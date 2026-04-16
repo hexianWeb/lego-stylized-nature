@@ -11,6 +11,9 @@ importers:
       three:
         specifier: ^0.183.2
         version: 0.183.2
+      tweakpane:
+        specifier: ^4.0.5
+        version: 4.0.5
       vite:
         specifier: ^5.4.10
         version: 5.4.21(lightningcss@1.32.0)
@@ -391,6 +394,9 @@ packages:
   three@0.183.2:
     resolution: {integrity: sha512-di3BsL2FEQ1PA7Hcvn4fyJOlxRRgFYBpMTcyOgkwJIaDOdJMebEFPA+t98EvjuljDx4hNulAGwF6KIjtwI5jgQ==}
 
+  tweakpane@4.0.5:
+    resolution: {integrity: sha512-rxEXdSI+ArlG1RyO6FghC4ZUX8JkEfz8F3v1JuteXSV0pEtHJzyo07fcDG+NsJfN5L39kSbCYbB9cBGHyuI/tQ==}
+
   vite@5.4.21:
     resolution: {integrity: sha512-o5a9xKjbtuhY6Bi5S3+HvbRERmouabWbyUcpXXUA1u+GNUKoROi9byOJ8M0nHbHYHkYICiMlqxkg1KkYmm25Sw==}
     engines: {node: ^18.0.0 || >=20.0.0}
@@ -696,6 +702,8 @@ snapshots:
   source-map-js@1.2.1: {}
 
   three@0.183.2: {}
+
+  tweakpane@4.0.5: {}
 
   vite@5.4.21(lightningcss@1.32.0):
     dependencies:

@@ -17,3 +17,17 @@ body
     left: 0;
     outline: none;
 }
+
+.app-error
+{
+    position: fixed;
+    z-index: 1;
+    top: 0;
+    left: 0;
+    right: 0;
+    padding: 0.75rem 1rem;
+    font-family: system-ui, sans-serif;
+    font-size: 0.875rem;
+    color: #fff;
+    background: #b00020;
+}

@@ -49,7 +49,9 @@
     "postcss"
   ],
   "cSpell.words": [
-    "raycaster"
+    "raycaster",
+    "tsl",
+    "webgpu"
   ],
   "vim.leader": "<space>",
   "vim.useSystemClipboard": true,
@@ -65,4 +67,5 @@
     "<C-z>": false,
     "<C-y>": false
   },
+  "liveServer.settings.port": 5501,
 }
