@@ -1,0 +1,34 @@
+---
+description: Instruct agent to use rg (ripgrep) and PowerShell commands instead of Unix ls/find/grep on Windows 10
+alwaysApply: true
+---
+
+# Windows Command Preferences
+
+This project runs on Windows 10 with PowerShell and rg (ripgrep) installed. Never use Unix-only commands.
+
+## Required Behavior
+- **For file/content search**: Always use `rg` instead of `grep`, `find`, or `ls | grep`.
+  - List project files: `rg --files`
+  - Search in files: `rg "search pattern"`
+  - Limit to specific types: `rg --glob "*.js" "pattern"`
+- **For directory listing**: Use PowerShell cmdlets.
+  - `Get-ChildItem` (or its alias `dir`)
+  - Avoid `ls -la` (use `Get-ChildItem -Force` for hidden files)
+- **When Shell tool fails** on a command, immediately switch to `rg` or PowerShell equivalent and retry.
+
+## Why
+Unix commands like `ls -la`, `find .`, `grep -r` are not native on Windows 10 and cause repeated failures. rg provides fast, cross-platform search and is already installed for this reason.
+
+## Examples
+```powershell
+# BAD (will fail)
+ls -la
+find . -name "*.js"
+grep -r "foo" .
+
+# GOOD
+rg --files
+rg "foo" --glob "*.js"
+Get-ChildItem
+```

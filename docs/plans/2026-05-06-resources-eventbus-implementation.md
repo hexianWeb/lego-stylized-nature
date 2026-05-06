@@ -228,12 +228,31 @@ git commit -m "feat(resources): implement all 12 loader types + video special ca
 
 ---
 
-## Task 5: Create example sources.js
+## Task 5: Update Vite publicDir + create example sources.js (using crane.glb)
 
 **Files:**
+- Modify: `vite.config.js:3` (change publicDir from '../static/' to '../public/')
 - Create: `src/sources.js`
 
-**Step 1: Write a minimal valid example (user can replace)**
+**Rationale:** The project already contains `public/model/crane.glb`. Vite's current `publicDir: '../static/'` would not serve files from the `public/` folder. We must point it to `../public/` (relative to `root: 'src/'`) so that `model/crane.glb` becomes available at runtime as `/model/crane.glb`.
+
+**Step 1: Update vite.config.js**
+```js
+// vite.config.js
+export default {
+    root: 'src/',
+    publicDir: '../public/', // Use the public/ folder at project root for static assets
+    // ... rest unchanged
+}
+```
+
+Run:
+```bash
+git add vite.config.js
+git commit -m "fix(vite): point publicDir to '../public/' so model/crane.glb is served"
+```
+
+**Step 2: Write sources.js using the crane model**
 ```js
 /**
  * 定义项目所需的静态资源列表。
@@ -241,25 +260,18 @@ git commit -m "feat(resources): implement all 12 loader types + video special ca
  */
 export default [
   {
-    name: 'environmentMapTexture',
-    type: 'cubeTexture',
-    path: [
-      'textures/environmentMap/px.jpg',
-      'textures/environmentMap/nx.jpg',
-      'textures/environmentMap/py.jpg',
-      'textures/environmentMap/ny.jpg',
-      'textures/environmentMap/pz.jpg',
-      'textures/environmentMap/nz.jpg'
-    ]
+    name: 'craneModel',
+    type: 'gltfModel',
+    path: 'model/crane.glb'
   }
-  // Add more entries (gltfModel, hdrTexture, video, etc.) as needed
+  // Add more entries (texture, hdrTexture, video, cubeTexture, etc.) as needed
 ]
 ```
 
-**Step 2: Commit**
+**Step 3: Commit**
 ```bash
 git add src/sources.js
-git commit -m "feat: add example sources.js with cubeTexture entry"
+git commit -m "feat: add example sources.js using gltfModel crane.glb from public/"
 ```
 
 ---

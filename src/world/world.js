@@ -1,5 +1,6 @@
 import * as THREE from 'three/webgpu'
 import { sin, positionLocal, time, vec2, vec3, vec4, uv, uniform } from 'three/tsl'
+import { eventBus } from '../utils/event-bus.js'
 
 export default class World {
     /**
@@ -44,6 +45,13 @@ export default class World {
 
         this.torusKnot = new THREE.Mesh(new THREE.TorusKnotGeometry(1, 0.35, 128, 32), this.material)
         this.scene.add(this.torusKnot)
+
+        eventBus.on('source ready', () => {
+            const gltf = this.experience.resources?.items?.craneModel
+            if (gltf?.scene) {
+                this.scene.add(gltf.scene)
+            }
+        })
     }
 
     /**
