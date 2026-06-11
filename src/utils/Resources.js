@@ -5,7 +5,7 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import { FontLoader } from 'three/examples/jsm/loaders/FontLoader.js'
 import { FBXLoader } from 'three/examples/jsm/loaders/FBXLoader.js'
 import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader.js'
-import { RGBELoader } from 'three/examples/jsm/loaders/RGBELoader.js'
+import { HDRLoader } from 'three/examples/jsm/loaders/HDRLoader.js'
 import { SVGLoader } from 'three/examples/jsm/loaders/SVGLoader.js'
 import { EXRLoader } from 'three/examples/jsm/loaders/EXRLoader.js'
 import { KTX2Loader } from 'three/examples/jsm/loaders/KTX2Loader.js'
@@ -40,7 +40,7 @@ export default class Resources {
       fbxModel: new FBXLoader(),
       audio: new THREE.AudioLoader(),
       objModel: new OBJLoader(),
-      hdrTexture: new RGBELoader(),
+      hdrTexture: new HDRLoader(),
       svg: new SVGLoader(),
       exrTexture: new EXRLoader(),
       video: null, // special handling
