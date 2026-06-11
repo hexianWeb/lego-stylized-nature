@@ -1,26 +1,11 @@
 import { Pane } from 'tweakpane'
 
-/**
- * Root Tweakpane; only created when URL hash is `#debug`.
- * Child modules use {@link addFolder} from the passed `Debug` instance inside `debuggerInit()`.
- */
 export default class Debug {
     constructor() {
-        this.active = window.location.hash === '#debug'
-
-        // DEV_MODE
-        this.active = true
-        if (this.active) {
-            this.ui = new Pane({ title: 'Debug' })
-        } else {
-            this.ui = null
-        }
+        this.active = import.meta.env.DEV && window.location.hash === '#debug'
+        this.ui = this.active ? new Pane({ title: 'Debug' }) : null
     }
 
-    /**
-     * @param {import('tweakpane').FolderApiOptions} options
-     * @returns {import('tweakpane').FolderApi | undefined}
-     */
     addFolder(options) {
         if (!this.active || !this.ui) {
             return undefined

@@ -1,5 +1,4 @@
-import sources from '../sources.js'
-import { eventBus } from './event-bus.js'
+import sources from '../assets/sources.js'
 
 import * as THREE from 'three/webgpu'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
@@ -12,19 +11,20 @@ import { EXRLoader } from 'three/examples/jsm/loaders/EXRLoader.js'
 import { KTX2Loader } from 'three/examples/jsm/loaders/KTX2Loader.js'
 
 export default class Resources {
-  constructor() {
+  constructor(sourceList = sources) {
     this.items = {}
-    this.sources = sources
-    this.toLoad = sources.length
+    this.errors = {}
+    this.sources = sourceList
+    this.toLoad = sourceList.length
     this.loaded = 0
+    this.progress = 0
 
     this.ready = new Promise(resolve => {
       this._resolveReady = resolve
     })
 
     if (this.toLoad === 0) {
-      this._resolveReady()
-      eventBus.emit('source ready')
+      this._resolveReady(this)
       return
     }
     this.startLoading()
@@ -61,7 +61,10 @@ export default class Resources {
     const loader = this.loaders[type]
 
     if (!loader && type !== 'video') {
-      console.error(`[Resources] Unknown type "${type}" for "${name}"`)
+      const err = new Error(`[Resources] Unknown type "${type}" for "${name}"`)
+      console.error(err.message)
+      this.errors[name] = err
+      this.items[name] = null
       this.itemLoaded(name, null)
       return
     }
@@ -72,6 +75,8 @@ export default class Resources {
     }
     const onError = (err) => {
       console.error(`[Resources] Failed to load ${type} "${name}":`, err)
+      this.errors[name] = err
+      this.items[name] = null
       this.itemLoaded(name, null)
     }
 
@@ -99,10 +104,12 @@ export default class Resources {
   }
 
   itemLoaded(name, file) {
+    this.items[name] = file
     this.loaded++
+    this.progress = this.loaded / this.toLoad
     if (this.loaded === this.toLoad) {
-      this._resolveReady()
-      eventBus.emit('source ready')
+      this.progress = 1
+      this._resolveReady(this)
     }
   }
 }

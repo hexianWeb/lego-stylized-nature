@@ -26,8 +26,8 @@ export default class Experience {
         this.worldCamera = new WorldCamera(canvas, this.sizes)
         this.scene.add(this.worldCamera.instance)
 
-        this.world = new World(this)
         this.resources = new Resources()
+        this.world = new World(this)
 
         /** @type {(() => void) | null} */
         this._unsubscribeResize = null
@@ -36,6 +36,7 @@ export default class Experience {
     async init() {
         this.renderer.attachPipeline(this.scene, this.worldCamera.instance)
         await this.renderer.init()
+        await this.resources.ready
 
         this.time.connectDocument(document)
 

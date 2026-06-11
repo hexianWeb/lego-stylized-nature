@@ -10,17 +10,37 @@ export default class WorldCamera {
         this.sizes = sizes
         this.canvas = canvas
 
-        this.instance = new THREE.PerspectiveCamera(25, sizes.width / sizes.height, 0.1, 100)
-        this.instance.position.set(6, 3, 10)
+        this._frustumHeight = 14
+
+        const aspect = sizes.width / sizes.height
+        this.instance = new THREE.OrthographicCamera(
+            -this._frustumHeight * aspect * 0.5,
+            this._frustumHeight * aspect * 0.5,
+            this._frustumHeight * 0.5,
+            -this._frustumHeight * 0.5,
+            0.1,
+            200
+        )
+        this.instance.position.set(40, 40, 40)
 
         this.controls = new OrbitControls(this.instance, canvas)
         this.controls.enableDamping = true
+        this.controls.maxPolarAngle = Math.PI / 3
+        this.controls.minZoom = 0.5
+        this.controls.maxZoom = 6
+    }
 
-        this._debugFov = { fov: this.instance.fov }
+    lookAt(target) {
+        this.controls.target.copy(target)
+        this.controls.update()
     }
 
     resize() {
-        this.instance.aspect = this.sizes.width / this.sizes.height
+        const aspect = this.sizes.width / this.sizes.height
+        this.instance.left = -this._frustumHeight * aspect * 0.5
+        this.instance.right = this._frustumHeight * aspect * 0.5
+        this.instance.top = this._frustumHeight * 0.5
+        this.instance.bottom = -this._frustumHeight * 0.5
         this.instance.updateProjectionMatrix()
     }
 
@@ -32,19 +52,13 @@ export default class WorldCamera {
      * @param {import('../utils/debug.js').default} debug
      */
     debuggerInit(debug) {
-        if (!debug.active) {
-            return
-        }
-        const folder = debug.addFolder({
-            title: 'Camera',
-            expanded: false
-        })
+        const folder = debug.addFolder({ title: 'Camera', expanded: false })
         if (!folder) {
             return
         }
-        folder.addBinding(this._debugFov, 'fov', { min: 10, max: 90, step: 1, label: 'FOV' }).on('change', () => {
-            this.instance.fov = this._debugFov.fov
+        folder.addBinding(this, '_frustumHeight', { min: 4, max: 60, step: 1, label: 'Frustum H' }).on('change', () => {
             this.instance.updateProjectionMatrix()
+            this.resize()
         })
     }
 

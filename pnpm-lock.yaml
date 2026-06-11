@@ -11,6 +11,9 @@ importers:
       mitt:
         specifier: ^3.0.1
         version: 3.0.1
+      simplex-noise:
+        specifier: ^4.0.3
+        version: 4.0.3
       three:
         specifier: ^0.183.2
         version: 0.183.2
@@ -393,6 +396,9 @@ packages:
     engines: {node: '>=18.0.0', npm: '>=8.0.0'}
     hasBin: true
 
+  simplex-noise@4.0.3:
+    resolution: {integrity: sha512-qSE2I4AngLQG7BXqoZj51jokT4WUXe8mOBrvfOXpci8+6Yu44+/dD5zqDpOx3Ux792eamTd2lLcI8jqFntk/lg==}
+
   source-map-js@1.2.1:
     resolution: {integrity: sha512-UXWMKhLOwVKb728IUtQPXxfYU+usdybtUrK/8uGE8CQMvrhOpwvzDBwj0QhSL7MQc7vIsISBG8VQ8+IDQxpfQA==}
     engines: {node: '>=0.10.0'}
@@ -706,6 +712,8 @@ snapshots:
       '@rollup/rollup-win32-x64-gnu': 4.60.0
       '@rollup/rollup-win32-x64-msvc': 4.60.0
       fsevents: 2.3.3
+
+  simplex-noise@4.0.3: {}
 
   source-map-js@1.2.1: {}
 

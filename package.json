@@ -9,6 +9,7 @@
   },
   "dependencies": {
     "mitt": "^3.0.1",
+    "simplex-noise": "^4.0.3",
     "three": "^0.183.2",
     "tweakpane": "^4.0.5",
     "vite": "^5.4.10"
