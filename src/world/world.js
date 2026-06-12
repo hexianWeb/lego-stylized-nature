@@ -11,6 +11,10 @@ import TerrainBrickRenderer from './bricks/TerrainBrickRenderer.js'
 import WaterBrickRenderer from './bricks/WaterBrickRenderer.js'
 import PrefabRegistry from './prefabs/PrefabRegistry.js'
 import PrefabPlacer from './prefabs/PrefabPlacer.js'
+import { createTerrainPanel } from '../debug/panels/TerrainPanel.js'
+import { createBiomePanel } from '../debug/panels/BiomePanel.js'
+import { createPlacementPanel } from '../debug/panels/PlacementPanel.js'
+import { createMaterialPanel } from '../debug/panels/MaterialPanel.js'
 
 export default class World {
     /**
@@ -27,6 +31,17 @@ export default class World {
         this.config = worldConfig
         this.terrainMap = null
         this.terrainPlacements = []
+
+        this.brickGeometry = null
+        this.biomeRegistry = null
+        this.biomeBlender = null
+        this.biomeMaskGenerator = null
+        this.terrainGenerator = null
+        this.layeredTerrainBuilder = null
+        this.brickColorResolver = null
+        this.terrainBrickRenderer = null
+        this.waterBrickRenderer = null
+        this.prefabPlacer = null
     }
 
     addSystem(system) {
@@ -38,62 +53,90 @@ export default class World {
 
     build() {
         const resources = this.experience.resources
-        const brickGeometry = extractBrickGeometry(resources.items.brick2x2Model, this.config.terrain.cellSize)
 
-        const biomeRegistry = new BiomeRegistry()
-        const biomeBlender = new BiomeBlender(biomeRegistry)
-        const biomeMaskGenerator = new BiomeMaskGenerator(this.config)
-        const terrainGenerator = new TerrainGenerator({
-            config: this.config,
-            biomeMaskGenerator,
-            biomeBlender
-        })
-        const layeredTerrainBuilder = new LayeredTerrainBuilder({ config: this.config })
+        if (!this.brickGeometry) {
+            this.brickGeometry = extractBrickGeometry(resources.items.brick2x2Model, this.config.terrain.cellSize)
+        }
 
-        this.terrainMap = terrainGenerator.generate()
-        this.terrainPlacements = layeredTerrainBuilder.buildPlacements(this.terrainMap)
-
-        const { width, depth, cellSize } = this.config.terrain
-        this.experience.worldCamera.lookAt(new THREE.Vector3(width * cellSize / 2, 0, depth * cellSize / 2))
-
-        if (!brickGeometry) {
+        if (!this.brickGeometry) {
             console.warn('[World] Missing brick geometry; terrain render skipped.')
             return
         }
 
-        const brickColorResolver = new BrickColorResolver({
-            biomeRegistry,
-            biomeBlender,
-            config: this.config
-        })
-        const terrainBrickRenderer = new TerrainBrickRenderer({
-            config: this.config,
-            brickGeometry
-        })
-        terrainBrickRenderer.build(this.terrainPlacements, brickColorResolver)
-        this.addSystem(terrainBrickRenderer)
+        if (!this.terrainBrickRenderer) {
+            this.biomeRegistry = new BiomeRegistry()
+            this.biomeBlender = new BiomeBlender(this.biomeRegistry)
+            this.biomeMaskGenerator = new BiomeMaskGenerator(this.config)
+            this.terrainGenerator = new TerrainGenerator({
+                config: this.config,
+                biomeMaskGenerator: this.biomeMaskGenerator,
+                biomeBlender: this.biomeBlender
+            })
+            this.layeredTerrainBuilder = new LayeredTerrainBuilder({ config: this.config })
+            this.brickColorResolver = new BrickColorResolver({
+                biomeRegistry: this.biomeRegistry,
+                biomeBlender: this.biomeBlender,
+                config: this.config
+            })
 
-        const waterBrickRenderer = new WaterBrickRenderer({
-            config: this.config,
-            brickGeometry
-        })
-        waterBrickRenderer.build(this.terrainMap)
-        this.addSystem(waterBrickRenderer)
+            this.terrainBrickRenderer = new TerrainBrickRenderer({
+                config: this.config,
+                brickGeometry: this.brickGeometry
+            })
+            this.waterBrickRenderer = new WaterBrickRenderer({
+                config: this.config,
+                brickGeometry: this.brickGeometry
+            })
 
-        // const prefabRegistry = new PrefabRegistry(resources)
-        // const prefabPlacer = new PrefabPlacer({
-        //     config: this.config,
-        //     biomeRegistry,
-        //     prefabRegistry
-        // })
-        // prefabPlacer.build(this.terrainMap)
-        // this.addSystem(prefabPlacer)
+            this.addSystem(this.terrainBrickRenderer)
+            this.addSystem(this.waterBrickRenderer)
+
+            const prefabRegistry = new PrefabRegistry(resources)
+            this.prefabPlacer = new PrefabPlacer({
+                config: this.config,
+                biomeRegistry: this.biomeRegistry,
+                prefabRegistry
+            })
+            this.addSystem(this.prefabPlacer)
+        }
+
+        this.regenerate()
+    }
+
+    regenerate() {
+        if (!this.terrainGenerator || !this.terrainBrickRenderer || !this.waterBrickRenderer) {
+            return
+        }
+
+        this.terrainMap = this.terrainGenerator.generate()
+        this.terrainPlacements = this.layeredTerrainBuilder.buildPlacements(this.terrainMap)
+
+        const { width, depth, cellSize } = this.config.terrain
+        this.experience.worldCamera.lookAt(new THREE.Vector3(width * cellSize / 2, 0, depth * cellSize / 2))
+
+        this.terrainBrickRenderer.build(this.terrainPlacements, this.brickColorResolver)
+        this.waterBrickRenderer.build(this.terrainMap)
+        this.prefabPlacer?.build(this.terrainMap)
     }
 
     /**
-     * @param {import('../utils/debug.js').default} debug
+     * @param {import('../debug/Debug.js').default} debug
      */
     debuggerInit(debug) {
+        if (!debug.active) {
+            return
+        }
+
+        const onRegenerate = () => this.regenerate()
+
+        createTerrainPanel(debug, this.config, onRegenerate)
+        createBiomePanel(debug, this.config, onRegenerate)
+        createPlacementPanel(debug, this.config, onRegenerate)
+        createMaterialPanel(debug, this.config, {
+            waterMaterial: this.waterBrickRenderer?.material,
+            legoMaterial: this.terrainBrickRenderer?.material
+        })
+
         for (const child of this.children) {
             child.debuggerInit?.(debug)
         }

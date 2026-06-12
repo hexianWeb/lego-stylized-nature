@@ -1,5 +1,5 @@
 import * as THREE from 'three/webgpu'
-import Debug from '../utils/debug.js'
+import Debug from '../debug/Debug.js'
 import Resources from '../utils/Resources.js'
 import WorldCamera from '../world/camera.js'
 import Environment from '../world/environment.js'
