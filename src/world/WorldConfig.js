@@ -1,10 +1,10 @@
 export const worldConfig = {
   seed: 20260608,
   terrain: {
-    width: 96,
-    depth: 96,
+    width: 128,
+    depth: 128,
     maxHeight: 28,
-    layerHeight: 0.09,
+    layerHeight: 0.095,
     cellSize: 0.2,
     waterLevel: 3,
     noiseScale: 34,

@@ -15,7 +15,7 @@ export function createMaterialPanel(debug, config, { waterMaterial, legoMaterial
 
     if (legoMaterial) {
         folder.addBinding(legoMaterial, 'roughness', { min: 0, max: 1, step: 0.01, label: 'brickRoughness' })
-        folder.addBinding(legoMaterial, 'clearcoat', { min: 0, max: 1, step: 0.01, label: 'brickClearcoat' })
+        // folder.addBinding(legoMaterial, 'clearcoat', { min: 0, max: 1, step: 0.01, label: 'brickClearcoat' })
         folder.addBinding(legoMaterial, 'envMapIntensity', { min: 0, max: 2, step: 0.05, label: 'brickEnvIntensity' })
     }
 }

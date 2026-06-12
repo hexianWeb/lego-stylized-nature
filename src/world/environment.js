@@ -1,5 +1,6 @@
 import * as THREE from 'three/webgpu'
 import { color, fog, rangeFogFactor, uniform } from 'three/tsl'
+import { createLightPanel } from '../debug/panels/LightPanel.js'
 
 export default class Environment {
     /**
@@ -8,6 +9,8 @@ export default class Environment {
     constructor(scene) {
         this.scene = scene
         this.envMap = null
+        this.environmentIntensity = 0.4
+        this.useEnvBackground = true
 
         this.ambientLight = new THREE.AmbientLight(0xffffff, 0.2)
         this.scene.add(this.ambientLight)
@@ -46,17 +49,28 @@ export default class Environment {
         pmremGenerator.dispose()
 
         this.scene.environment = this.envMap
-        this.scene.environmentIntensity = 0.4
-        this.scene.background = this.envMap
+        this.syncEnvironmentIntensity()
+        this.syncBackground()
+    }
+
+    syncEnvironmentIntensity() {
+        this.scene.environmentIntensity = this.environmentIntensity
+    }
+
+    syncBackground() {
+        this.scene.background = this.useEnvBackground ? this.envMap : null
     }
 
     /**
-     * @param {import('../utils/debug.js').default} debug
+     * @param {import('../debug/Debug.js').default} debug
      */
     debuggerInit(debug) {
         if (!debug.active) {
             return
         }
+
+        createLightPanel(debug, this)
+
         const folder = debug.addFolder({
             title: 'Environment',
             expanded: false
@@ -74,6 +88,7 @@ export default class Environment {
 
     dispose() {
         this.scene.environment = null
+        this.scene.background = null
         this.envMap?.dispose()
         this.envMap = null
         this.scene.remove(this.ambientLight)
