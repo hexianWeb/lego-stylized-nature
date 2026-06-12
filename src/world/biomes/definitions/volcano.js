@@ -13,6 +13,7 @@ export default {
   },
   prefabs: [
     { id: 'commonRock', density: 0.09, minHeight: 5, maxSlope: 3 },
-    { id: 'waterBubble', density: 0.015 }
+    { id: 'waterBubble', density: 0.015 },
+    { id: 'landGrass', density: 0.02, minHeight: 5, maxSlope: 3 }
   ]
 }

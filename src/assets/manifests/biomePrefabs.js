@@ -33,8 +33,8 @@ export const biomePrefabs = {
     category: 'tree',
     placement: { surface: 'land', biomes: ['forest'] },
     variants: [
-      { source: 'forestTreeGreenModel', weight: 3 },
-      { source: 'forestTreeCoconutModel', weight: 1 }
+      { source: 'forestTreeGreenModel', weight: 1 },
+      // { source: 'forestTreeCoconutModel', weight: 1 }
     ],
     randomRotation: false
   },
@@ -50,11 +50,10 @@ export const biomePrefabs = {
     category: 'plant',
     placement: { surface: 'land', biomes: ['desert'] },
     variants: [
-      { source: 'desertCactusModel', weight: 1 },
+      // { source: 'desertCactusModel', weight: 1 },
       { source: 'desertCactus2Model', weight: 1 }
     ],
     randomRotation: true,
-    randomScale: [0.85, 1.15]
   },
   landGrass: {
     category: 'flora',

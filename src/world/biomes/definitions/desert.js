@@ -15,6 +15,7 @@ export default {
     { id: 'desertCactusSmall', density: 0.035, minHeight: 4, maxSlope: 1 },
     { id: 'commonRock', density: 0.05, minHeight: 4, maxSlope: 2 },
     { id: 'waterBubble', density: 0.015 },
-    { id: 'waterDuckweed', density: 0.01 }
+    { id: 'waterDuckweed', density: 0.01 },
+    { id: 'landGrass', density: 0.04, minHeight: 4, maxSlope: 2 }
   ]
 }

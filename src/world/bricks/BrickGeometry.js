@@ -13,12 +13,12 @@ export function extractBrickGeometry(gltf, cellSize) {
   }
 
   const geometry = sourceMesh.geometry.clone()
-  geometry.computeBoundingBox()
-  const size = new THREE.Vector3()
-  geometry.boundingBox.getSize(size)
+  // geometry.computeBoundingBox()
+  // const size = new THREE.Vector3()
+  // geometry.boundingBox.getSize(size)
 
-  const scale = cellSize / size.x
-  geometry.scale(scale, scale, scale)
+  // const scale = cellSize / size.x
+  // geometry.scale(scale, scale, scale)
 
   return geometry
 }

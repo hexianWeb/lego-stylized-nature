@@ -20,6 +20,18 @@ export function random01(x, z, seed = 0) {
   return hash2(x, z, seed) / 4294967295
 }
 
+export function hashString(value, seed = 0) {
+  let h = seed >>> 0
+  for (let i = 0; i < value.length; i++) {
+    h = (Math.imul(h, 31) + value.charCodeAt(i)) >>> 0
+  }
+  return h >>> 0
+}
+
+export function placementRandom01(x, z, worldSeed, ruleId) {
+  return random01(x, z, worldSeed + hashString(ruleId))
+}
+
 export function pickWeighted(entries, randomValue) {
   let total = 0
   for (const entry of entries) {
