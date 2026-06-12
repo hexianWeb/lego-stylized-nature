@@ -10,7 +10,7 @@ export default class WorldCamera {
         this.sizes = sizes
         this.canvas = canvas
 
-        this._frustumHeight = 14
+        this._frustumHeight = 42
 
         const aspect = sizes.width / sizes.height
         this.instance = new THREE.OrthographicCamera(
@@ -25,7 +25,7 @@ export default class WorldCamera {
 
         this.controls = new OrbitControls(this.instance, canvas)
         this.controls.enableDamping = true
-        this.controls.maxPolarAngle = Math.PI / 3
+        this.controls.maxPolarAngle = Math.PI / 2
         this.controls.minZoom = 0.5
         this.controls.maxZoom = 6
     }

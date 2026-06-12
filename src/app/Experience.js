@@ -82,6 +82,7 @@ export default class Experience {
         this._unsubscribeResize = null
 
         this.world.dispose()
+        this.environment.dispose()
         this.worldCamera.dispose()
         this.debug.dispose()
         this.sizes.dispose()
