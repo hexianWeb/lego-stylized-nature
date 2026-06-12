@@ -8,6 +8,7 @@ import LayeredTerrainBuilder from './terrain/LayeredTerrainBuilder.js'
 import { extractBrickGeometry } from './bricks/BrickGeometry.js'
 import BrickColorResolver from './bricks/BrickColorResolver.js'
 import TerrainBrickRenderer from './bricks/TerrainBrickRenderer.js'
+import WaterBrickRenderer from './bricks/WaterBrickRenderer.js'
 import PrefabRegistry from './prefabs/PrefabRegistry.js'
 import PrefabPlacer from './prefabs/PrefabPlacer.js'
 
@@ -72,14 +73,21 @@ export default class World {
         terrainBrickRenderer.build(this.terrainPlacements, brickColorResolver)
         this.addSystem(terrainBrickRenderer)
 
-        const prefabRegistry = new PrefabRegistry(resources)
-        const prefabPlacer = new PrefabPlacer({
+        const waterBrickRenderer = new WaterBrickRenderer({
             config: this.config,
-            biomeRegistry,
-            prefabRegistry
+            brickGeometry
         })
-        prefabPlacer.build(this.terrainMap)
-        this.addSystem(prefabPlacer)
+        waterBrickRenderer.build(this.terrainMap)
+        this.addSystem(waterBrickRenderer)
+
+        // const prefabRegistry = new PrefabRegistry(resources)
+        // const prefabPlacer = new PrefabPlacer({
+        //     config: this.config,
+        //     biomeRegistry,
+        //     prefabRegistry
+        // })
+        // prefabPlacer.build(this.terrainMap)
+        // this.addSystem(prefabPlacer)
     }
 
     /**
