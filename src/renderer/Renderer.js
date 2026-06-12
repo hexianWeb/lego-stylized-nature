@@ -10,6 +10,9 @@ export default class Renderer {
             canvas,
             forceWebGL: false
         })
+        this.instance.outputColorSpace = THREE.SRGBColorSpace
+        this.instance.toneMapping = THREE.ACESFilmicToneMapping
+        this.instance.toneMappingExposure = 1.0
         /** @type {THREE.RenderPipeline | null} */
         this.renderPipeline = null
     }

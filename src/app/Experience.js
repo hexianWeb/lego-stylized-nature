@@ -37,6 +37,10 @@ export default class Experience {
         this.renderer.attachPipeline(this.scene, this.worldCamera.instance)
         await this.renderer.init()
         await this.resources.ready
+        this.environment.applyEnvironmentMap(
+            this.renderer.instance,
+            this.resources.items.studioEnvMap
+        )
         this.world.build()
 
         this.time.connectDocument(document)

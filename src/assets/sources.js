@@ -1,4 +1,6 @@
 export default [
+  { name: 'studioEnvMap', type: 'hdrTexture', path: 'hdri/grasslands_sunset_1k.hdr' },
+
   { name: 'brick2x2Model', type: 'gltfModel', path: 'model/terrain/legoBlock2x2.glb' },
 
   { name: 'waterBubbleModel', type: 'gltfModel', path: 'model/prefab/bubble.glb' },

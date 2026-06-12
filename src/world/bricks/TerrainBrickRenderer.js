@@ -42,6 +42,7 @@ export default class TerrainBrickRenderer {
         surfaceCell: p.surfaceCell,
         layer: p.layer,
         x: p.x,
+        y: p.y,
         z: p.z
       }))
       this.mesh.setColorAt(i, color)

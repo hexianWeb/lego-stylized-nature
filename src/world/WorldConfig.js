@@ -3,7 +3,7 @@ export const worldConfig = {
   terrain: {
     width: 96,
     depth: 96,
-    maxHeight: 18,
+    maxHeight: 28,
     layerHeight: 0.09,
     cellSize: 0.2,
     waterLevel: 3,
@@ -27,7 +27,6 @@ export const worldConfig = {
   },
   water: {
     color: '#2d9bd4',
-    opacity: 0.82,
     rippleStrength: 0.06,
     rippleSpeed: 0.6
   }

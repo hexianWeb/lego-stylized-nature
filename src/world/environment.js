@@ -7,11 +7,12 @@ export default class Environment {
      */
     constructor(scene) {
         this.scene = scene
+        this.envMap = null
 
-        this.ambientLight = new THREE.AmbientLight(0xffffff, 1.2)
+        this.ambientLight = new THREE.AmbientLight(0xffffff, 0.2)
         this.scene.add(this.ambientLight)
 
-        this.directionalLight = new THREE.DirectionalLight(0xffffff, 2)
+        this.directionalLight = new THREE.DirectionalLight(0xffffff, 1.0)
         this.directionalLight.position.set(12, 18, 8)
         this.scene.add(this.directionalLight)
 
@@ -22,6 +23,31 @@ export default class Environment {
 
     _rebuildFog() {
         this.scene.fogNode = fog(this.fogColor, rangeFogFactor(this.fogRange.near, this.fogRange.far))
+    }
+
+    /**
+     * @param {THREE.WebGPURenderer} renderer
+     * @param {THREE.Texture | null} equirectTexture
+     */
+    applyEnvironmentMap(renderer, equirectTexture) {
+        if (!equirectTexture) {
+            console.warn('[Environment] Missing HDR texture; scene.environment skipped.')
+            return
+        }
+
+        this.envMap?.dispose()
+        this.envMap = null
+
+        equirectTexture.mapping = THREE.EquirectangularReflectionMapping
+
+        const pmremGenerator = new THREE.PMREMGenerator(renderer)
+        pmremGenerator.compileEquirectangularShader()
+        this.envMap = pmremGenerator.fromEquirectangular(equirectTexture).texture
+        pmremGenerator.dispose()
+
+        this.scene.environment = this.envMap
+        this.scene.environmentIntensity = 0.4
+        this.scene.background = this.envMap
     }
 
     /**
@@ -47,6 +73,9 @@ export default class Environment {
     }
 
     dispose() {
+        this.scene.environment = null
+        this.envMap?.dispose()
+        this.envMap = null
         this.scene.remove(this.ambientLight)
         this.scene.remove(this.directionalLight)
     }
