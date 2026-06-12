@@ -12,9 +12,7 @@ export default class PrefabPlacer {
     }
 
     build(terrainMap) {
-        this.dispose()
-        this.group = new THREE.Group()
-        this.group.name = 'BiomePrefabs'
+        this.clearInstances()
 
         const buckets = this.collectTransforms(terrainMap)
 
@@ -113,13 +111,20 @@ export default class PrefabPlacer {
         return variantGroup
     }
 
+    clearInstances() {
+        const children = [...this.group.children]
+        for (const child of children) {
+            child.traverse((node) => {
+                if (node.isInstancedMesh) {
+                    node.dispose()
+                }
+            })
+            this.group.remove(child)
+        }
+    }
+
     dispose() {
-        this.group?.traverse((child) => {
-            if (child.isInstancedMesh) {
-                child.dispose()
-            }
-        })
-        this.group?.parent?.remove(this.group)
-        this.group?.clear()
+        this.clearInstances()
+        this.group.parent?.remove(this.group)
     }
 }
