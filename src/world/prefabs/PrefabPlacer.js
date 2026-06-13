@@ -96,6 +96,8 @@ export default class PrefabPlacer {
             }
 
             const mesh = new THREE.InstancedMesh(child.geometry, child.material, transforms.length)
+            mesh.castShadow = true
+            mesh.receiveShadow = true
             transforms.forEach((t, i) => {
                 position.fromArray(t.position)
                 quaternion.setFromAxisAngle(yAxis, t.rotationY)

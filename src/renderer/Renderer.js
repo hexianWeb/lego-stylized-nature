@@ -1,4 +1,4 @@
-﻿import * as THREE from 'three/webgpu'
+import * as THREE from 'three/webgpu'
 import { pass, renderOutput, Fn, float, screenUV, smoothstep } from 'three/tsl'
 import { smaa } from 'three/addons/tsl/display/SMAANode.js'
 
@@ -25,6 +25,8 @@ export default class Renderer {
         this.instance.outputColorSpace = THREE.SRGBColorSpace
         this.instance.toneMapping = THREE.CineonToneMapping
         this.instance.toneMappingExposure = 1.0
+        this.instance.shadowMap.enabled = true
+        this.instance.shadowMap.type = THREE.PCFShadowMap
         /** @type {THREE.RenderPipeline | null} */
         this.renderPipeline = null
     }

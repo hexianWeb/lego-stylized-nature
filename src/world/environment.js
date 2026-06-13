@@ -1,6 +1,7 @@
 import * as THREE from 'three/webgpu'
 import { color, fog, rangeFogFactor, uniform } from 'three/tsl'
 import { createLightPanel } from '../debug/panels/LightPanel.js'
+import { createShadowPanel } from '../debug/panels/ShadowPanel.js'
 
 export default class Environment {
     /**
@@ -9,19 +10,54 @@ export default class Environment {
     constructor(scene) {
         this.scene = scene
         this.envMap = null
-        this.environmentIntensity = 0.4
+        this.environmentIntensity = 0.22
         this.useEnvBackground = true
+        this.showShadowHelper = true
+        this.showLightHelper = false
+        /** 0 = darker shadows, 1 = more ambient/env fill */
+        this.shadowFill = 0.25
+        this.shadowBounds = {
+            centerX: 0,
+            centerZ: 0,
+            halfExtent: 14,
+            maxHeight: 10
+        }
+        this.directionalTarget = { x: 0, y: 0, z: 0 }
+        this.autoTargetToTerrain = true
 
-        this.ambientLight = new THREE.AmbientLight(0xffffff, 0.2)
+        this.ambientLight = new THREE.AmbientLight(0xffffff, 0.08)
         this.scene.add(this.ambientLight)
 
-        this.directionalLight = new THREE.DirectionalLight(0xffffff, 1.0)
-        this.directionalLight.position.set(12, 18, 8)
+        this.directionalLight = new THREE.DirectionalLight(0xffffff, 1.85)
+        this.directionalLight.position.set(8, 26, 10)
+        this.directionalLight.castShadow = true
+        this.directionalLight.shadow.mapSize.set(2048, 2048)
+        this.directionalLight.shadow.bias = -0.0002
+        this.directionalLight.shadow.normalBias = 0.015
+        this.directionalLight.shadow.radius = 1.5
         this.scene.add(this.directionalLight)
+        this.scene.add(this.directionalLight.target)
+
+        this.shadowCameraHelper = new THREE.CameraHelper(this.directionalLight.shadow.camera)
+        this.shadowCameraHelper.frustumCulled = false
+        this.shadowCameraHelper.visible = this.showShadowHelper
+        this.scene.add(this.shadowCameraHelper)
+
+        this.directionalLightHelper = new THREE.DirectionalLightHelper(this.directionalLight, 4, 0xffcc00)
+        this.directionalLightHelper.visible = this.showLightHelper
+        this.scene.add(this.directionalLightHelper)
 
         this.fogColor = uniform(color('#ffffff'))
         this.fogRange = { near: 80, far: 140 }
         this._rebuildFog()
+        this.applyShadowFill()
+    }
+
+    applyShadowFill() {
+        const fill = THREE.MathUtils.clamp(this.shadowFill, 0, 1)
+        this.ambientLight.intensity = fill * 0.16 + 0.04
+        this.environmentIntensity = fill * 0.38 + 0.12
+        this.syncEnvironmentIntensity()
     }
 
     _rebuildFog() {
@@ -62,6 +98,78 @@ export default class Environment {
     }
 
     /**
+     * @param {{ centerX: number, centerZ: number, halfExtent: number, maxHeight: number }} bounds
+     */
+    configureShadows({ centerX, centerZ, halfExtent, maxHeight }) {
+        this.shadowBounds.centerX = centerX
+        this.shadowBounds.centerZ = centerZ
+        this.shadowBounds.halfExtent = halfExtent
+        this.shadowBounds.maxHeight = maxHeight
+
+        if (this.autoTargetToTerrain) {
+            this.directionalTarget.x = centerX
+            this.directionalTarget.y = 0
+            this.directionalTarget.z = centerZ
+        }
+
+        this.applyShadowBounds()
+    }
+
+    syncDirectionalTarget() {
+        this.directionalLight.target.position.set(
+            this.directionalTarget.x,
+            this.directionalTarget.y,
+            this.directionalTarget.z
+        )
+        this.directionalLight.target.updateMatrixWorld()
+        this.directionalLight.shadow.needsUpdate = true
+        this.directionalLight.shadow.updateMatrices(this.directionalLight)
+        this.updateShadowHelpers()
+    }
+
+    applyShadowBounds() {
+        const { halfExtent, maxHeight } = this.shadowBounds
+
+        this.syncDirectionalTarget()
+
+        const shadowCamera = this.directionalLight.shadow.camera
+        shadowCamera.left = -halfExtent
+        shadowCamera.right = halfExtent
+        shadowCamera.top = halfExtent
+        shadowCamera.bottom = -halfExtent
+        shadowCamera.near = 0.5
+        shadowCamera.far = maxHeight + halfExtent * 2
+        shadowCamera.updateProjectionMatrix()
+
+        this.directionalLight.shadow.needsUpdate = true
+        this.directionalLight.shadow.updateMatrices(this.directionalLight)
+        this.updateShadowHelpers()
+    }
+
+    syncShadowHelperVisibility() {
+        if (this.shadowCameraHelper) {
+            this.shadowCameraHelper.visible = this.showShadowHelper
+        }
+        if (this.directionalLightHelper) {
+            this.directionalLightHelper.visible = this.showLightHelper
+        }
+    }
+
+    updateShadowHelpers() {
+        if (this.showShadowHelper && this.shadowCameraHelper) {
+            this.directionalLight.shadow.updateMatrices(this.directionalLight)
+            this.shadowCameraHelper.update()
+        }
+        if (this.showLightHelper && this.directionalLightHelper) {
+            this.directionalLightHelper.update()
+        }
+    }
+
+    update() {
+        this.updateShadowHelpers()
+    }
+
+    /**
      * @param {import('../debug/Debug.js').default} debug
      */
     debuggerInit(debug) {
@@ -70,6 +178,7 @@ export default class Environment {
         }
 
         createLightPanel(debug, this)
+        createShadowPanel(debug, this)
 
         const folder = debug.addFolder({
             title: 'Environment',
@@ -93,5 +202,10 @@ export default class Environment {
         this.envMap = null
         this.scene.remove(this.ambientLight)
         this.scene.remove(this.directionalLight)
+        this.scene.remove(this.directionalLight.target)
+        this.shadowCameraHelper?.dispose()
+        this.directionalLightHelper?.dispose()
+        this.scene.remove(this.shadowCameraHelper)
+        this.scene.remove(this.directionalLightHelper)
     }
 }

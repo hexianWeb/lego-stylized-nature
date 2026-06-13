@@ -77,6 +77,7 @@ export default class Experience {
         this.time.update(timestamp)
         this.worldCamera.update()
         this.world.update()
+        this.environment.update()
         this.renderer.render()
     }
 

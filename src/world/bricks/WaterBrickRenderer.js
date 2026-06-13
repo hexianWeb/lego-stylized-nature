@@ -32,6 +32,8 @@ export default class WaterBrickRenderer {
             this.capacity = Math.ceil(Math.max(cells.length, 1) * 1.2)
             this.mesh = new THREE.InstancedMesh(this.brickGeometry, this.material, this.capacity)
             this.mesh.name = 'WaterBrickInstances'
+            this.mesh.castShadow = true
+            this.mesh.receiveShadow = true
             this.group.add(this.mesh)
         }
 
