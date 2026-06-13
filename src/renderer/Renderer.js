@@ -1,5 +1,17 @@
-import * as THREE from 'three/webgpu'
-import { pass } from 'three/tsl'
+﻿import * as THREE from 'three/webgpu'
+import { pass, renderOutput, Fn, float, screenUV, smoothstep } from 'three/tsl'
+import { smaa } from 'three/addons/tsl/display/SMAANode.js'
+
+// dist is scaled so screen corners sit near 1.0 (~sqrt(2)/2 * 1.42)
+const VIGNETTE_INNER = 0.22
+const VIGNETTE_OUTER = 0.92
+const VIGNETTE_AMOUNT = 0.2
+
+const applyVignette = Fn(() => {
+    const dist = screenUV.sub(0.5).length().mul(1.42)
+    const mask = smoothstep(VIGNETTE_INNER, VIGNETTE_OUTER, dist)
+    return float(1.0).sub(mask.mul(VIGNETTE_AMOUNT))
+})
 
 export default class Renderer {
     /**
@@ -23,7 +35,13 @@ export default class Renderer {
      */
     attachPipeline(scene, camera) {
         const scenePass = pass(scene, camera)
-        this.renderPipeline = new THREE.RenderPipeline(this.instance, scenePass)
+        const color = renderOutput(scenePass)
+        const vignetted = color.mul(applyVignette())
+        const output = smaa(vignetted)
+
+        this.renderPipeline = new THREE.RenderPipeline(this.instance)
+        this.renderPipeline.outputColorTransform = false
+        this.renderPipeline.outputNode = output
     }
 
     async init() {
