@@ -5,7 +5,6 @@ export default [
 
   { name: 'waterBubbleModel', type: 'gltfModel', path: 'model/prefab/bubble.glb' },
   { name: 'waterDuckweedModel', type: 'gltfModel', path: 'model/prefab/duckweed.glb' },
-  { name: 'waterDuckweed2Model', type: 'gltfModel', path: 'model/prefab/duckweed_2.glb' },
 
   { name: 'commonRock1Model', type: 'gltfModel', path: 'model/prefab/rock_1.glb' },
   { name: 'commonRock2Model', type: 'gltfModel', path: 'model/prefab/rock_2.glb' },
@@ -17,8 +16,9 @@ export default [
   { name: 'autumnTreeModel', type: 'gltfModel', path: 'model/prefab/yellow_tree.glb' },
 
   { name: 'desertCactusModel', type: 'gltfModel', path: 'model/prefab/cactus.glb' },
-  { name: 'desertCactus2Model', type: 'gltfModel', path: 'model/prefab/cactus_2.glb' },
+  { name: 'skullModel', type: 'gltfModel', path: 'model/prefab/skull.glb' },
 
   { name: 'landGrassModel', type: 'gltfModel', path: 'model/prefab/grass.glb' },
+  { name: 'landGrass2Model', type: 'gltfModel', path: 'model/prefab/grass_2.glb' },
   { name: 'landFlowerModel', type: 'gltfModel', path: 'model/prefab/flower.glb' }
 ]
