@@ -31,21 +31,14 @@ export function pickVariantIndex(manifestEntry, x, z, seed) {
 
 export function makePrefabTransform({ x, z, height, manifestEntry, config, seed }) {
     const { cellSize, layerHeight } = config.terrain
-    const { rotationStep, scaleStep } = config.placement
+    const { rotationStep } = config.placement
 
     const rotationY = manifestEntry.randomRotation
         ? snapValue(random01(x, z, seed + 17) * Math.PI * 2, rotationStep)
         : 0
 
-    let scale = 1
-    if (manifestEntry.randomScale) {
-        const [min, max] = manifestEntry.randomScale
-        scale = snapValue(min + random01(x, z, seed + 23) * (max - min), scaleStep)
-    }
-
     return {
         position: [(x + 0.5) * cellSize, (height + 1) * layerHeight, (z + 0.5) * cellSize],
-        rotationY,
-        scale
+        rotationY
     }
 }

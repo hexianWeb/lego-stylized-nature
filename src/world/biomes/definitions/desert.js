@@ -13,6 +13,7 @@ export default {
   },
   prefabs: [
     { id: 'desertCactusSmall', density: 0.035, minHeight: 4, maxSlope: 1 },
+    { id: 'skull', density: 0.02, minHeight: 4, maxSlope: 2 },
     { id: 'commonRock', density: 0.05, minHeight: 4, maxSlope: 2 },
     { id: 'waterBubble', density: 0.015 },
     { id: 'waterDuckweed', density: 0.01 },

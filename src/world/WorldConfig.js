@@ -35,8 +35,8 @@ export const worldConfig = {
     ]
   },
   placement: {
-    rotationStep: Math.PI / 2,
-    scaleStep: 0.05
+    enableTrees: false,
+    rotationStep: Math.PI / 2
   },
   water: {
     color: '#2d9bd4',

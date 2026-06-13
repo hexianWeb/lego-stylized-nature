@@ -45,6 +45,10 @@ export default class PrefabPlacer {
                         continue
                     }
 
+                    if (this.config.placement.enableTrees === false && prefab.entry.category === 'tree') {
+                        continue
+                    }
+
                     if (!canPlacePrefab(rule, prefab.entry, biomeCell, surfaceCell)) {
                         continue
                     }
@@ -87,7 +91,7 @@ export default class PrefabPlacer {
         const composed = new THREE.Matrix4()
         const position = new THREE.Vector3()
         const quaternion = new THREE.Quaternion()
-        const scale = new THREE.Vector3()
+        const unitScale = new THREE.Vector3(1, 1, 1)
         const yAxis = new THREE.Vector3(0, 1, 0)
 
         sourceScene.traverse((child) => {
@@ -101,8 +105,7 @@ export default class PrefabPlacer {
             transforms.forEach((t, i) => {
                 position.fromArray(t.position)
                 quaternion.setFromAxisAngle(yAxis, t.rotationY)
-                scale.setScalar(t.scale)
-                instanceMatrix.compose(position, quaternion, scale)
+                instanceMatrix.compose(position, quaternion, unitScale)
                 composed.multiplyMatrices(instanceMatrix, child.matrixWorld)
                 mesh.setMatrixAt(i, composed)
             })

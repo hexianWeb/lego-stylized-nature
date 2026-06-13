@@ -22,14 +22,14 @@ export default class Environment {
             halfExtent: 14,
             maxHeight: 10
         }
-        this.directionalTarget = { x: 0, y: 0, z: 0 }
+        this.directionalTarget = { x: 12, y: 12, z: 12}
         this.autoTargetToTerrain = true
 
         this.ambientLight = new THREE.AmbientLight(0xffffff, 0.08)
         this.scene.add(this.ambientLight)
 
         this.directionalLight = new THREE.DirectionalLight(0xffffff, 1.85)
-        this.directionalLight.position.set(8, 26, 10)
+        this.directionalLight.position.set(8, 23, 10)
         this.directionalLight.castShadow = true
         this.directionalLight.shadow.mapSize.set(2048, 2048)
         this.directionalLight.shadow.bias = -0.0002
@@ -108,7 +108,7 @@ export default class Environment {
 
         if (this.autoTargetToTerrain) {
             this.directionalTarget.x = centerX
-            this.directionalTarget.y = 0
+            this.directionalTarget.y = 12
             this.directionalTarget.z = centerZ
         }
 
