@@ -11,7 +11,20 @@ export const worldConfig = {
     noiseOctaves: 4,
     noiseGain: 0.5,
     noiseLacunarity: 2,
-    seaClip: 0.35
+    seaClip: 0.35,
+    ao: {
+      enabled: true,
+      previewGrayscale: false,
+      strength: 1.4,
+      min: 0.2,
+      horizonScale: 2.5,
+      creviceScale: 2.5,
+      depthScale: 6.5,
+      horizonWeight: 0.61,
+      creviceWeight: 0.42,
+      depthWeight: 0.32,
+      sideWeight: 0.52
+    }
   },
   biomes: {
     regions: [
