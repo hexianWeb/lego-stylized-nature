@@ -3,6 +3,9 @@ import { random01, snapValue, pickWeighted } from '../../utils/random.js'
 export function canPlacePrefab(rule, manifestEntry, biomeCell, surfaceCell) {
     const placement = manifestEntry.placement ?? {}
 
+    if (surfaceCell.isLava) {
+        return false
+    }
     if (placement.surface === 'water' && !surfaceCell.isWater) {
         return false
     }
