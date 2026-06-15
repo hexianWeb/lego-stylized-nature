@@ -10,6 +10,7 @@ import BrickColorResolver from './bricks/BrickColorResolver.js'
 import HeightfieldAO from './bricks/HeightfieldAO.js'
 import TerrainBrickRenderer from './bricks/TerrainBrickRenderer.js'
 import WaterBrickRenderer from './bricks/WaterBrickRenderer.js'
+import LavaBrickRenderer from './bricks/LavaBrickRenderer.js'
 import PrefabRegistry from './prefabs/PrefabRegistry.js'
 import PrefabPlacer from './prefabs/PrefabPlacer.js'
 import { createTerrainPanel } from '../debug/panels/TerrainPanel.js'
@@ -44,6 +45,7 @@ export default class World {
         this.heightfieldAO = null
         this.terrainBrickRenderer = null
         this.waterBrickRenderer = null
+        this.lavaBrickRenderer = null
         this.prefabPlacer = null
     }
 
@@ -92,9 +94,15 @@ export default class World {
                 config: this.config,
                 brickGeometry: this.brickGeometry
             })
+            this.lavaBrickRenderer = new LavaBrickRenderer({
+                config: this.config,
+                brickGeometry: this.brickGeometry,
+                lavaConfig: this.biomeRegistry.get('volcano').lava
+            })
 
             this.addSystem(this.terrainBrickRenderer)
             this.addSystem(this.waterBrickRenderer)
+            this.addSystem(this.lavaBrickRenderer)
 
             const prefabRegistry = new PrefabRegistry(resources)
             this.prefabPlacer = new PrefabPlacer({
@@ -136,6 +144,7 @@ export default class World {
             this.heightfieldAO
         )
         this.waterBrickRenderer.build(this.terrainMap)
+        this.lavaBrickRenderer.build(this.terrainMap)
         this.prefabPlacer?.build(this.terrainMap)
         this.refreshAOPreview()
     }
@@ -151,6 +160,9 @@ export default class World {
 
         if (this.waterBrickRenderer?.group) {
             this.waterBrickRenderer.group.visible = !preview
+        }
+        if (this.lavaBrickRenderer?.group) {
+            this.lavaBrickRenderer.group.visible = !preview
         }
         if (this.prefabPlacer?.group) {
             this.prefabPlacer.group.visible = !preview
