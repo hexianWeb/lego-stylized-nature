@@ -73,7 +73,8 @@ export default class World {
             this.terrainGenerator = new TerrainGenerator({
                 config: this.config,
                 biomeMaskGenerator: this.biomeMaskGenerator,
-                biomeBlender: this.biomeBlender
+                biomeBlender: this.biomeBlender,
+                biomeRegistry: this.biomeRegistry
             })
             this.layeredTerrainBuilder = new LayeredTerrainBuilder({ config: this.config })
             this.brickColorResolver = new BrickColorResolver({

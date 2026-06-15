@@ -2,14 +2,19 @@ import { createNoise2D } from 'simplex-noise'
 import HeightField from './HeightField.js'
 import TerrainMap from './TerrainMap.js'
 import SurfaceClassifier from './SurfaceClassifier.js'
+import VolcanoSurfaceFeatureGenerator from './VolcanoSurfaceFeatureGenerator.js'
 import { mulberry32 } from '../../utils/random.js'
 
 export default class TerrainGenerator {
-  constructor({ config, biomeMaskGenerator, biomeBlender }) {
+  constructor({ config, biomeMaskGenerator, biomeBlender, biomeRegistry }) {
     this.config = config
     this.biomeMaskGenerator = biomeMaskGenerator
     this.biomeBlender = biomeBlender
     this.surfaceClassifier = new SurfaceClassifier(config)
+    this.volcanoSurfaceFeatureGenerator = new VolcanoSurfaceFeatureGenerator({
+      config,
+      biomeRegistry
+    })
   }
 
   generate() {
@@ -17,6 +22,7 @@ export default class TerrainGenerator {
     const biomeCells = this.biomeMaskGenerator.generate()
     const heightField = this.generateHeightField(biomeCells)
     const surfaceCells = this.surfaceClassifier.classify(heightField)
+    this.volcanoSurfaceFeatureGenerator.apply(biomeCells, surfaceCells)
     return new TerrainMap({ heightField, biomeCells, surfaceCells })
   }
 
