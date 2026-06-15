@@ -16,7 +16,9 @@ export default {
     { id: 'commonRock', density: 0.035, minHeight: 4, maxSlope: 2 },
     { id: 'waterBubble', density: 0.025 },
     { id: 'waterDuckweed', density: 0.04 },
+    { id: 'phragmites', density: 0.03 },
     { id: 'landFlower', density: 0.1, minHeight: 4, maxSlope: 2 },
-    { id: 'landGrass', density: 0.12, minHeight: 4, maxSlope: 2 }
+    { id: 'landGrass', density: 0.12, minHeight: 4, maxSlope: 2 },
+    { id: 'landMushroom', density: 0.06, minHeight: 4, maxSlope: 2 }
   ]
 }

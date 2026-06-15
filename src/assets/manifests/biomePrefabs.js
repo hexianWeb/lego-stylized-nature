@@ -15,6 +15,14 @@ export const biomePrefabs = {
     ],
     randomRotation: true
   },
+  phragmites: {
+    category: 'waterPlant',
+    placement: { surface: 'water' },
+    variants: [
+      { source: 'phragmitesModel', weight: 1 }
+    ],
+    randomRotation: true
+  },
   commonRock: {
     category: 'rock',
     placement: { surface: 'land' },
@@ -59,12 +67,31 @@ export const biomePrefabs = {
     ],
     randomRotation: true
   },
+  deadBush: {
+    category: 'plant',
+    placement: { surface: 'land', biomes: ['desert'] },
+    variants: [
+      { source: 'deadBushModel', weight: 1 }
+    ],
+    randomRotation: true
+  },
   landGrass: {
     category: 'flora',
     placement: { surface: 'land' },
     variants: [
       { source: 'landGrassModel', weight: 1 },
       { source: 'landGrass2Model', weight: 1 }
+    ],
+    randomRotation: true
+  },
+  landMushroom: {
+    category: 'flora',
+    placement: { surface: 'land' },
+    variants: [
+      { source: 'landMushroom1Model', weight: 1 },
+      { source: 'landMushroom2Model', weight: 1 },
+      { source: 'landMushroom3Model', weight: 1 },
+      { source: 'landMushroom4Model', weight: 1 }
     ],
     randomRotation: true
   },
