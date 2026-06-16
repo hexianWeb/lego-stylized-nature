@@ -97,7 +97,8 @@ export default class World {
             this.lavaBrickRenderer = new LavaBrickRenderer({
                 config: this.config,
                 brickGeometry: this.brickGeometry,
-                lavaConfig: this.biomeRegistry.get('volcano').lava
+                lavaConfig: this.biomeRegistry.get('volcano').lava,
+                lavaNoiseTexture: resources.items.lavaNoiseTexture
             })
 
             this.addSystem(this.terrainBrickRenderer)

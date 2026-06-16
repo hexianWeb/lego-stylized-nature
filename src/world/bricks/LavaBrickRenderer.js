@@ -2,10 +2,10 @@ import * as THREE from 'three/webgpu'
 import { createLavaMaterial } from '../../materials/tsl/lavaMaterial.js'
 
 export default class LavaBrickRenderer {
-  constructor({ config, brickGeometry, lavaConfig = {} }) {
+  constructor({ config, brickGeometry, lavaConfig = {}, lavaNoiseTexture = null }) {
     this.config = config
     this.brickGeometry = brickGeometry
-    this.material = createLavaMaterial(lavaConfig)
+    this.material = createLavaMaterial(lavaConfig, lavaNoiseTexture)
     this.group = new THREE.Group()
     this.group.name = 'LavaBricks'
     this.mesh = null
@@ -20,7 +20,7 @@ export default class LavaBrickRenderer {
       for (let x = 0; x < width; x++) {
         const surfaceCell = terrainMap.getSurfaceCell(x, z)
         if (surfaceCell.isLava) {
-          cells.push({ x, z, height: surfaceCell.height })
+          cells.push({ x, z, height: surfaceCell.lavaHeight ?? surfaceCell.height })
         }
       }
     }
@@ -42,7 +42,7 @@ export default class LavaBrickRenderer {
     cells.forEach((cell, i) => {
       matrix.setPosition(
         (cell.x + 0.5) * cellSize,
-        (cell.height + 1) * layerHeight,
+        cell.height * layerHeight,
         (cell.z + 0.5) * cellSize
       )
       this.mesh.setMatrixAt(i, matrix)

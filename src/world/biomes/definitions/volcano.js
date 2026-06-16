@@ -12,11 +12,10 @@ export default {
     }
   },
   lava: {
-    poolDensity: 0.2,
-    crackDensity: 0.3,
+    poolDensity: 0.22,
     minVolcanoWeight: 0.65,
-    poolNoiseScale: 30,
-    crackNoiseScale: 7,
+    poolCellScale: 18,
+    poolEdgeWarp: 0.12,
     maxSlope: 4,
     pulseSpeed: 1.35,
     glowStrength: 1.15,

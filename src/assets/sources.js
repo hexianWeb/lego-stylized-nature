@@ -1,5 +1,6 @@
 export default [
   { name: 'studioEnvMap', type: 'hdrTexture', path: 'hdri/grasslands_sunset_1k.hdr' },
+  { name: 'lavaNoiseTexture', type: 'texture', path: 'texture/lava-noise-ai.png' },
 
   { name: 'brick2x2Model', type: 'gltfModel', path: 'model/terrain/legoBlock2x2.glb' },
 

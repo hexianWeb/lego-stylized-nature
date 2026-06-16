@@ -11,8 +11,11 @@ test('volcano biome does not use forest or water prefabs', () => {
 
 test('volcano biome exposes lava tuning parameters', () => {
   assert.equal(typeof volcano.lava.poolDensity, 'number')
-  assert.equal(typeof volcano.lava.crackDensity, 'number')
+  assert.equal(typeof volcano.lava.poolCellScale, 'number')
+  assert.equal(typeof volcano.lava.poolEdgeWarp, 'number')
   assert.equal(typeof volcano.lava.minVolcanoWeight, 'number')
   assert.equal(typeof volcano.lava.pulseSpeed, 'number')
   assert.equal(typeof volcano.lava.glowStrength, 'number')
+  assert.equal('crackDensity' in volcano.lava, false)
+  assert.equal('crackNoiseScale' in volcano.lava, false)
 })

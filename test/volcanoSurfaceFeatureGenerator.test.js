@@ -26,10 +26,9 @@ const biomeRegistry = {
     return {
       lava: {
         poolDensity: 1,
-        crackDensity: 0,
         minVolcanoWeight: 0.65,
-        poolNoiseScale: 12,
-        crackNoiseScale: 6,
+        poolCellScale: 12,
+        poolEdgeWarp: 0,
         maxSlope: 4
       }
     }
@@ -64,4 +63,49 @@ test('does not mark water cells or weak volcano transition cells as lava', () =>
   assert.equal(surfaceCells[0][0].lavaType, null)
   assert.equal(surfaceCells[0][1].isLava, false)
   assert.equal(surfaceCells[0][1].lavaType, null)
+})
+
+test('ignores legacy crack lava tuning and only emits pool lava', () => {
+  const { biomeCells, surfaceCells } = makeCells({ width: 24, depth: 24 })
+  const generator = new VolcanoSurfaceFeatureGenerator({
+    config: { seed: 321, terrain: { width: 24, depth: 24 } },
+    biomeRegistry: {
+      get(id) {
+        assert.equal(id, 'volcano')
+        return {
+          lava: {
+            poolDensity: 0,
+            crackDensity: 1,
+            crackNoiseScale: 1,
+            minVolcanoWeight: 0.65,
+            poolCellScale: 12,
+            poolEdgeWarp: 0,
+            maxSlope: 4
+          }
+        }
+      }
+    }
+  })
+
+  generator.apply(biomeCells, surfaceCells)
+
+  assert.equal(surfaceCells.flat().some((cell) => cell.lavaType === 'crack'), false)
+  assert.equal(surfaceCells.flat().some((cell) => cell.isLava), false)
+})
+
+test('assigns each connected lava pool to its lowest covered surface height', () => {
+  const { biomeCells, surfaceCells } = makeCells({ width: 3, depth: 1 })
+  surfaceCells[0][0].height = 7
+  surfaceCells[0][1].height = 4
+  surfaceCells[0][2].height = 6
+
+  const generator = new VolcanoSurfaceFeatureGenerator({
+    config: { seed: 123, terrain: { width: 3, depth: 1 } },
+    biomeRegistry
+  })
+
+  generator.apply(biomeCells, surfaceCells)
+
+  assert.deepEqual(surfaceCells[0].map((cell) => cell.isLava), [true, true, true])
+  assert.deepEqual(surfaceCells[0].map((cell) => cell.lavaHeight), [4, 4, 4])
 })
