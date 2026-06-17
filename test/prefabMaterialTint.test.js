@@ -34,6 +34,14 @@ test('clones and strength-tints material color without mutating source', () => {
   assert.equal(result.version > 0, true)
 })
 
+test('can recolor green source material toward a warm biome tint', () => {
+  const source = new THREE.MeshBasicMaterial({ color: '#41a451' })
+
+  const result = resolvePrefabMaterial(source, { color: '#c6b56a', strength: 1 })
+
+  assert.equal(result.color.getHexString(), 'c6b56a')
+})
+
 test('clamps tint strength to the 0 to 1 range', () => {
   const source = new THREE.MeshBasicMaterial({ color: '#ffffff' })
 

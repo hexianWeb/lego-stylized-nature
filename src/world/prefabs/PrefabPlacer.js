@@ -1,6 +1,7 @@
 import * as THREE from 'three/webgpu'
 import { placementRandom01 } from '../../utils/random.js'
 import { canPlacePrefab, pickVariantIndex, makePrefabTransform } from './placementRules.js'
+import { resolvePrefabMaterial, disposeBiomeTintMaterial } from './prefabMaterialTint.js'
 
 export default class PrefabPlacer {
     constructor({ config, biomeRegistry, prefabRegistry }) {
@@ -16,13 +17,13 @@ export default class PrefabPlacer {
 
         const buckets = this.collectTransforms(terrainMap)
 
-        for (const [key, transforms] of buckets) {
-            const [prefabId, variantIndex] = key.split(':')
-            const gltf = this.prefabRegistry.getVariantAsset(prefabId, Number(variantIndex))
-            if (!gltf?.scene) {
+        for (const bucket of buckets.values()) {
+            const prefab = this.prefabRegistry.get(bucket.prefabId)
+            const gltf = this.prefabRegistry.getVariantAsset(bucket.prefabId, bucket.variantIndex)
+            if (!prefab || !gltf?.scene) {
                 continue
             }
-            this.group.add(this.buildVariantInstances(gltf.scene, transforms))
+            this.group.add(this.buildVariantInstances(gltf.scene, bucket.transforms, prefab.entry, bucket.tint))
         }
 
         return this.group
@@ -70,11 +71,21 @@ export default class PrefabPlacer {
                         seed
                     })
 
-                    const key = `${rule.id}:${variantIndex}`
+                    const tint = prefab.entry.biomeTints?.[biomeCell.biomeId] ?? null
+                    const bucketBiomeId = tint ? biomeCell.biomeId : null
+                    const key = bucketBiomeId
+                        ? `${rule.id}:${variantIndex}:${bucketBiomeId}`
+                        : `${rule.id}:${variantIndex}`
                     if (!buckets.has(key)) {
-                        buckets.set(key, [])
+                        buckets.set(key, {
+                            prefabId: rule.id,
+                            variantIndex,
+                            biomeId: bucketBiomeId,
+                            tint,
+                            transforms: []
+                        })
                     }
-                    buckets.get(key).push(transform)
+                    buckets.get(key).transforms.push(transform)
                     break
                 }
             }
@@ -83,7 +94,7 @@ export default class PrefabPlacer {
         return buckets
     }
 
-    buildVariantInstances(sourceScene, transforms) {
+    buildVariantInstances(sourceScene, transforms, prefabEntry, tint) {
         sourceScene.updateMatrixWorld(true)
 
         const variantGroup = new THREE.Group()
@@ -99,7 +110,8 @@ export default class PrefabPlacer {
                 return
             }
 
-            const mesh = new THREE.InstancedMesh(child.geometry, child.material, transforms.length)
+            const material = resolvePrefabMaterial(child.material, tint)
+            const mesh = new THREE.InstancedMesh(child.geometry, material, transforms.length)
             mesh.castShadow = true
             mesh.receiveShadow = true
             transforms.forEach((t, i) => {
@@ -121,6 +133,7 @@ export default class PrefabPlacer {
         for (const child of children) {
             child.traverse((node) => {
                 if (node.isInstancedMesh) {
+                    disposeBiomeTintMaterial(node.material)
                     node.dispose()
                 }
             })

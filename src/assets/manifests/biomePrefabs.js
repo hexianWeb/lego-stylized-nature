@@ -32,7 +32,13 @@ export const biomePrefabs = {
       { source: 'commonRock3Model', weight: 1 },
       { source: 'commonRock4Model', weight: 1 }
     ],
-    randomRotation: true
+    randomRotation: true,
+    biomeTints: {
+      forest: { color: '#7a8178', strength: 0.35 },
+      autumnForest: { color: '#9a7a55', strength: 0.4 },
+      desert: { color: '#b59a68', strength: 0.45 },
+      volcano: { color: '#3a3a3a', strength: 0.65 }
+    }
   },
   forestTree: {
     category: 'tree',
@@ -82,7 +88,12 @@ export const biomePrefabs = {
       { source: 'landGrassModel', weight: 1 },
       { source: 'landGrass2Model', weight: 1 }
     ],
-    randomRotation: true
+    randomRotation: true,
+    biomeTints: {
+      forest: { color: '#67b65d', strength: 0.35 },
+      autumnForest: { color: '#c99a42', strength: 0.55 },
+      desert: { color: '#c6b56a', strength: 1 }
+    }
   },
   landMushroom: {
     category: 'flora',

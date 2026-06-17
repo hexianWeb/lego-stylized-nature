@@ -37,7 +37,7 @@ function resolveSinglePrefabMaterial(sourceMaterial, normalizedTint) {
 
   const clone = sourceMaterial.clone()
   const sourceColor = sourceMaterial.color?.clone?.() ?? new THREE.Color(0xffffff)
-  const targetColor = sourceColor.clone().multiply(normalizedTint.color)
+  const targetColor = normalizedTint.color
 
   clone.color = sourceColor.clone().lerp(targetColor, normalizedTint.strength)
   clone.userData = {
