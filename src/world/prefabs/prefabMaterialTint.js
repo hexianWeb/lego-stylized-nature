@@ -51,13 +51,14 @@ function normalizeTint(tint) {
     return null
   }
 
-  const color = new THREE.Color()
-  try {
-    color.set(tint.color)
-  } catch {
+  const colorString = tint.color.trim()
+  if (!isUsableTintColorString(colorString)) {
     console.warn('Invalid prefab biome tint color:', tint.color)
     return null
   }
+
+  const color = new THREE.Color()
+  color.set(colorString)
 
   const strength = Number.isFinite(tint.strength) ? tint.strength : 1
 
@@ -65,4 +66,28 @@ function normalizeTint(tint) {
     color,
     strength: THREE.MathUtils.clamp(strength, 0, 1)
   }
+}
+
+function isUsableTintColorString(color) {
+  if (color.length === 0) {
+    return false
+  }
+
+  if (/^#[A-Fa-f\d]{3}$/.test(color) || /^#[A-Fa-f\d]{6}$/.test(color)) {
+    return true
+  }
+
+  if (/^(rgb|rgba)\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*(?:,\s*(\d*\.?\d+)\s*)?\)$/.test(color)) {
+    return true
+  }
+
+  if (/^(rgb|rgba)\(\s*(\d+)%\s*,\s*(\d+)%\s*,\s*(\d+)%\s*(?:,\s*(\d*\.?\d+)\s*)?\)$/.test(color)) {
+    return true
+  }
+
+  if (/^(hsl|hsla)\(\s*(\d*\.?\d+)\s*,\s*(\d*\.?\d+)%\s*,\s*(\d*\.?\d+)%\s*(?:,\s*(\d*\.?\d+)\s*)?\)$/.test(color)) {
+    return true
+  }
+
+  return THREE.Color.NAMES[color.toLowerCase()] !== undefined
 }

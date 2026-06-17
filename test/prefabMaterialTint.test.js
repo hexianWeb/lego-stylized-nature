@@ -53,6 +53,32 @@ test('returns source material and warns when tint color is not usable', () => {
   }
 })
 
+test('returns source material and warns when tint color string is invalid', () => {
+  const source = new THREE.MeshBasicMaterial({ color: '#808080' })
+  const originalWarn = console.warn
+  const warnings = []
+  console.warn = (message) => warnings.push(message)
+
+  try {
+    const result = resolvePrefabMaterial(source, { color: 'not-a-color', strength: 0.5 })
+
+    assert.equal(result, source)
+    assert.equal(warnings.length, 1)
+    assert.match(warnings[0], /Invalid prefab biome tint color/)
+  } finally {
+    console.warn = originalWarn
+  }
+})
+
+test('accepts valid CSS tint color strings', () => {
+  const source = new THREE.MeshBasicMaterial({ color: '#ffffff' })
+
+  const result = resolvePrefabMaterial(source, { color: 'rgb(0, 0, 0)', strength: 1 })
+
+  assert.notEqual(result, source)
+  assert.equal(result.color.getHexString(), '000000')
+})
+
 test('preserves material array order when tinting', () => {
   const first = new THREE.MeshBasicMaterial({ color: '#ffffff' })
   const second = new THREE.MeshBasicMaterial({ color: '#808080' })
