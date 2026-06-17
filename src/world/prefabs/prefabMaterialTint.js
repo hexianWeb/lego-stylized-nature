@@ -3,6 +3,10 @@ import * as THREE from 'three/webgpu'
 const TINT_CLONE_FLAG = 'isBiomeTintClone'
 
 export function resolvePrefabMaterial(sourceMaterial, tint) {
+  if (!tint) {
+    return sourceMaterial
+  }
+
   if (Array.isArray(sourceMaterial)) {
     return sourceMaterial.map((material) => resolveSinglePrefabMaterial(material, tint))
   }

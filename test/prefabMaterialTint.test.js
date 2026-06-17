@@ -14,6 +14,14 @@ test('returns source material when tint is null', () => {
   assert.equal(result, source)
 })
 
+test('returns source material array when tint is null', () => {
+  const source = [new THREE.MeshBasicMaterial({ color: '#808080' })]
+
+  const result = resolvePrefabMaterial(source, null)
+
+  assert.equal(result, source)
+})
+
 test('clones and strength-tints material color without mutating source', () => {
   const source = new THREE.MeshBasicMaterial({ color: '#ffffff' })
 
