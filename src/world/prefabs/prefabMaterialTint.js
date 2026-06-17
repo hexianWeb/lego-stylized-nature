@@ -7,11 +7,16 @@ export function resolvePrefabMaterial(sourceMaterial, tint) {
     return sourceMaterial
   }
 
-  if (Array.isArray(sourceMaterial)) {
-    return sourceMaterial.map((material) => resolveSinglePrefabMaterial(material, tint))
+  const normalized = normalizeTint(tint)
+  if (!normalized) {
+    return sourceMaterial
   }
 
-  return resolveSinglePrefabMaterial(sourceMaterial, tint)
+  if (Array.isArray(sourceMaterial)) {
+    return sourceMaterial.map((material) => resolveSinglePrefabMaterial(material, normalized))
+  }
+
+  return resolveSinglePrefabMaterial(sourceMaterial, normalized)
 }
 
 export function disposeBiomeTintMaterial(material) {
@@ -25,21 +30,16 @@ export function disposeBiomeTintMaterial(material) {
   }
 }
 
-function resolveSinglePrefabMaterial(sourceMaterial, tint) {
-  if (!sourceMaterial || !tint) {
-    return sourceMaterial
-  }
-
-  const normalized = normalizeTint(tint)
-  if (!normalized) {
+function resolveSinglePrefabMaterial(sourceMaterial, normalizedTint) {
+  if (!sourceMaterial || !normalizedTint) {
     return sourceMaterial
   }
 
   const clone = sourceMaterial.clone()
   const sourceColor = sourceMaterial.color?.clone?.() ?? new THREE.Color(0xffffff)
-  const targetColor = sourceColor.clone().multiply(normalized.color)
+  const targetColor = sourceColor.clone().multiply(normalizedTint.color)
 
-  clone.color = sourceColor.clone().lerp(targetColor, normalized.strength)
+  clone.color = sourceColor.clone().lerp(targetColor, normalizedTint.strength)
   clone.userData = {
     ...clone.userData,
     [TINT_CLONE_FLAG]: true
