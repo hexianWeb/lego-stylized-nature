@@ -40,20 +40,31 @@ export const biomePrefabs = {
       volcano: { color: '#3a3a3a', strength: 0.65 }
     }
   },
-  forestTree: {
-    category: 'tree',
-    placement: { surface: 'land', biomes: ['forest'] },
+  volcanoRock: {
+    category: 'rock',
+    placement: { surface: 'land', biomes: ['volcano'] },
     variants: [
-      { source: 'forestTreeGreenModel', weight: 1 },
-      // { source: 'forestTreeCoconutModel', weight: 1 }
+      { source: 'volcanoRockModel', weight: 0.3 },
+      { source: 'volcanoRock2Model', weight: 0.7 }
     ],
-    randomRotation: false
+    randomRotation: true,
+    instanceColors: {
+      meshNameSuffix: '_InstanceColor',
+      palette: [  '#ff6a00',
+        '#ff9a1f',
+        '#d94212',
+        '#8f1f14',
+        '#b45a1c',
+      ]
+    }
   },
-  autumnTree: {
+  tree: {
     category: 'tree',
-    placement: { surface: 'land', biomes: ['autumnForest'] },
+    placement: { surface: 'land', biomes: ['forest', 'autumnForest'] },
     variants: [
-      { source: 'autumnTreeModel', weight: 1 }
+      { source: 'treeModel', weight: 1 },
+      { source: 'fruitTreeModel', weight: 1 },
+      { source: 'cTreeModel', weight: 1 }
     ],
     randomRotation: false
   },
@@ -117,7 +128,7 @@ export const biomePrefabs = {
     randomRotation: true,
     instanceColors: {
       meshNameSuffix: '_InstanceColor',
-      palette: ['#ff0000', '#ffff00', '#ffffff']
+      palette: ['#ff1111', '#ffff00', '#ffffff']
     }
   }
 }

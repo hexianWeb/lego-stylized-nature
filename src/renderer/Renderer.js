@@ -23,7 +23,7 @@ export default class Renderer {
             forceWebGL: false
         })
         this.instance.outputColorSpace = THREE.SRGBColorSpace
-        this.instance.toneMapping = THREE.CineonToneMapping
+        this.instance.toneMapping = THREE.ACESFilmicToneMapping
         this.instance.toneMappingExposure = 1.0
         this.instance.shadowMap.enabled = true
         this.instance.shadowMap.type = THREE.PCFShadowMap

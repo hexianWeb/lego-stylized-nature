@@ -12,7 +12,7 @@ export default {
     }
   },
   prefabs: [
-    { id: 'autumnTree', density: 0.025, minHeight: 4, maxSlope: 2 },
+    { id: 'tree', density: 0.025, minHeight: 4, maxSlope: 2 },
     { id: 'commonRock', density: 0.04, minHeight: 4, maxSlope: 2 },
     { id: 'waterBubble', density: 0.02 },
     { id: 'waterDuckweed', density: 0.035 },

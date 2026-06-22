@@ -2,6 +2,7 @@ import * as THREE from 'three/webgpu'
 import { placementRandom01 } from '../../utils/random.js'
 import { canPlacePrefab, pickVariantIndex, makePrefabTransform } from './placementRules.js'
 import { resolvePrefabMaterial, disposeBiomeTintMaterial } from './prefabMaterialTint.js'
+import { resolveTreeMaterial, resolveTreeInstanceColor, disposeTreeMaterials } from './treeMaterial.js'
 import {
     normalizeInstanceColors,
     pickInstanceColorIndex,
@@ -38,7 +39,8 @@ export default class PrefabPlacer {
                     bucket.transforms,
                     prefab.entry,
                     bucket.tint,
-                    bucket.prefabId
+                    bucket.prefabId,
+                    bucket.biomeId
                 )
             )
         }
@@ -99,7 +101,8 @@ export default class PrefabPlacer {
                     }
 
                     const tint = prefab.entry.biomeTints?.[biomeCell.biomeId] ?? null
-                    const bucketBiomeId = tint ? biomeCell.biomeId : null
+                    const isTree = prefab.entry.category === 'tree'
+                    const bucketBiomeId = tint || isTree ? biomeCell.biomeId : null
                     const key = bucketBiomeId
                         ? `${rule.id}:${variantIndex}:${bucketBiomeId}`
                         : `${rule.id}:${variantIndex}`
@@ -121,7 +124,7 @@ export default class PrefabPlacer {
         return buckets
     }
 
-    buildVariantInstances(sourceScene, transforms, prefabEntry, tint, prefabId = 'unknown') {
+    buildVariantInstances(sourceScene, transforms, prefabEntry, tint, prefabId = 'unknown', biomeId = null) {
         sourceScene.updateMatrixWorld(true)
 
         const variantGroup = new THREE.Group()
@@ -145,9 +148,13 @@ export default class PrefabPlacer {
             if (usesInstanceColor) {
                 matchedInstanceColorMesh = true
             }
-            const material = usesInstanceColor
-                ? resolveInstanceColorMaterial(child.material)
-                : resolvePrefabMaterial(child.material, tint)
+            const biome = biomeId ? this.biomeRegistry.get(biomeId) : null
+            const isTree = prefabEntry.category === 'tree'
+            const material = isTree
+                ? resolveTreeMaterial(child, biomeId) ?? resolvePrefabMaterial(child.material, tint)
+                : usesInstanceColor
+                    ? resolveInstanceColorMaterial(child.material)
+                    : resolvePrefabMaterial(child.material, tint)
             const mesh = new THREE.InstancedMesh(child.geometry, material, transforms.length)
             mesh.castShadow = true
             mesh.receiveShadow = true
@@ -157,7 +164,19 @@ export default class PrefabPlacer {
                 instanceMatrix.compose(position, quaternion, unitScale)
                 composed.multiplyMatrices(instanceMatrix, child.matrixWorld)
                 mesh.setMatrixAt(i, composed)
-                if (usesInstanceColor) {
+                if (isTree && biome) {
+                    const treeColor = resolveTreeInstanceColor(
+                        child,
+                        biome,
+                        t.x ?? 0,
+                        t.y ?? 0,
+                        t.z ?? 0,
+                        this.config.seed
+                    )
+                    if (treeColor) {
+                        mesh.setColorAt(i, treeColor)
+                    }
+                } else if (usesInstanceColor) {
                     const colorIndex = Number.isInteger(t.instanceColorIndex)
                         ? t.instanceColorIndex
                         : 0
@@ -209,6 +228,7 @@ export default class PrefabPlacer {
             })
             this.group.remove(child)
         }
+        disposeTreeMaterials()
     }
 
     dispose() {

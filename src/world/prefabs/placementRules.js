@@ -42,6 +42,9 @@ export function makePrefabTransform({ x, z, height, manifestEntry, config, seed 
 
     return {
         position: [(x + 0.5) * cellSize, (height + 1) * layerHeight, (z + 0.5) * cellSize],
-        rotationY
+        rotationY,
+        x,
+        y: height,
+        z
     }
 }

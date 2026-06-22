@@ -12,10 +12,12 @@ export default [
   { name: 'commonRock2Model', type: 'gltfModel', path: 'model/prefab/rock_2.glb' },
   { name: 'commonRock3Model', type: 'gltfModel', path: 'model/prefab/rock_3.glb' },
   { name: 'commonRock4Model', type: 'gltfModel', path: 'model/prefab/rock_4.glb' },
+  { name: 'volcanoRockModel', type: 'gltfModel', path: 'model/prefab/volcano_rock.glb' },
+  { name: 'volcanoRock2Model', type: 'gltfModel', path: 'model/prefab/volcano_rock_2.glb' },
 
-  { name: 'forestTreeGreenModel', type: 'gltfModel', path: 'model/prefab/green_tree.glb' },
-  { name: 'forestTreeCoconutModel', type: 'gltfModel', path: 'model/prefab/coconut_tree.glb' },
-  { name: 'autumnTreeModel', type: 'gltfModel', path: 'model/prefab/yellow_tree.glb' },
+  { name: 'treeModel', type: 'gltfModel', path: 'model/tree/tree.glb' },
+  { name: 'fruitTreeModel', type: 'gltfModel', path: 'model/tree/fruittree.glb' },
+  { name: 'cTreeModel', type: 'gltfModel', path: 'model/tree/Ctree.glb' },
 
   { name: 'desertCactusModel', type: 'gltfModel', path: 'model/prefab/cactus.glb' },
   { name: 'skullModel', type: 'gltfModel', path: 'model/prefab/skull.glb' },

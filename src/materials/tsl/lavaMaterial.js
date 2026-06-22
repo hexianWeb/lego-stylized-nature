@@ -61,10 +61,21 @@ export function createLavaMaterial(lavaConfig = {}, lavaNoiseTexture = null) {
     material.userData.lavaNoiseTexture = lavaNoiseTexture
   }
 
-  const lavaColor = mix(color('#ff3b00'), color('#ffd45a'), heat)
+  const crustDark = color('#4B0000')
+  const crustVein = color('#8B0000')
+  const magmaDeep = color('#E25822')
+  const magmaBright = color('#FF8C00')
+  const hotSpot = color('#FFCC00')
+  const coreHeat = color('#FFD700')
+
+  let lavaColor = mix(crustDark, crustVein, smoothstep(0.0, 0.25, heat))
+  lavaColor = mix(lavaColor, magmaDeep, smoothstep(0.2, 0.45, heat))
+  lavaColor = mix(lavaColor, magmaBright, smoothstep(0.4, 0.65, heat))
+  lavaColor = mix(lavaColor, hotSpot, smoothstep(0.6, 0.82, heat))
+  lavaColor = mix(lavaColor, coreHeat, smoothstep(0.78, 1.0, heat))
 
   material.colorNode = lavaColor
-  material.emissiveNode = color('#ff4a00').mul(heat.mul(uGlowStrength))
+  material.emissiveNode = mix(magmaDeep, coreHeat, heat).mul(heat.mul(uGlowStrength))
   material.roughness = lavaConfig.roughness ?? 0.34
   material.metalness = 0
   material.userData.uniforms = {

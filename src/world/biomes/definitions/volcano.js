@@ -22,6 +22,6 @@ export default {
     roughness: 0.34
   },
   prefabs: [
-    { id: 'commonRock', density: 0.09, minHeight: 5, maxSlope: 3 }
+    { id: 'volcanoRock', density: 0.09, minHeight: 5, maxSlope: 3 }
   ]
 }

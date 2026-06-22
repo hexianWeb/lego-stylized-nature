@@ -35,12 +35,10 @@ export const worldConfig = {
     ]
   },
   placement: {
-    enableTrees: false,
+    enableTrees: true,
     rotationStep: Math.PI / 2
   },
   water: {
-    color: '#2d9bd4',
-    rippleStrength: 0.06,
-    rippleSpeed: 0.6
+    color: '#45a0f1'
   }
 }

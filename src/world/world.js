@@ -186,7 +186,6 @@ export default class World {
         createBiomePanel(debug, this.config, onRegenerate)
         createPlacementPanel(debug, this.config, onRegenerate)
         createMaterialPanel(debug, this.config, {
-            waterMaterial: this.waterBrickRenderer?.material,
             legoMaterial: this.terrainBrickRenderer?.material
         })
 
