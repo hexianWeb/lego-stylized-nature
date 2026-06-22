@@ -3,79 +3,58 @@ import {
   color,
   mix,
   positionWorld,
-  sin,
-  smoothstep,
-  time,
-  uniform,
+  step,
+  texture,
+  uniform
 } from 'three/tsl'
 
-export function createWaterMaterial(waterConfig = {}, baseColor = null) {
+function configureWaterNoiseTexture(waterNoiseTexture) {
+  waterNoiseTexture.wrapS = THREE.RepeatWrapping
+  waterNoiseTexture.wrapT = THREE.RepeatWrapping
+  waterNoiseTexture.colorSpace = THREE.NoColorSpace
+  waterNoiseTexture.needsUpdate = true
+}
+
+export function createWaterMaterial(waterConfig = {}, waterNoiseTexture = null) {
   const material = new THREE.MeshPhysicalNodeMaterial()
-  const uRippleSpeed = uniform(waterConfig.rippleSpeed ?? 0.75)
-  const uRippleScale = uniform(waterConfig.rippleScale ?? 7)
-  const uRippleStrength = uniform(waterConfig.rippleStrength ?? 0.12)
-  const uDetailScale = uniform(waterConfig.detailScale ?? 18)
-  const uDetailStrength = uniform(waterConfig.detailStrength ?? 0.035)
-  const uHighlightStrength = uniform(waterConfig.highlightStrength ?? 0.24)
+  const darkColor = color(waterConfig.darkColor ?? '#0757A6')
+  const midColor = color(waterConfig.midColor ?? '#168FD2')
+  const lightColor = color(waterConfig.lightColor ?? '#42DDEB')
 
-  const phase = time.mul(uRippleSpeed)
-  const primary = sin(
-    positionWorld.x
-      .mul(uRippleScale)
-      .add(positionWorld.z.mul(uRippleScale).mul(0.62))
-      .add(phase),
-  )
-    .mul(0.5)
-    .add(0.5)
-  const crossing = sin(
-    positionWorld.x
-      .mul(uRippleScale)
-      .mul(-0.48)
-      .add(positionWorld.z.mul(uRippleScale).mul(0.87))
-      .sub(phase.mul(1.17)),
-  )
-    .mul(0.5)
-    .add(0.5)
-  const detail = sin(
-    positionWorld.x
-      .mul(uDetailScale)
-      .add(positionWorld.z.mul(uDetailScale).mul(-0.73))
-      .add(phase.mul(1.9)),
-  )
-    .mul(0.5)
-    .add(0.5)
+  material.userData.uniforms = {}
 
-  const broadRipple = primary.mul(0.58).add(crossing.mul(0.42))
-  const rippleBrightness = broadRipple.sub(0.5).mul(uRippleStrength)
-  const highlightMask = smoothstep(0.68, 0.9, broadRipple)
-    .add(detail.mul(uDetailStrength))
-    .mul(uHighlightStrength)
-  const waterColor = color(
-    baseColor ??
-      waterConfig.transitionColor ??
-      waterConfig.color ??
-      '#168FD2',
-  )
+  if (waterNoiseTexture) {
+    configureWaterNoiseTexture(waterNoiseTexture)
 
-  material.colorNode = mix(
-    waterColor.add(rippleBrightness),
-    color(waterConfig.highlightColor ?? '#BDF8FF'),
-    highlightMask,
-  )
+    const uTextureScale = uniform(waterConfig.textureScale ?? 0.45)
+    const noiseValue = texture(
+      waterNoiseTexture,
+      positionWorld.xz.mul(uTextureScale)
+    ).r
+    const darkToMid = mix(darkColor, midColor, noiseValue.mul(2))
+    const midToLight = mix(
+      midColor,
+      lightColor,
+      noiseValue.sub(0.5).mul(2)
+    )
+
+    material.colorNode = mix(
+      darkToMid,
+      midToLight,
+      step(0.5, noiseValue)
+    )
+    material.userData.uniforms.uTextureScale = uTextureScale
+    material.userData.waterNoiseTexture = waterNoiseTexture
+  } else {
+    material.colorNode = midColor
+  }
+
   material.roughness = waterConfig.roughness ?? 0.3
   material.metalness = 0
   material.clearcoat = waterConfig.clearcoat ?? 0.45
   material.clearcoatRoughness = waterConfig.clearcoatRoughness ?? 0.2
   material.opacity = 1
   material.transparent = false
-  material.userData.uniforms = {
-    uRippleSpeed,
-    uRippleScale,
-    uRippleStrength,
-    uDetailScale,
-    uDetailStrength,
-    uHighlightStrength,
-  }
 
   return material
 }
