@@ -2,6 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import * as THREE from 'three/webgpu'
 import { createWaterMaterial } from '../src/materials/tsl/waterMaterial.js'
+import WaterBrickRenderer from '../src/world/bricks/WaterBrickRenderer.js'
 
 test('creates static noise-mixed water material with a plain-color fallback', () => {
   const noiseTexture = new THREE.Texture()
@@ -31,4 +32,60 @@ test('creates static noise-mixed water material with a plain-color fallback', ()
   assert.equal(texturedMaterial.transparent, false)
   assert.equal(texturedMaterial.opacity, 1)
   assert.equal(texturedMaterial.metalness, 0)
+})
+
+test('maintains one reusable water mesh and disposes owned resources', () => {
+  const renderer = new WaterBrickRenderer({
+    config: {
+      terrain: {
+        width: 3,
+        depth: 1,
+        cellSize: 0.2,
+        layerHeight: 1,
+        waterLevel: 4
+      },
+      water: {}
+    },
+    brickGeometry: new THREE.BoxGeometry(1, 1, 1),
+    waterNoiseTexture: new THREE.Texture()
+  })
+  let cells = [
+    { isWater: true },
+    { isWater: true },
+    { isWater: false }
+  ]
+  const terrainMap = {
+    getSurfaceCell(x) {
+      return cells[x]
+    }
+  }
+
+  renderer.build(terrainMap)
+  const firstMesh = renderer.mesh
+
+  assert.equal(renderer.group.children.length, 1)
+  assert.equal(renderer.mesh.name, 'WaterBrickInstances')
+  assert.equal(renderer.mesh.count, 2)
+
+  cells = [
+    { isWater: true },
+    { isWater: false },
+    { isWater: false }
+  ]
+  renderer.build(terrainMap)
+
+  assert.equal(renderer.mesh, firstMesh)
+  assert.equal(renderer.group.children.length, 1)
+  assert.equal(renderer.mesh.count, 1)
+
+  let materialDisposed = false
+  renderer.material.dispose = () => {
+    materialDisposed = true
+  }
+  renderer.dispose()
+
+  assert.equal(materialDisposed, true)
+  assert.equal(renderer.mesh, null)
+  assert.equal(renderer.capacity, 0)
+  assert.equal(renderer.group.children.length, 0)
 })
