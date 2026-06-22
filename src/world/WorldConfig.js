@@ -39,6 +39,12 @@ export const worldConfig = {
     rotationStep: Math.PI / 2
   },
   water: {
-    color: '#45a0f1'
+    darkColor: '#0757A6',
+    midColor: '#168FD2',
+    lightColor: '#42DDEB',
+    textureScale: 0.3,
+    roughness: 0.3,
+    clearcoat: 0.45,
+    clearcoatRoughness: 0.2
   }
 }

@@ -92,7 +92,8 @@ export default class World {
             })
             this.waterBrickRenderer = new WaterBrickRenderer({
                 config: this.config,
-                brickGeometry: this.brickGeometry
+                brickGeometry: this.brickGeometry,
+                waterNoiseTexture: resources.items.waterNoiseTexture
             })
             this.lavaBrickRenderer = new LavaBrickRenderer({
                 config: this.config,
@@ -186,7 +187,8 @@ export default class World {
         createBiomePanel(debug, this.config, onRegenerate)
         createPlacementPanel(debug, this.config, onRegenerate)
         createMaterialPanel(debug, this.config, {
-            legoMaterial: this.terrainBrickRenderer?.material
+            legoMaterial: this.terrainBrickRenderer?.material,
+            waterMaterial: this.waterBrickRenderer?.material
         })
 
         for (const child of this.children) {
