@@ -39,6 +39,21 @@ export const worldConfig = {
     rotationStep: Math.PI / 2
   },
   water: {
-    color: '#45a0f1'
+    shallowColor: '#42DDEB',
+    transitionColor: '#168FD2',
+    deepColor: '#0757A6',
+    highlightColor: '#BDF8FF',
+    shallowMaxDepth: 1,
+    transitionMaxDepth: 3,
+    rippleSpeed: 0.75,
+    rippleScale: 7,
+    rippleStrength: 0.12,
+    detailScale: 18,
+    detailStrength: 0.035,
+    highlightStrength: 0.24,
+    roughness: 0.3,
+    clearcoat: 0.45,
+    clearcoatRoughness: 0.2,
+    opacity: 1
   }
 }

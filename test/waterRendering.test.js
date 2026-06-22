@@ -1,6 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import * as THREE from 'three/webgpu'
+import { createMaterialPanel } from '../src/debug/panels/MaterialPanel.js'
 import { createWaterMaterial } from '../src/materials/tsl/waterMaterial.js'
 import WaterBrickRenderer from '../src/world/bricks/WaterBrickRenderer.js'
 import { WATER_BUCKETS, classifyWaterDepth } from '../src/world/bricks/waterDepth.js'
@@ -204,5 +205,65 @@ test('disposes all water bucket materials and clears owned meshes', () => {
   for (const bucket of Object.values(renderer.buckets)) {
     assert.equal(bucket.mesh, null)
     assert.equal(bucket.capacity, 0)
+  }
+})
+
+function createFakeFolder(bindings) {
+  return {
+    addFolder() {
+      return createFakeFolder(bindings)
+    },
+    addBinding(target, key) {
+      const handlers = {}
+      const binding = {
+        target,
+        key,
+        on(event, handler) {
+          handlers[event] = handler
+          return binding
+        },
+        emit(event, value) {
+          handlers[event]?.({ value })
+        },
+      }
+      bindings.push(binding)
+      return binding
+    },
+  }
+}
+
+test('water material panel synchronizes uniform and physical values', () => {
+  const bindings = []
+  const debug = {
+    addFolder() {
+      return createFakeFolder(bindings)
+    },
+  }
+  const config = {
+    water: {
+      rippleSpeed: 0.75,
+      rippleScale: 7,
+      rippleStrength: 0.12,
+      detailScale: 18,
+      detailStrength: 0.035,
+      highlightStrength: 0.24,
+      roughness: 0.3,
+      clearcoat: 0.45,
+      clearcoatRoughness: 0.2,
+    },
+  }
+  const waterMaterials = [
+    createWaterMaterial(config.water, '#42DDEB'),
+    createWaterMaterial(config.water, '#168FD2'),
+    createWaterMaterial(config.water, '#0757A6'),
+  ]
+
+  createMaterialPanel(debug, config, { waterMaterials })
+  bindings.find((binding) => binding.key === 'rippleSpeed').emit('change', 1.1)
+  bindings.find((binding) => binding.key === 'roughness').emit('change', 0.4)
+
+  for (const material of waterMaterials) {
+    assert.equal(material.userData.uniforms.uRippleSpeed.value, 1.1)
+    assert.equal(material.roughness, 0.4)
   }
 })

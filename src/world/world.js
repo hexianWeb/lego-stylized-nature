@@ -186,7 +186,8 @@ export default class World {
         createBiomePanel(debug, this.config, onRegenerate)
         createPlacementPanel(debug, this.config, onRegenerate)
         createMaterialPanel(debug, this.config, {
-            legoMaterial: this.terrainBrickRenderer?.material
+            legoMaterial: this.terrainBrickRenderer?.material,
+            waterMaterials: this.waterBrickRenderer?.materials ?? []
         })
 
         for (const child of this.children) {
