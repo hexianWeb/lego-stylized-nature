@@ -37,7 +37,6 @@ test('creates animated physical water material with configurable uniforms', () =
     detailStrength: 0.06,
     highlightStrength: 0.4,
     roughness: 0.18,
-    metalness: 0.08,
     clearcoat: 0.7,
     clearcoatRoughness: 0.05,
   }
@@ -47,7 +46,7 @@ test('creates animated physical water material with configurable uniforms', () =
   assert.ok(material instanceof THREE.MeshPhysicalNodeMaterial)
   assert.ok(material.colorNode)
   assert.equal(material.roughness, 0.18)
-  assert.equal(material.metalness, 0.08)
+  assert.equal(material.metalness, 0)
   assert.equal(material.clearcoat, 0.7)
   assert.equal(material.clearcoatRoughness, 0.05)
   assert.equal(material.transparent, false)
@@ -89,4 +88,16 @@ test('preserves explicit zero values in water material configuration', () => {
   assert.equal(material.userData.uniforms.uRippleStrength.value, 0)
   assert.equal(material.userData.uniforms.uDetailStrength.value, 0)
   assert.equal(material.userData.uniforms.uHighlightStrength.value, 0)
+})
+
+test('keeps water nonmetallic and in the opaque render path', () => {
+  const material = createWaterMaterial({
+    metalness: 1,
+    opacity: 0.2,
+    transparent: true,
+  })
+
+  assert.equal(material.metalness, 0)
+  assert.equal(material.opacity, 1)
+  assert.equal(material.transparent, false)
 })

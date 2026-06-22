@@ -63,11 +63,11 @@ export function createWaterMaterial(waterConfig = {}, baseColor = null) {
     highlightMask,
   )
   material.roughness = waterConfig.roughness ?? 0.3
-  material.metalness = waterConfig.metalness ?? 0
+  material.metalness = 0
   material.clearcoat = waterConfig.clearcoat ?? 0.45
   material.clearcoatRoughness = waterConfig.clearcoatRoughness ?? 0.2
-  material.opacity = waterConfig.opacity ?? 1
-  material.transparent = waterConfig.transparent ?? false
+  material.opacity = 1
+  material.transparent = false
   material.userData.uniforms = {
     uRippleSpeed,
     uRippleScale,
