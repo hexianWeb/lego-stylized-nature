@@ -24,8 +24,5 @@ export default [
   { name: 'landGrassModel', type: 'gltfModel', path: 'model/prefab/grass.glb' },
   { name: 'landGrass2Model', type: 'gltfModel', path: 'model/prefab/grass_2.glb' },
   { name: 'landMushroom1Model', type: 'gltfModel', path: 'model/prefab/mushroom_1.glb' },
-  { name: 'landMushroom2Model', type: 'gltfModel', path: 'model/prefab/mushroom_2.glb' },
-  { name: 'landMushroom3Model', type: 'gltfModel', path: 'model/prefab/mushroom_3.glb' },
-  { name: 'landMushroom4Model', type: 'gltfModel', path: 'model/prefab/mushroom_4.glb' },
   { name: 'landFlowerModel', type: 'gltfModel', path: 'model/prefab/flower.glb' }
 ]

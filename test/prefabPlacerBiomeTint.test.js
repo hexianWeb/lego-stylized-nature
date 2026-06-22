@@ -116,6 +116,40 @@ test('collectTransforms uses untinted bucket when prefab lacks current biome tin
   assert.equal(buckets[0].transforms.length, 1)
 })
 
+test('collectTransforms stores deterministic color indices without splitting buckets', () => {
+  const manifest = {
+    testFlower: {
+      category: 'flora',
+      placement: { surface: 'land' },
+      variants: [{ source: 'flowerModel', weight: 1 }],
+      randomRotation: false,
+      instanceColors: {
+        meshNameSuffix: '_InstanceColor',
+        palette: ['#ff0000', '#00ff00', '#0000ff']
+      }
+    }
+  }
+  const biomes = {
+    forest: { prefabs: [{ id: 'testFlower', density: 1 }] }
+  }
+  const terrainMap = createTerrainMap([['forest', 'forest']])
+  const placer = createPlacer({ manifest, biomes, width: 2, depth: 1 })
+
+  const firstBuild = [...placer.collectTransforms(terrainMap).values()]
+  const secondBuild = [...placer.collectTransforms(terrainMap).values()]
+
+  assert.equal(firstBuild.length, 1)
+  assert.equal(firstBuild[0].transforms.length, 2)
+  assert.deepEqual(
+    firstBuild[0].transforms.map((transform) => transform.instanceColorIndex),
+    secondBuild[0].transforms.map((transform) => transform.instanceColorIndex)
+  )
+  for (const transform of firstBuild[0].transforms) {
+    assert.equal(Number.isInteger(transform.instanceColorIndex), true)
+    assert.equal(transform.instanceColorIndex >= 0 && transform.instanceColorIndex < 3, true)
+  }
+})
+
 test('buildVariantInstances applies tint clones to instanced meshes', () => {
   const sourceMaterial = new THREE.MeshBasicMaterial({ color: '#ffffff' })
   const sourceScene = new THREE.Group()
@@ -150,6 +184,156 @@ test('buildVariantInstances preserves untinted source material', () => {
   )
 
   assert.equal(group.children[0].material, sourceMaterial)
+})
+
+test('buildVariantInstances applies palette colors to matching child instances', () => {
+  const sourceMaterial = new THREE.MeshBasicMaterial({ color: '#cc2255' })
+  const sourceScene = new THREE.Group()
+  const sourceMesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), sourceMaterial)
+  sourceMesh.name = 'flower_InstanceColor'
+  sourceScene.add(sourceMesh)
+  const placer = createPlacer({ manifest: {}, biomes: {}, width: 1, depth: 1 })
+
+  const group = placer.buildVariantInstances(
+    sourceScene,
+    [
+      { position: [0, 0, 0], rotationY: 0, instanceColorIndex: 0 },
+      { position: [1, 0, 0], rotationY: 0, instanceColorIndex: 1 }
+    ],
+    {
+      instanceColors: {
+        meshNameSuffix: '_InstanceColor',
+        palette: ['#ff0000', '#00ff00']
+      }
+    },
+    null
+  )
+
+  const mesh = group.children[0]
+  const firstColor = new THREE.Color()
+  const secondColor = new THREE.Color()
+  mesh.getColorAt(0, firstColor)
+  mesh.getColorAt(1, secondColor)
+
+  assert.equal(mesh.material.color.getHexString(), 'ffffff')
+  assert.equal(firstColor.getHexString(), 'ff0000')
+  assert.equal(secondColor.getHexString(), '00ff00')
+  assert.equal(mesh.instanceColor.version > 0, true)
+  assert.equal(sourceMaterial.color.getHexString(), 'cc2255')
+})
+
+test('buildVariantInstances shares each transform color across matching child meshes', () => {
+  const sourceScene = new THREE.Group()
+  const firstSource = new THREE.Mesh(
+    new THREE.BoxGeometry(1, 1, 1),
+    new THREE.MeshBasicMaterial({ color: '#ff00ff' })
+  )
+  firstSource.name = 'flower_InstanceColor'
+  const secondSource = new THREE.Mesh(
+    new THREE.BoxGeometry(1, 1, 1),
+    new THREE.MeshBasicMaterial({ color: '#ff00ff' })
+  )
+  secondSource.name = 'flower_InstanceColor.001'
+  sourceScene.add(firstSource, secondSource)
+  const placer = createPlacer({ manifest: {}, biomes: {}, width: 1, depth: 1 })
+
+  const group = placer.buildVariantInstances(
+    sourceScene,
+    [{ position: [0, 0, 0], rotationY: 0, instanceColorIndex: 1 }],
+    {
+      instanceColors: {
+        meshNameSuffix: '_InstanceColor',
+        palette: ['#ff0000', '#0000ff']
+      }
+    },
+    null
+  )
+
+  const firstColor = new THREE.Color()
+  const secondColor = new THREE.Color()
+  group.children[0].getColorAt(0, firstColor)
+  group.children[1].getColorAt(0, secondColor)
+
+  assert.equal(firstColor.getHexString(), '0000ff')
+  assert.equal(secondColor.getHexString(), '0000ff')
+})
+
+test('buildVariantInstances keeps biome tint on nonmatching child meshes', () => {
+  const sourceScene = new THREE.Group()
+  const sourceMesh = new THREE.Mesh(
+    new THREE.BoxGeometry(1, 1, 1),
+    new THREE.MeshBasicMaterial({ color: '#ffffff' })
+  )
+  sourceMesh.name = 'flower_root'
+  sourceScene.add(sourceMesh)
+  const placer = createPlacer({ manifest: {}, biomes: {}, width: 1, depth: 1 })
+
+  const originalWarn = console.warn
+  const warnings = []
+  console.warn = (message) => warnings.push(message)
+
+  let group
+  try {
+    group = placer.buildVariantInstances(
+      sourceScene,
+      [{ position: [0, 0, 0], rotationY: 0, instanceColorIndex: 0 }],
+      {
+        instanceColors: {
+          meshNameSuffix: '_InstanceColor',
+          palette: ['#ff0000']
+        }
+      },
+      { color: '#000000', strength: 1 },
+      'testFlower'
+    )
+    placer.buildVariantInstances(
+      sourceScene,
+      [{ position: [0, 0, 0], rotationY: 0, instanceColorIndex: 0 }],
+      {
+        instanceColors: {
+          meshNameSuffix: '_InstanceColor',
+          palette: ['#ff0000']
+        }
+      },
+      { color: '#000000', strength: 1 },
+      'testFlower'
+    )
+  } finally {
+    console.warn = originalWarn
+  }
+
+  assert.equal(group.children[0].material.color.getHexString(), '000000')
+  assert.equal(group.children[0].instanceColor, null)
+  assert.equal(warnings.length, 1)
+  assert.match(warnings[0], /testFlower/)
+})
+
+test('invalid instance color config warns once per manifest entry', () => {
+  const sourceScene = new THREE.Group()
+  sourceScene.add(new THREE.Mesh(
+    new THREE.BoxGeometry(1, 1, 1),
+    new THREE.MeshBasicMaterial({ color: '#ffffff' })
+  ))
+  const prefabEntry = {
+    instanceColors: {
+      meshNameSuffix: '_InstanceColor',
+      palette: []
+    }
+  }
+  const transforms = [{ position: [0, 0, 0], rotationY: 0 }]
+  const placer = createPlacer({ manifest: {}, biomes: {}, width: 1, depth: 1 })
+  const originalWarn = console.warn
+  const warnings = []
+  console.warn = (message) => warnings.push(message)
+
+  try {
+    placer.buildVariantInstances(sourceScene, transforms, prefabEntry, null, 'testFlower')
+    placer.buildVariantInstances(sourceScene, transforms, prefabEntry, null, 'testFlower')
+  } finally {
+    console.warn = originalWarn
+  }
+
+  assert.equal(warnings.length, 1)
 })
 
 test('buildVariantInstances preserves material array order when tinting', () => {

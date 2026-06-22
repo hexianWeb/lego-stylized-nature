@@ -2,6 +2,13 @@ import * as THREE from 'three/webgpu'
 import { placementRandom01 } from '../../utils/random.js'
 import { canPlacePrefab, pickVariantIndex, makePrefabTransform } from './placementRules.js'
 import { resolvePrefabMaterial, disposeBiomeTintMaterial } from './prefabMaterialTint.js'
+import {
+    normalizeInstanceColors,
+    pickInstanceColorIndex,
+    matchesInstanceColorMesh,
+    resolveInstanceColorMaterial,
+    disposeInstanceColorMaterial
+} from './prefabInstanceColor.js'
 
 export default class PrefabPlacer {
     constructor({ config, biomeRegistry, prefabRegistry }) {
@@ -10,6 +17,8 @@ export default class PrefabPlacer {
         this.prefabRegistry = prefabRegistry
         this.group = new THREE.Group()
         this.group.name = 'BiomePrefabs'
+        this.instanceColorConfigCache = new WeakMap()
+        this.missingInstanceColorMeshWarnings = new Set()
     }
 
     build(terrainMap) {
@@ -23,7 +32,15 @@ export default class PrefabPlacer {
             if (!prefab || !gltf?.scene) {
                 continue
             }
-            this.group.add(this.buildVariantInstances(gltf.scene, bucket.transforms, prefab.entry, bucket.tint))
+            this.group.add(
+                this.buildVariantInstances(
+                    gltf.scene,
+                    bucket.transforms,
+                    prefab.entry,
+                    bucket.tint,
+                    bucket.prefabId
+                )
+            )
         }
 
         return this.group
@@ -70,6 +87,16 @@ export default class PrefabPlacer {
                         config: this.config,
                         seed
                     })
+                    const instanceColors = this.getInstanceColors(prefab.entry)
+                    if (instanceColors) {
+                        transform.instanceColorIndex = pickInstanceColorIndex(
+                            x,
+                            z,
+                            seed,
+                            rule.id,
+                            instanceColors.palette.length
+                        )
+                    }
 
                     const tint = prefab.entry.biomeTints?.[biomeCell.biomeId] ?? null
                     const bucketBiomeId = tint ? biomeCell.biomeId : null
@@ -94,10 +121,12 @@ export default class PrefabPlacer {
         return buckets
     }
 
-    buildVariantInstances(sourceScene, transforms, prefabEntry, tint) {
+    buildVariantInstances(sourceScene, transforms, prefabEntry, tint, prefabId = 'unknown') {
         sourceScene.updateMatrixWorld(true)
 
         const variantGroup = new THREE.Group()
+        const instanceColors = this.getInstanceColors(prefabEntry)
+        let matchedInstanceColorMesh = false
         const instanceMatrix = new THREE.Matrix4()
         const composed = new THREE.Matrix4()
         const position = new THREE.Vector3()
@@ -110,7 +139,15 @@ export default class PrefabPlacer {
                 return
             }
 
-            const material = resolvePrefabMaterial(child.material, tint)
+            const usesInstanceColor = instanceColors
+                ? matchesInstanceColorMesh(child.name, instanceColors.meshNameSuffix)
+                : false
+            if (usesInstanceColor) {
+                matchedInstanceColorMesh = true
+            }
+            const material = usesInstanceColor
+                ? resolveInstanceColorMaterial(child.material)
+                : resolvePrefabMaterial(child.material, tint)
             const mesh = new THREE.InstancedMesh(child.geometry, material, transforms.length)
             mesh.castShadow = true
             mesh.receiveShadow = true
@@ -120,12 +157,44 @@ export default class PrefabPlacer {
                 instanceMatrix.compose(position, quaternion, unitScale)
                 composed.multiplyMatrices(instanceMatrix, child.matrixWorld)
                 mesh.setMatrixAt(i, composed)
+                if (usesInstanceColor) {
+                    const colorIndex = Number.isInteger(t.instanceColorIndex)
+                        ? t.instanceColorIndex
+                        : 0
+                    mesh.setColorAt(i, instanceColors.palette[colorIndex] ?? instanceColors.palette[0])
+                }
             })
             mesh.instanceMatrix.needsUpdate = true
+            if (mesh.instanceColor) {
+                mesh.instanceColor.needsUpdate = true
+            }
             variantGroup.add(mesh)
         })
 
+        if (instanceColors && !matchedInstanceColorMesh) {
+            const warningKey = `${prefabId}:${instanceColors.meshNameSuffix}`
+            if (!this.missingInstanceColorMeshWarnings.has(warningKey)) {
+                this.missingInstanceColorMeshWarnings.add(warningKey)
+                console.warn(
+                    `Prefab ${prefabId} has no mesh matching instance color suffix ${instanceColors.meshNameSuffix}`
+                )
+            }
+        }
+
         return variantGroup
+    }
+
+    getInstanceColors(prefabEntry) {
+        if (!prefabEntry || typeof prefabEntry !== 'object') {
+            return null
+        }
+        if (!this.instanceColorConfigCache.has(prefabEntry)) {
+            this.instanceColorConfigCache.set(
+                prefabEntry,
+                normalizeInstanceColors(prefabEntry.instanceColors)
+            )
+        }
+        return this.instanceColorConfigCache.get(prefabEntry)
     }
 
     clearInstances() {
@@ -134,6 +203,7 @@ export default class PrefabPlacer {
             child.traverse((node) => {
                 if (node.isInstancedMesh) {
                     disposeBiomeTintMaterial(node.material)
+                    disposeInstanceColorMaterial(node.material)
                     node.dispose()
                 }
             })

@@ -99,12 +99,13 @@ export const biomePrefabs = {
     category: 'flora',
     placement: { surface: 'land' },
     variants: [
-      { source: 'landMushroom1Model', weight: 1 },
-      { source: 'landMushroom2Model', weight: 1 },
-      { source: 'landMushroom3Model', weight: 1 },
-      { source: 'landMushroom4Model', weight: 1 }
+      { source: 'landMushroom1Model', weight: 1 }
     ],
-    randomRotation: true
+    randomRotation: true,
+    instanceColors: {
+      meshNameSuffix: '_InstanceColor',
+      palette: ['#c9110e', '#0158b8', '#ea9202', '#03b1a0']
+    }
   },
   landFlower: {
     category: 'flora',
@@ -112,6 +113,10 @@ export const biomePrefabs = {
     variants: [
       { source: 'landFlowerModel', weight: 1 }
     ],
-    randomRotation: true
+    randomRotation: true,
+    instanceColors: {
+      meshNameSuffix: '_InstanceColor',
+      palette: ['#f97ba8', '#f695b5', '#ed4e90']
+    }
   }
 }
