@@ -23,6 +23,7 @@ export default [
 
   { name: 'landGrassModel', type: 'gltfModel', path: 'model/prefab/grass.glb' },
   { name: 'landGrass2Model', type: 'gltfModel', path: 'model/prefab/grass_2.glb' },
+  { name: 'landGrass3Model', type: 'gltfModel', path: 'model/prefab/grass_3.glb' },
   { name: 'landMushroom1Model', type: 'gltfModel', path: 'model/prefab/mushroom_1.glb' },
   { name: 'landFlowerModel', type: 'gltfModel', path: 'model/prefab/flower.glb' }
 ]
