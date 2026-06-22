@@ -86,7 +86,8 @@ export const biomePrefabs = {
     placement: { surface: 'land' },
     variants: [
       { source: 'landGrassModel', weight: 1 },
-      { source: 'landGrass2Model', weight: 1 }
+      { source: 'landGrass2Model', weight: 1 },
+      { source: 'landGrass3Model', weight: 0.25 }
     ],
     randomRotation: true,
     biomeTints: {
@@ -99,24 +100,24 @@ export const biomePrefabs = {
     category: 'flora',
     placement: { surface: 'land' },
     variants: [
-      { source: 'landMushroom1Model', weight: 1 }
+      { source: 'landMushroom1Model', weight: 0.5 }
     ],
     randomRotation: true,
     instanceColors: {
       meshNameSuffix: '_InstanceColor',
-      palette: ['#c9110e', '#0158b8', '#ea9202', '#03b1a0']
+      palette: ['#ff0000', '#0158b8', '#ea9202', '#03b1a0']
     }
   },
   landFlower: {
     category: 'flora',
     placement: { surface: 'land', biomes: ['forest', 'autumnForest'] },
     variants: [
-      { source: 'landFlowerModel', weight: 1 }
+      { source: 'landFlowerModel', weight: 0.5 }
     ],
     randomRotation: true,
     instanceColors: {
       meshNameSuffix: '_InstanceColor',
-      palette: ['#f97ba8', '#f695b5', '#ed4e90']
+      palette: ['#ff0000', '#ffff00', '#ffffff']
     }
   }
 }
