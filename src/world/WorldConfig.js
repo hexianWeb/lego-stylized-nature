@@ -42,7 +42,7 @@ export const worldConfig = {
     darkColor: '#0757A6',
     midColor: '#168FD2',
     lightColor: '#42DDEB',
-    textureScale: 0.45,
+    textureScale: 0.3,
     roughness: 0.3,
     clearcoat: 0.45,
     clearcoatRoughness: 0.2
