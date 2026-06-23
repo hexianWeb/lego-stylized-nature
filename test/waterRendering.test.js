@@ -4,13 +4,16 @@ import * as THREE from 'three/webgpu'
 import { createWaterMaterial } from '../src/materials/tsl/waterMaterial.js'
 import WaterBrickRenderer from '../src/world/bricks/WaterBrickRenderer.js'
 
-test('creates static noise-mixed water material with a plain-color fallback', () => {
+test('creates animated noise-mixed water material with a procedural fallback', () => {
   const noiseTexture = new THREE.Texture()
   const config = {
     darkColor: '#0757A6',
     midColor: '#168FD2',
     lightColor: '#42DDEB',
     textureScale: 0.45,
+    flowSpeed: 0.42,
+    flowStrength: 0.52,
+    flowVariance: 0.55,
     roughness: 0.3,
     clearcoat: 0.45,
     clearcoatRoughness: 0.2
@@ -26,9 +29,11 @@ test('creates static noise-mixed water material with a plain-color fallback', ()
   assert.ok(noiseTexture.version > 0)
   assert.ok(texturedMaterial.colorNode)
   assert.equal(texturedMaterial.userData.uniforms.uTextureScale.value, 0.45)
+  assert.equal(texturedMaterial.userData.uniforms.uFlowSpeed.value, 0.42)
   assert.equal(texturedMaterial.userData.waterNoiseTexture, noiseTexture)
   assert.ok(fallbackMaterial.colorNode)
-  assert.deepEqual(fallbackMaterial.userData.uniforms, {})
+  assert.equal(fallbackMaterial.userData.uniforms.uFlowSpeed.value, 0.42)
+  assert.equal(fallbackMaterial.userData.waterNoiseTexture, undefined)
   assert.equal(texturedMaterial.transparent, false)
   assert.equal(texturedMaterial.opacity, 1)
   assert.equal(texturedMaterial.metalness, 0)

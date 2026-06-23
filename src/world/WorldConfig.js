@@ -43,6 +43,9 @@ export const worldConfig = {
     midColor: '#168FD2',
     lightColor: '#42DDEB',
     textureScale: 0.3,
+    flowSpeed: 1.2,
+    flowStrength: 0.72,
+    flowVariance: 0.55,
     roughness: 0.3,
     clearcoat: 0.45,
     clearcoatRoughness: 0.2

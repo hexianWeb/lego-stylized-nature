@@ -26,20 +26,35 @@ export function createMaterialPanel(
         })
         const waterConfig = config.water
 
-        waterFolder
-            .addBinding(waterConfig, 'textureScale', {
-                min: 0.05,
-                max: 2,
-                step: 0.01,
-                label: 'textureScale'
-            })
-            .on('change', ({ value }) => {
-                const uniform =
-                    waterMaterial.userData.uniforms.uTextureScale
-                if (uniform) {
-                    uniform.value = value
-                }
-            })
+        for (const key of [
+            'textureScale',
+            'flowSpeed',
+            'flowStrength',
+            'flowVariance'
+        ]) {
+            waterFolder
+                .addBinding(waterConfig, key, {
+                    min: key === 'textureScale' ? 0.05 : 0,
+                    max: key === 'textureScale' ? 2 : key === 'flowSpeed' ? 2 : 1,
+                    step: 0.01,
+                    label: key
+                })
+                .on('change', ({ value }) => {
+                    const uniformName =
+                        key === 'textureScale'
+                            ? 'uTextureScale'
+                            : key === 'flowSpeed'
+                              ? 'uFlowSpeed'
+                              : key === 'flowStrength'
+                                ? 'uFlowStrength'
+                                : 'uFlowVariance'
+                    const uniform =
+                        waterMaterial.userData.uniforms[uniformName]
+                    if (uniform) {
+                        uniform.value = value
+                    }
+                })
+        }
 
         for (const key of [
             'roughness',
