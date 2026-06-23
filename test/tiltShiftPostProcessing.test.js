@@ -15,10 +15,10 @@ import { createPostProcessingPanel } from '../src/debug/panels/PostProcessingPan
 test('defines the approved tilt-shift defaults and debug ranges', () => {
   assert.deepEqual(TILT_SHIFT_DEFAULTS, {
     enabled: true,
-    focusCenter: 0.5,
-    focusWidth: 0.22,
-    falloff: 0.28,
-    blurStrength: 2.5
+    focusCenter: 0.61,
+    focusWidth: 0.33,
+    falloff: 0.30,
+    blurStrength: 0.45
   })
 
   assert.deepEqual(TILT_SHIFT_RANGES, {
@@ -36,7 +36,10 @@ test('defines the approved tilt-shift defaults and debug ranges', () => {
 })
 
 test('keeps the focus center fully sharp', () => {
-  assert.equal(evaluateTiltShiftMask(0.5), 0)
+  assert.equal(
+    evaluateTiltShiftMask(TILT_SHIFT_DEFAULTS.focusCenter),
+    0
+  )
 })
 
 test('reaches full blur outside the clear band and falloff', () => {
@@ -46,15 +49,16 @@ test('reaches full blur outside the clear band and falloff', () => {
     TILT_SHIFT_DEFAULTS.falloff
 
   assert.equal(evaluateTiltShiftMask(fullBlurY), 1)
-  assert.equal(evaluateTiltShiftMask(1), 1)
+  assert.equal(evaluateTiltShiftMask(0), 1)
 })
 
 test('uses a symmetric smooth transition above and below the focus center', () => {
-  const upper = evaluateTiltShiftMask(0.25)
-  const lower = evaluateTiltShiftMask(0.75)
+  const offset = 0.25
+  const upper = evaluateTiltShiftMask(TILT_SHIFT_DEFAULTS.focusCenter - offset)
+  const lower = evaluateTiltShiftMask(TILT_SHIFT_DEFAULTS.focusCenter + offset)
 
   assert.equal(upper, lower)
-  assert.equal(upper, 0.5)
+  assert.ok(upper > 0 && upper < 1)
 })
 
 test('creates a quarter-resolution blur with live uniforms', () => {

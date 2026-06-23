@@ -1,9 +1,9 @@
 export const TILT_SHIFT_DEFAULTS = Object.freeze({
   enabled: true,
-  focusCenter: 0.5,
-  focusWidth: 0.22,
-  falloff: 0.28,
-  blurStrength: 2.5
+  focusCenter: 0.61,
+  focusWidth: 0.33,
+  falloff: 0.30,
+  blurStrength: 0.45
 })
 
 export const TILT_SHIFT_RANGES = Object.freeze({
