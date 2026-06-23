@@ -1,5 +1,6 @@
 import * as THREE from 'three/webgpu'
 import { color, fog, rangeFogFactor, uniform } from 'three/tsl'
+import { createEnvironmentPanel } from '../debug/panels/EnvironmentPanel.js'
 import { createLightPanel } from '../debug/panels/LightPanel.js'
 import { createShadowPanel } from '../debug/panels/ShadowPanel.js'
 
@@ -179,20 +180,7 @@ export default class Environment {
 
         createLightPanel(debug, this)
         createShadowPanel(debug, this)
-
-        const folder = debug.addFolder({
-            title: 'Environment',
-            expanded: false
-        })
-        if (!folder) {
-            return
-        }
-        folder.addBinding(this.fogRange, 'near', { min: 0.1, max: 50, step: 0.1, label: 'fog near' }).on('change', () => {
-            this._rebuildFog()
-        })
-        folder.addBinding(this.fogRange, 'far', { min: 0.1, max: 80, step: 0.1, label: 'fog far' }).on('change', () => {
-            this._rebuildFog()
-        })
+        createEnvironmentPanel(debug, this)
     }
 
     dispose() {

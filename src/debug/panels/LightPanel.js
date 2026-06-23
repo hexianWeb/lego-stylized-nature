@@ -33,19 +33,4 @@ export function createLightPanel(debug, environment) {
         .on('change', () => environment.syncDirectionalTarget())
     targetFolder.addBinding(environment.directionalTarget, 'z', { min: -40, max: 40, step: 0.1, label: 'z' })
         .on('change', () => environment.syncDirectionalTarget())
-
-    folder.addBinding(environment, 'environmentIntensity', {
-        min: 0,
-        max: 2,
-        step: 0.05,
-        label: 'envIntensity'
-    }).on('change', () => {
-        environment.syncEnvironmentIntensity()
-    })
-
-    folder.addBinding(environment, 'useEnvBackground', {
-        label: 'envBackground'
-    }).on('change', () => {
-        environment.syncBackground()
-    })
 }
