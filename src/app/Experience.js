@@ -7,6 +7,8 @@ import World from '../world/world.js'
 import Sizes from '../systems/Sizes.js'
 import Time from '../systems/Time.js'
 import Renderer from '../renderer/Renderer.js'
+import { worldConfig } from '../world/WorldConfig.js'
+import { createPostProcessingPanel } from '../debug/panels/PostProcessingPanel.js'
 
 export default class Experience {
     /**
@@ -18,7 +20,10 @@ export default class Experience {
         this.debug = new Debug()
         this.sizes = new Sizes()
         this.time = new Time()
-        this.renderer = new Renderer({ canvas })
+        this.renderer = new Renderer({
+            canvas,
+            postProcessing: worldConfig.postProcessing
+        })
 
         this.scene = new THREE.Scene()
         this.environment = new Environment(this.scene)
@@ -56,6 +61,11 @@ export default class Experience {
             this.environment.debuggerInit(this.debug)
             this.worldCamera.debuggerInit(this.debug)
             this.world.debuggerInit(this.debug)
+            createPostProcessingPanel(
+                this.debug,
+                worldConfig,
+                this.renderer.postProcessingController
+            )
         }
     }
 
@@ -92,6 +102,7 @@ export default class Experience {
         this.debug.dispose()
         this.sizes.dispose()
         this.time.dispose()
+        this.renderer.dispose()
 
         if (typeof this.renderer.instance.dispose === 'function') {
             this.renderer.instance.dispose()

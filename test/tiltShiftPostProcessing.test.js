@@ -10,6 +10,7 @@ import {
 } from '../src/renderer/postprocessing/tiltShiftConfig.js'
 import { createTiltShiftEffect } from '../src/renderer/postprocessing/createTiltShiftEffect.js'
 import Renderer from '../src/renderer/Renderer.js'
+import { createPostProcessingPanel } from '../src/debug/panels/PostProcessingPanel.js'
 
 test('defines the approved tilt-shift defaults and debug ranges', () => {
   assert.deepEqual(TILT_SHIFT_DEFAULTS, {
@@ -195,4 +196,84 @@ test('disposes renderer-owned post-processing resources', () => {
   assert.equal(renderer.tiltShiftEffect, null)
   assert.equal(renderer.renderPipeline, null)
   assert.equal(renderer.outputNodes, null)
+})
+
+function createDebugHarness() {
+  const bindings = new Map()
+  const folder = {
+    addBinding(target, key, options) {
+      const binding = {
+        target,
+        key,
+        options,
+        handler: null,
+        on(event, handler) {
+          assert.equal(event, 'change')
+          this.handler = handler
+          return this
+        }
+      }
+      bindings.set(key, binding)
+      return binding
+    }
+  }
+
+  return {
+    bindings,
+    debug: {
+      addFolder(options) {
+        assert.deepEqual(options, {
+          title: 'Post Processing',
+          expanded: false
+        })
+        return folder
+      }
+    }
+  }
+}
+
+test('binds all tilt-shift controls to the renderer controller', () => {
+  const { debug, bindings } = createDebugHarness()
+  const config = {
+    postProcessing: {
+      tiltShift: { ...TILT_SHIFT_DEFAULTS }
+    }
+  }
+  const enabledCalls = []
+  const syncCalls = []
+  const controller = {
+    setTiltShiftEnabled(value) {
+      enabledCalls.push(value)
+    },
+    syncTiltShift(value) {
+      syncCalls.push({ ...value })
+    }
+  }
+
+  createPostProcessingPanel(debug, config, controller)
+
+  assert.deepEqual([...bindings.keys()], [
+    'enabled',
+    'focusCenter',
+    'focusWidth',
+    'falloff',
+    'blurStrength'
+  ])
+  assert.deepEqual(
+    bindings.get('focusCenter').options,
+    { ...TILT_SHIFT_RANGES.focusCenter, label: 'focusCenter' }
+  )
+  assert.deepEqual(
+    bindings.get('blurStrength').options,
+    { ...TILT_SHIFT_RANGES.blurStrength, label: 'blurStrength' }
+  )
+
+  bindings.get('enabled').handler({ value: false })
+  bindings.get('focusCenter').handler({ value: 0.42 })
+
+  assert.equal(config.postProcessing.tiltShift.enabled, false)
+  assert.equal(config.postProcessing.tiltShift.focusCenter, 0.42)
+  assert.deepEqual(enabledCalls, [false])
+  assert.equal(syncCalls.length, 1)
+  assert.equal(syncCalls[0].focusCenter, 0.42)
 })
