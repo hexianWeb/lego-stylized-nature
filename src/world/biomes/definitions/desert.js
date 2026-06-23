@@ -5,7 +5,7 @@ export default {
     heightOffset: -1,
     heightMagnitude: 0.65,
     colors: {
-      surface: '#d8b56a',
+      surface: '#C2AE78',
       subsurface: '#c9a258',
       deep: '#8c8c8c',
       shore: '#e0c878'

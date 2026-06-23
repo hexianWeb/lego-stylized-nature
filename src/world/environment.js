@@ -1,6 +1,7 @@
 import * as THREE from 'three/webgpu'
 import { color, fog, rangeFogFactor, uniform } from 'three/tsl'
 import { createEnvironmentPanel } from '../debug/panels/EnvironmentPanel.js'
+import { createFogPanel } from '../debug/panels/FogPanel.js'
 import { createLightPanel } from '../debug/panels/LightPanel.js'
 import { createShadowPanel } from '../debug/panels/ShadowPanel.js'
 
@@ -48,8 +49,10 @@ export default class Environment {
         this.directionalLightHelper.visible = this.showLightHelper
         this.scene.add(this.directionalLightHelper)
 
-        this.fogColor = uniform(color('#ffffff'))
-        this.fogRange = { near: 80, far: 140 }
+        this.fogColor = uniform(color('#666'))
+        this.fogControl = { color: '#848c87' }
+        this.fogRange = { near: 50, far: 75 }
+        this.renderer = null
         this._rebuildFog()
         this.applyShadowFill()
     }
@@ -66,10 +69,20 @@ export default class Environment {
     }
 
     /**
+     * @param {string} hex
+     */
+    setFogColor(hex) {
+        this.fogColor.value.set(hex)
+        this.renderer?.setClearColor(this.fogColor.value)
+    }
+
+    /**
      * @param {THREE.WebGPURenderer} renderer
      * @param {THREE.Texture | null} equirectTexture
      */
     applyEnvironmentMap(renderer, equirectTexture) {
+        this.renderer = renderer
+
         if (!equirectTexture) {
             console.warn('[Environment] Missing HDR texture; scene.environment skipped.')
             return
@@ -181,6 +194,7 @@ export default class Environment {
         createLightPanel(debug, this)
         createShadowPanel(debug, this)
         createEnvironmentPanel(debug, this)
+        createFogPanel(debug, this)
     }
 
     dispose() {

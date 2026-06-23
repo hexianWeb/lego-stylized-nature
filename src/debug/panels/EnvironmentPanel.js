@@ -18,22 +18,4 @@ export function createEnvironmentPanel(debug, environment) {
     }).on('change', () => {
         environment.syncBackground()
     })
-
-    const fogFolder = folder.addFolder({ title: 'Fog', expanded: true })
-    fogFolder.addBinding(environment.fogRange, 'near', {
-        min: 0.1,
-        max: 200,
-        step: 1,
-        label: 'near'
-    }).on('change', () => {
-        environment._rebuildFog()
-    })
-    fogFolder.addBinding(environment.fogRange, 'far', {
-        min: 0.1,
-        max: 300,
-        step: 1,
-        label: 'far'
-    }).on('change', () => {
-        environment._rebuildFog()
-    })
 }
