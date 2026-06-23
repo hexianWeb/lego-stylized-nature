@@ -1,11 +1,14 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
+import * as THREE from 'three/webgpu'
+import { texture } from 'three/tsl'
 import { worldConfig } from '../src/world/WorldConfig.js'
 import {
   TILT_SHIFT_DEFAULTS,
   TILT_SHIFT_RANGES,
   evaluateTiltShiftMask
 } from '../src/renderer/postprocessing/tiltShiftConfig.js'
+import { createTiltShiftEffect } from '../src/renderer/postprocessing/createTiltShiftEffect.js'
 
 test('defines the approved tilt-shift defaults and debug ranges', () => {
   assert.deepEqual(TILT_SHIFT_DEFAULTS, {
@@ -50,4 +53,64 @@ test('uses a symmetric smooth transition above and below the focus center', () =
 
   assert.equal(upper, lower)
   assert.equal(upper, 0.5)
+})
+
+test('creates a quarter-resolution blur with live uniforms', () => {
+  const sourceTexture = new THREE.Texture()
+  const sceneColor = texture(sourceTexture)
+  const effect = createTiltShiftEffect(sceneColor, {
+    enabled: true,
+    focusCenter: 0.4,
+    focusWidth: 0.3,
+    falloff: 0.2,
+    blurStrength: 3
+  })
+
+  assert.equal(effect.disabledOutput, sceneColor)
+  assert.notEqual(effect.enabledOutput, sceneColor)
+  assert.equal(effect.blurNode.isGaussianBlurNode, true)
+  assert.equal(effect.blurNode.resolutionScale, 0.25)
+  assert.equal(effect.uniforms.focusCenter.value, 0.4)
+  assert.equal(effect.uniforms.focusWidth.value, 0.3)
+  assert.equal(effect.uniforms.falloff.value, 0.2)
+  assert.equal(effect.uniforms.blurStrength.value, 3)
+})
+
+test('updates numeric uniforms without replacing output nodes', () => {
+  const effect = createTiltShiftEffect(
+    texture(new THREE.Texture()),
+    TILT_SHIFT_DEFAULTS
+  )
+  const enabledOutput = effect.enabledOutput
+  const blurNode = effect.blurNode
+
+  effect.sync({
+    focusCenter: 0.45,
+    focusWidth: 0.18,
+    falloff: 0.35,
+    blurStrength: 4
+  })
+
+  assert.equal(effect.enabledOutput, enabledOutput)
+  assert.equal(effect.blurNode, blurNode)
+  assert.equal(effect.uniforms.focusCenter.value, 0.45)
+  assert.equal(effect.uniforms.focusWidth.value, 0.18)
+  assert.equal(effect.uniforms.falloff.value, 0.35)
+  assert.equal(effect.uniforms.blurStrength.value, 4)
+})
+
+test('disposes the Gaussian blur node exactly once', () => {
+  const effect = createTiltShiftEffect(
+    texture(new THREE.Texture()),
+    TILT_SHIFT_DEFAULTS
+  )
+  let disposeCount = 0
+  effect.blurNode.dispose = () => {
+    disposeCount++
+  }
+
+  effect.dispose()
+  effect.dispose()
+
+  assert.equal(disposeCount, 1)
 })
