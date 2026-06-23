@@ -9,6 +9,7 @@ import {
   evaluateTiltShiftMask
 } from '../src/renderer/postprocessing/tiltShiftConfig.js'
 import { createTiltShiftEffect } from '../src/renderer/postprocessing/createTiltShiftEffect.js'
+import Renderer from '../src/renderer/Renderer.js'
 
 test('defines the approved tilt-shift defaults and debug ranges', () => {
   assert.deepEqual(TILT_SHIFT_DEFAULTS, {
@@ -113,4 +114,85 @@ test('disposes the Gaussian blur node exactly once', () => {
   effect.dispose()
 
   assert.equal(disposeCount, 1)
+})
+
+function createRendererHarness() {
+  const renderer = Object.create(Renderer.prototype)
+  renderer.tiltShiftConfig = { ...TILT_SHIFT_DEFAULTS }
+  renderer.renderPipeline = { outputNode: null }
+  renderer.outputNodes = {
+    tiltShiftEnabled: { name: 'enabled' },
+    tiltShiftDisabled: { name: 'disabled' }
+  }
+  renderer.tiltShiftEffect = null
+  return renderer
+}
+
+test('switches between prebuilt output chains without rebuilding them', () => {
+  const renderer = createRendererHarness()
+  const outputNodes = renderer.outputNodes
+
+  renderer.setTiltShiftEnabled(true)
+  assert.equal(
+    renderer.renderPipeline.outputNode,
+    outputNodes.tiltShiftEnabled
+  )
+
+  renderer.setTiltShiftEnabled(false)
+  assert.equal(
+    renderer.renderPipeline.outputNode,
+    outputNodes.tiltShiftDisabled
+  )
+  assert.equal(renderer.outputNodes, outputNodes)
+  assert.equal(renderer.tiltShiftConfig.enabled, false)
+})
+
+test('synchronizes numeric controls without changing the selected output', () => {
+  const renderer = createRendererHarness()
+  const selectedOutput = renderer.outputNodes.tiltShiftEnabled
+  const calls = []
+  renderer.renderPipeline.outputNode = selectedOutput
+  renderer.tiltShiftEffect = {
+    sync(config) {
+      calls.push({ ...config })
+    }
+  }
+
+  renderer.syncTiltShift({
+    focusCenter: 0.35,
+    focusWidth: 0.25,
+    falloff: 0.4,
+    blurStrength: 3.5
+  })
+
+  assert.equal(renderer.renderPipeline.outputNode, selectedOutput)
+  assert.equal(calls.length, 1)
+  assert.equal(calls[0].blurStrength, 3.5)
+  assert.equal(renderer.tiltShiftConfig.focusCenter, 0.35)
+})
+
+test('disposes renderer-owned post-processing resources', () => {
+  const renderer = createRendererHarness()
+  let effectDisposed = 0
+  let pipelineDisposed = 0
+  renderer.tiltShiftEffect = {
+    dispose() {
+      effectDisposed++
+    }
+  }
+  renderer.renderPipeline = {
+    outputNode: renderer.outputNodes.tiltShiftEnabled,
+    dispose() {
+      pipelineDisposed++
+    }
+  }
+
+  renderer.dispose()
+  renderer.dispose()
+
+  assert.equal(effectDisposed, 1)
+  assert.equal(pipelineDisposed, 1)
+  assert.equal(renderer.tiltShiftEffect, null)
+  assert.equal(renderer.renderPipeline, null)
+  assert.equal(renderer.outputNodes, null)
 })
