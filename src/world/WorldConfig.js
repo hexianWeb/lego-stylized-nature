@@ -1,5 +1,10 @@
+import { TILT_SHIFT_DEFAULTS } from '../renderer/postprocessing/tiltShiftConfig.js'
+
 export const worldConfig = {
   seed: 20260608,
+  postProcessing: {
+    tiltShift: { ...TILT_SHIFT_DEFAULTS }
+  },
   terrain: {
     width: 128,
     depth: 128,
