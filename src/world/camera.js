@@ -35,6 +35,21 @@ export default class WorldCamera {
         this.controls.update()
     }
 
+    followTarget(target, delta, smoothing = 0) {
+        const previousTarget = this.controls.target.clone()
+        const nextTarget = target.clone()
+
+        if (smoothing > 0 && delta > 0) {
+            const alpha = 1 - Math.exp(-smoothing * delta)
+            nextTarget.lerpVectors(previousTarget, target, alpha)
+        }
+
+        const movement = nextTarget.sub(previousTarget)
+        this.controls.target.copy(previousTarget).add(movement)
+        this.instance.position.add(movement)
+        this.controls.update()
+    }
+
     resize() {
         const aspect = this.sizes.width / this.sizes.height
         this.instance.left = -this._frustumHeight * aspect * 0.5
