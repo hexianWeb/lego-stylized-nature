@@ -49,9 +49,9 @@ export default class Environment {
         this.directionalLightHelper.visible = this.showLightHelper
         this.scene.add(this.directionalLightHelper)
 
-        this.fogColor = uniform(color('#666'))
-        this.fogControl = { color: '#848c87' }
-        this.fogRange = { near: 50, far: 75 }
+        this.fogColor = uniform(color('#333'))
+        this.fogControl = { color: '#333' }
+        this.fogRange = { near: 60, far: 80 }
         this.renderer = null
         this._rebuildFog()
         this.applyShadowFill()
