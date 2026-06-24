@@ -43,6 +43,25 @@ export const worldConfig = {
     enableTrees: true,
     rotationStep: Math.PI / 2
   },
+  player: {
+    aircraft: {
+      enabled: true,
+      assetName: 'playerAircraftModel',
+      height: 2.5,
+      scale: 1,
+      thrust: 14,
+      reverseThrust: 7,
+      turnTorque: 5,
+      linearDrag: 2.2,
+      angularDrag: 4,
+      maxSpeed: 8,
+      maxAngularSpeed: 2.8,
+      cameraFollow: {
+        enabled: true,
+        smoothing: 8
+      }
+    }
+  },
   water: {
     darkColor: '#0757A6',
     midColor: '#168FD2',

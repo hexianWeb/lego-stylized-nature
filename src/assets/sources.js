@@ -4,6 +4,7 @@ export default [
   { name: 'waterNoiseTexture', type: 'texture', path: 'texture/noise.jpg' },
 
   { name: 'brick2x2Model', type: 'gltfModel', path: 'model/terrain/legoBlock2x2.glb' },
+  { name: 'playerAircraftModel', type: 'gltfModel', path: 'model/player/fly.glb' },
 
   { name: 'waterBubbleModel', type: 'gltfModel', path: 'model/prefab/bubble.glb' },
   { name: 'waterDuckweedModel', type: 'gltfModel', path: 'model/prefab/duckweed.glb' },
