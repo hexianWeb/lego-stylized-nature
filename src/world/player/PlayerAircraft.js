@@ -65,6 +65,8 @@ export default class PlayerAircraft {
     }
 
     const model = sourceScene.clone(true)
+    // 旋转模型
+    model.rotation.y = Math.PI / 2
     this.group.add(model)
     this.group.scale.setScalar(this.motionConfig.scale)
     this.enabled = true
