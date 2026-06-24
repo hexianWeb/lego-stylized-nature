@@ -13,6 +13,7 @@ import WaterBrickRenderer from './bricks/WaterBrickRenderer.js'
 import LavaBrickRenderer from './bricks/LavaBrickRenderer.js'
 import PrefabRegistry from './prefabs/PrefabRegistry.js'
 import PrefabPlacer from './prefabs/PrefabPlacer.js'
+import PlayerAircraft from './player/PlayerAircraft.js'
 import { createTerrainPanel } from '../debug/panels/TerrainPanel.js'
 import { createAOPanel } from '../debug/panels/AOPanel.js'
 import { createBiomePanel } from '../debug/panels/BiomePanel.js'
@@ -47,6 +48,7 @@ export default class World {
         this.waterBrickRenderer = null
         this.lavaBrickRenderer = null
         this.prefabPlacer = null
+        this.playerAircraft = null
     }
 
     addSystem(system) {
@@ -113,6 +115,9 @@ export default class World {
                 prefabRegistry
             })
             this.addSystem(this.prefabPlacer)
+
+            this.playerAircraft = new PlayerAircraft(this.experience, { config: this.config })
+            this.addSystem(this.playerAircraft)
         }
 
         this.regenerate()
@@ -168,6 +173,9 @@ export default class World {
         }
         if (this.prefabPlacer?.group) {
             this.prefabPlacer.group.visible = !preview
+        }
+        if (this.playerAircraft?.group) {
+            this.playerAircraft.group.visible = !preview
         }
     }
 
