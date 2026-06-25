@@ -19,7 +19,7 @@ This design covers:
 - Converting biome regions into global authored route data.
 - Keeping the player free to fly instead of enforcing hard progression gates.
 - Defining unordered biome entry, discovery, achievement, gated ruin activation, and story comic events.
-- Preparing biome coordinates for future `128 x 128` terrain chunk streaming.
+- Preparing biome coordinates for future render chunk streaming.
 - Keeping chunk lifecycle, biome detection, progress state, and UI/story presentation separate.
 
 This design does not cover:
@@ -110,7 +110,7 @@ biomes: {
 }
 ```
 
-The spacing deliberately crosses future chunk boundaries. With `128 x 128` chunks, the route forces the streaming system to handle global coordinates instead of repeatedly generating the same local biome layout.
+The spacing deliberately crosses future render chunk boundaries. The first render chunk size should be `64 x 64` cells, and the route forces the streaming system to handle global coordinates instead of repeatedly generating the same local biome layout.
 
 `radius` controls terrain biome influence. `achievementRadius` is a smaller inner circle used for player-facing biome confirmation, discovery, and discovery achievements. For a `radius` of `50`, the recommended `achievementRadius` is `40`, which keeps the player well inside the biome before progress UI or achievements fire. This avoids ambiguous unlocks in blended border areas where two biome weights overlap.
 
@@ -125,7 +125,7 @@ world block = chunk origin + local cell
 Examples:
 
 ```text
-chunk [1, 1] origin = [128, 128]
+render chunk [2, 2] origin = [128, 128]
 local cell [17, 17] = world block [145, 145]
 autumnForest center = [145, 145]
 ```
@@ -136,7 +136,7 @@ Terrain generation, biome scoring, prefab randomness, ruin placement, and player
 
 ### ChunkManager
 
-Owns terrain chunk lifecycle. It decides which `128 x 128` chunks are active around the aircraft, keeps at most two chunk groups visible, and unloads chunks that are no longer relevant.
+Owns render chunk lifecycle. It decides which `64 x 64` render chunks are active around the aircraft, keeps a small active chunk window visible, initially `3 x 3`, and unloads chunks that are no longer relevant.
 
 It should not know about achievements, comics, or story completion.
 
@@ -276,7 +276,7 @@ Manual verification should cover:
 - The four-biome route is spatially readable from the top-down aircraft camera.
 - The player can fly away from the intended route without being blocked.
 - UI guidance still makes the next intended biome clear.
-- Chunk loading later shows only the current and nearest target-side chunk while maintaining continuous biome layout.
+- Chunk loading later keeps a small active chunk window visible, initially `3 x 3`, while maintaining continuous biome layout.
 
 ## Acceptance Criteria
 
@@ -289,6 +289,6 @@ Manual verification should cover:
 - Confirmed biome entry, discovery, and discovery achievements can happen out of story order.
 - Story progression advances in route order through ruins and comics.
 - Later-order ruins show a blocked-state message instead of preventing biome achievement unlocks.
-- The chunk-streaming design can load at most two visible chunks without duplicating biome layouts.
+- The chunk-streaming design can keep a small active render chunk window visible, initially `3 x 3`, without duplicating biome layouts.
 - Runtime UI and story overlays are separate from debug panels.
 - Existing terrain, prefab, water, lava, and aircraft systems remain separable from route progression logic.
