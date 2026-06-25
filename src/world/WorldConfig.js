@@ -6,8 +6,8 @@ export const worldConfig = {
     tiltShift: { ...TILT_SHIFT_DEFAULTS }
   },
   terrain: {
-    width: 128,
-    depth: 128,
+    width: 80,
+    depth: 80,
     maxHeight: 28,
     layerHeight: 0.095,
     cellSize: 0.2,
@@ -47,18 +47,42 @@ export const worldConfig = {
     aircraft: {
       enabled: true,
       assetName: 'playerAircraftModel',
-      height: 2.5,
+      height: 3,
       scale: 1,
-      thrust: 14,
-      reverseThrust: 7,
+      thrust: 16,
+      reverseThrust: 8,
       turnTorque: 5,
+      turnThrustBoost: 5,
+      turnIdleBoost: 4,
       linearDrag: 2.2,
-      angularDrag: 4,
+      angularDrag: 6,
       maxSpeed: 8,
       maxAngularSpeed: 2.8,
       cameraFollow: {
         enabled: true,
-        smoothing: 8
+        smoothing: 4
+
+      },
+      visualAttitude: {
+        enabled: true,
+        pitchMax: 0.22,
+        rollMax: 0.50,
+        pitchSmoothing: 10,
+        rollSmoothing: 8,
+        rollSpeedBoost: 0.4,
+        hover: {
+          amplitude: 0.06,
+          frequency: 0.7,
+          fadeSpeedRatio: 0.25
+        },
+        thrusters: {
+          enabled: true,
+          baseIntensity: 0.35,
+          thrustBoost: 0.65,
+          turnBias: 0.25,
+          leftNodeName: 'left_engine',
+          rightNodeName: 'right_engine'
+        }
       }
     }
   },

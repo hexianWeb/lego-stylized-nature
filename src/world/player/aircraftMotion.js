@@ -6,6 +6,8 @@ export const DEFAULT_AIRCRAFT_CONFIG = {
   thrust: 14,
   reverseThrust: 7,
   turnTorque: 5,
+  turnThrustBoost: 2,
+  turnIdleBoost: 1.5,
   linearDrag: 2.2,
   angularDrag: 4,
   maxSpeed: 8,
@@ -30,6 +32,8 @@ export function normalizeAircraftConfig(config = {}) {
     thrust: positiveNumber(config.thrust, DEFAULT_AIRCRAFT_CONFIG.thrust),
     reverseThrust: positiveNumber(config.reverseThrust, DEFAULT_AIRCRAFT_CONFIG.reverseThrust),
     turnTorque: positiveNumber(config.turnTorque, DEFAULT_AIRCRAFT_CONFIG.turnTorque),
+    turnThrustBoost: positiveNumber(config.turnThrustBoost, DEFAULT_AIRCRAFT_CONFIG.turnThrustBoost),
+    turnIdleBoost: positiveNumber(config.turnIdleBoost, DEFAULT_AIRCRAFT_CONFIG.turnIdleBoost),
     linearDrag: nonNegativeNumber(config.linearDrag, DEFAULT_AIRCRAFT_CONFIG.linearDrag),
     angularDrag: nonNegativeNumber(config.angularDrag, DEFAULT_AIRCRAFT_CONFIG.angularDrag),
     maxSpeed: positiveNumber(config.maxSpeed, DEFAULT_AIRCRAFT_CONFIG.maxSpeed),
@@ -69,6 +73,19 @@ function applyExponentialDrag(value, drag, delta) {
   return value * Math.max(0, 1 - drag * delta)
 }
 
+function resolveTurnMultiplier(input, config) {
+  if (input.turnInput === 0) {
+    return 1
+  }
+  if (input.thrustInput > 0) {
+    return config.turnThrustBoost
+  }
+  if (input.thrustInput === 0) {
+    return config.turnIdleBoost
+  }
+  return 1
+}
+
 export function stepAircraftMotion(state, input, config, delta) {
   const dt = Math.min(Math.max(delta, 0), config.maxDelta)
   if (dt === 0) {
@@ -80,7 +97,8 @@ export function stepAircraftMotion(state, input, config, delta) {
   FORWARD.set(Math.cos(state.yaw), 0, Math.sin(state.yaw))
   state.velocity.addScaledVector(FORWARD, acceleration * dt)
 
-  state.angularVelocity += input.turnInput * config.turnTorque * dt
+  const turnMultiplier = resolveTurnMultiplier(input, config)
+  state.angularVelocity += input.turnInput * config.turnTorque * turnMultiplier * dt
 
   state.velocity.multiplyScalar(applyExponentialDrag(1, config.linearDrag, dt))
   state.angularVelocity = applyExponentialDrag(state.angularVelocity, config.angularDrag, dt)
@@ -88,10 +106,11 @@ export function stepAircraftMotion(state, input, config, delta) {
   if (state.velocity.lengthSq() > config.maxSpeed * config.maxSpeed) {
     state.velocity.setLength(config.maxSpeed)
   }
+  const maxAngularSpeed = config.maxAngularSpeed * turnMultiplier
   state.angularVelocity = THREE.MathUtils.clamp(
     state.angularVelocity,
-    -config.maxAngularSpeed,
-    config.maxAngularSpeed
+    -maxAngularSpeed,
+    maxAngularSpeed
   )
 
   state.position.addScaledVector(state.velocity, dt)

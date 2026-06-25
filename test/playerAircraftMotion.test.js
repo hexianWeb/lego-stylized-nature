@@ -64,7 +64,13 @@ test('reverse thrust is weaker than forward thrust', () => {
 })
 
 test('left and right turn inputs change angular velocity in opposite directions', () => {
-  const config = normalizeAircraftConfig({ turnTorque: 3, angularDrag: 0, maxAngularSpeed: 100, maxDelta: 1 })
+  const config = normalizeAircraftConfig({
+    turnTorque: 3,
+    turnIdleBoost: 1,
+    angularDrag: 0,
+    maxAngularSpeed: 100,
+    maxDelta: 1
+  })
   const left = createAircraftState()
   const right = createAircraftState()
 
@@ -92,6 +98,7 @@ test('speed and angular velocity are clamped', () => {
   const config = normalizeAircraftConfig({
     thrust: 100,
     turnTorque: 100,
+    turnThrustBoost: 1,
     linearDrag: 0,
     angularDrag: 0,
     maxSpeed: 5,

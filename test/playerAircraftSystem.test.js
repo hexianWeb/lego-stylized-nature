@@ -67,6 +67,10 @@ test('clones the configured aircraft asset into its group', () => {
   assert.notEqual(player.group.children[0], experience.resources.items.playerAircraftModel.scene)
   assert.equal(player.group.scale.x, 2)
   assert.equal(player.group.position.y, 3)
+
+  const body = player.group.children[0].children[0].children[0]
+  assert.equal(body.castShadow, true)
+  assert.equal(body.receiveShadow, true)
 })
 
 test('missing asset disables player and warns once', () => {

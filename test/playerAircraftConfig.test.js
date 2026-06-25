@@ -30,3 +30,16 @@ test('player aircraft config is enabled and has no terrain bounds clamp', () => 
   assert.equal(config.cameraFollow.enabled, true)
   assert.equal(config.cameraFollow.smoothing > 0, true)
 })
+
+test('player aircraft visualAttitude config has expected defaults', () => {
+  const attitude = worldConfig.player.aircraft.visualAttitude
+
+  assert.equal(attitude.enabled, true)
+  assert.equal(attitude.pitchMax > 0, true)
+  assert.equal(attitude.rollMax > 0, true)
+  assert.equal(attitude.pitchSmoothing > 0, true)
+  assert.equal(attitude.rollSmoothing > 0, true)
+  assert.equal(attitude.hover.amplitude > 0, true)
+  assert.equal(attitude.hover.frequency > 0, true)
+  assert.equal(attitude.thrusters.enabled, true)
+})
