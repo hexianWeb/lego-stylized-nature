@@ -10,7 +10,7 @@ The first authored route is:
 forest -> autumnForest -> desert -> volcano
 ```
 
-Each biome should occupy roughly a `100 x 100` block area. Its center anchors the biome core and ruin placement, while a smaller inner achievement radius confirms that the player is safely inside that biome before discovery and achievements fire.
+Each biome should occupy roughly a `100 x 100` block area. Its center anchors the biome core and ruin placement, while a smaller inner achievement radius confirms that the player is safely inside that biome before discovery and discovery achievements fire.
 
 ## Scope
 
@@ -66,7 +66,7 @@ biomes: {
       achievementRadius: 40,
       weight: 1,
       storyOrder: 0,
-      achievementId: 'biome_forest_core',
+      discoveryAchievementId: 'biome_forest_discovered',
       ruinId: 'forest_ruin',
       storyId: 'forest_comic'
     },
@@ -78,7 +78,7 @@ biomes: {
       achievementRadius: 40,
       weight: 1,
       storyOrder: 1,
-      achievementId: 'biome_autumn_forest_core',
+      discoveryAchievementId: 'biome_autumn_forest_discovered',
       ruinId: 'autumn_forest_ruin',
       storyId: 'autumn_forest_comic'
     },
@@ -90,7 +90,7 @@ biomes: {
       achievementRadius: 40,
       weight: 1,
       storyOrder: 2,
-      achievementId: 'biome_desert_core',
+      discoveryAchievementId: 'biome_desert_discovered',
       ruinId: 'desert_ruin',
       storyId: 'desert_comic'
     },
@@ -102,7 +102,7 @@ biomes: {
       achievementRadius: 40,
       weight: 1,
       storyOrder: 3,
-      achievementId: 'biome_volcano_core',
+      discoveryAchievementId: 'biome_volcano_discovered',
       ruinId: 'volcano_ruin',
       storyId: 'volcano_comic'
     }
@@ -112,7 +112,7 @@ biomes: {
 
 The spacing deliberately crosses future chunk boundaries. With `128 x 128` chunks, the route forces the streaming system to handle global coordinates instead of repeatedly generating the same local biome layout.
 
-`radius` controls terrain biome influence. `achievementRadius` is a smaller inner circle used for player-facing biome discovery and biome achievements. For a `radius` of `50`, the recommended `achievementRadius` is `40`, which keeps the player well inside the biome before progress UI or achievements fire. This avoids ambiguous unlocks in blended border areas where two biome weights overlap.
+`radius` controls terrain biome influence. `achievementRadius` is a smaller inner circle used for player-facing biome confirmation, discovery, and discovery achievements. For a `radius` of `50`, the recommended `achievementRadius` is `40`, which keeps the player well inside the biome before progress UI or achievements fire. This avoids ambiguous unlocks in blended border areas where two biome weights overlap.
 
 ## Coordinate Model
 
@@ -149,10 +149,11 @@ Adapts the existing terrain generation path to accept a chunk origin. Biome samp
 Owns authored route interpretation:
 
 - Sort regions by `storyOrder`.
-- Resolve current biome from player world block position.
+- Resolve `currentVisualBiome` from terrain biome weights or dominant region. This is useful for debug and ambient UI, but it can change near borders.
+- Resolve `confirmedBiome` from player world block position only when the player is inside a region's `achievementRadius`.
 - Resolve the next recommended biome based on progress.
 - Compute distance to region centers.
-- Emit route-level events such as biome entered, biome discovered, achievement reached, ruin blocked, and ruin activated.
+- Emit route-level events such as `biome:changed`, `biome:confirmed`, `biome:discovered`, `achievement:unlocked`, `ruin:blocked`, and `ruin:activated`.
 
 It should be pure enough to test without Three.js.
 
@@ -160,7 +161,7 @@ It should be pure enough to test without Three.js.
 
 Tracks one-session progression:
 
-- entered biome ids
+- confirmed biome ids
 - discovered biome ids
 - unlocked achievement ids
 - activated ruin ids
@@ -182,7 +183,8 @@ Runtime UI should be separate from debug panels.
 
 The HUD displays:
 
-- current biome entered message
+- current visual biome message when useful
+- confirmed biome message when the player enters a stable inner biome area
 - next recommended biome or ruin direction
 - achievement unlock notice
 - blocked ruin notice when the player reaches a later ruin before the required story step
@@ -196,21 +198,23 @@ Every update:
 
 1. Read aircraft world position.
 2. Convert to world block position.
-3. Ask `BiomeRouteService` for the nearest confirmed region and next story target.
-4. If the player crosses inside a region's `achievementRadius`, emit `biomeEntered` and `biomeDiscovered` once for that region.
-5. Unlock that biome's achievement once, regardless of story order.
-6. If the player enters a ruin's `ruinActivationRadius`, compare the ruin's `storyOrder` with the current story index.
-7. If the ruin matches the current story index, emit `ruinActivated`, show the matching comic overlay, mark the story id viewed, and advance the recommended story target.
-8. If the ruin belongs to a later story step, emit `ruinBlocked` and show a message such as `Signal not synchronized. More clues are still missing.`
+3. Ask `BiomeRouteService` for `currentVisualBiome`, `confirmedBiome`, and next story target.
+4. If `currentVisualBiome` changes, optionally emit `biome:changed` for debug or ambient UI. This event does not unlock progress.
+5. If the player crosses inside a region's `achievementRadius`, emit `biome:confirmed` for that region.
+6. If that region was not already discovered, emit `biome:discovered`, record the discovery, and unlock `discoveryAchievementId` once, regardless of story order.
+7. If the player enters a ruin's `ruinActivationRadius`, compare the ruin's `storyOrder` with the current story index.
+8. If the ruin matches the current story index, emit `ruin:activated`, show the matching comic overlay, mark the story id viewed, and advance the recommended story target.
+9. If the ruin belongs to a later story step, emit `ruin:blocked` and show a message such as `Signal not synchronized. More clues are still missing.`
 
-The player may visit later biomes early. Enter UI, biome discovery, and biome achievements can all happen out of order. Only ruin activation and comic story progression follow `storyOrder`.
+The player may visit later biomes early. Visual biome changes, confirmed biome entry, biome discovery, and discovery achievements can all happen out of order. Only ruin activation and comic story progression follow `storyOrder`.
 
 Example: if the player flies to the volcano before completing earlier ruins:
 
 ```text
-enter volcano achievement radius -> HUD: Entered Volcano
+visual biome changes near volcano border -> optional HUD/debug: Volcano
+enter volcano achievement radius -> HUD: Confirmed Volcano
 first confirmed volcano visit -> progress records volcano as discovered
-volcano achievement not yet unlocked -> unlock Volcano Core
+volcano discovery achievement not yet unlocked -> unlock Volcano Discovered
 enter volcano ruin activation radius -> HUD: Signal not synchronized. More clues are still missing.
 story index remains unchanged
 ```
@@ -223,7 +227,7 @@ The map remains freely flyable. Guidance is soft:
 - No forced teleporting.
 - No hard lock that prevents entering a later biome.
 - UI points the player toward the next intended biome center.
-- Biome discovery and biome achievements unlock even if the player reaches a later biome early.
+- Confirmed biome discovery and discovery achievements unlock even if the player reaches a later biome early.
 - Ruin activation only advances the story target when it matches the current story order.
 - Later ruins show a blocked-state message instead of silently failing.
 
@@ -245,7 +249,7 @@ For volcano, the ruin should avoid active lava cells unless a later story beat r
 - Unknown biome id in a region should warn once and skip that region for route progression.
 - Duplicate `storyOrder` values should warn and use region list order as a stable tie-breaker.
 - Missing `displayName` should fall back to `id`.
-- Missing `achievementId`, `ruinId`, or `storyId` should disable that specific event while leaving biome generation intact.
+- Missing `discoveryAchievementId`, `ruinId`, or `storyId` should disable that specific event while leaving biome generation intact.
 - Missing comic content should show a placeholder comic overlay with the `storyId`.
 
 ## Testing
@@ -255,11 +259,14 @@ Focused tests should cover:
 - Global coordinate biome scoring uses `worldX/worldZ`.
 - Chunk-local coordinates convert correctly to global coordinates.
 - Route regions sort by `storyOrder`.
-- Entering a region's `achievementRadius` emits one `biomeEntered` event per confirmed biome.
+- `currentVisualBiome` can change near region borders without recording progress.
+- Entering a region's `achievementRadius` emits `biome:confirmed`.
+- First confirmation emits `biome:discovered`.
+- First discovery unlocks `discoveryAchievementId`.
 - Biome discovery records out of order.
-- Biome achievements unlock out of order.
+- Discovery achievements unlock out of order.
 - Border areas outside `achievementRadius` do not trigger discovery or achievements, even when biome weights blend.
-- Visiting a later ruin early emits `ruinBlocked` and does not advance the story target.
+- Visiting a later ruin early emits `ruin:blocked` and does not advance the story target.
 - Activating the current-order ruin advances progress.
 - Progress state does not duplicate achievements, ruins, or viewed stories.
 - Missing route metadata degrades without crashing terrain generation.
@@ -276,9 +283,10 @@ Manual verification should cover:
 - The authored route order is `forest -> autumnForest -> desert -> volcano`.
 - Biome centers use global block coordinates.
 - Each region radius is around `50`, producing roughly `100 x 100` biome areas.
-- Biome discovery and achievements use an inner `achievementRadius`, recommended as `40` for a `50` radius biome.
+- Biome discovery and discovery achievements use an inner `achievementRadius`, recommended as `40` for a `50` radius biome.
 - The player can freely enter any biome.
-- Biome entry, discovery, and achievements can happen out of story order.
+- Visual biome changes do not record progress by themselves.
+- Confirmed biome entry, discovery, and discovery achievements can happen out of story order.
 - Story progression advances in route order through ruins and comics.
 - Later-order ruins show a blocked-state message instead of preventing biome achievement unlocks.
 - The chunk-streaming design can load at most two visible chunks without duplicating biome layouts.
