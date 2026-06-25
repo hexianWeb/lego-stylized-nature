@@ -110,7 +110,7 @@ biomes: {
 }
 ```
 
-The spacing deliberately crosses future render chunk boundaries. The first render chunk size should be `64 x 64` cells, and the route forces the streaming system to handle global coordinates instead of repeatedly generating the same local biome layout.
+The spacing deliberately crosses future render chunk boundaries. The first render chunk size should be `32 x 32` cells, and the route forces the streaming system to handle global coordinates instead of repeatedly generating the same local biome layout. A `3 x 3` active window at this size covers `96 x 96` cells, which gives a small buffer around the current roughly `80 x 80` top-down view without drawing a much larger `192 x 192` area.
 
 `radius` controls terrain biome influence. `achievementRadius` is a smaller inner circle used for player-facing biome confirmation, discovery, and discovery achievements. For a `radius` of `50`, the recommended `achievementRadius` is `40`, which keeps the player well inside the biome before progress UI or achievements fire. This avoids ambiguous unlocks in blended border areas where two biome weights overlap.
 
@@ -125,7 +125,7 @@ world block = chunk origin + local cell
 Examples:
 
 ```text
-render chunk [2, 2] origin = [128, 128]
+render chunk [4, 4] origin = [128, 128]
 local cell [17, 17] = world block [145, 145]
 autumnForest center = [145, 145]
 ```
@@ -136,13 +136,13 @@ Terrain generation, biome scoring, prefab randomness, ruin placement, and player
 
 ### ChunkManager
 
-Owns render chunk lifecycle. It decides which `64 x 64` render chunks are active around the aircraft, keeps a small active chunk window visible, initially `3 x 3`, and unloads chunks that are no longer relevant.
+Owns render chunk lifecycle. It decides which `32 x 32` render chunks are active around the aircraft, keeps a small active chunk window visible, initially `3 x 3`, and unloads chunks that are no longer relevant.
 
 The active window should be centered on a stable `anchorChunk`, not on a raw per-frame direction guess. `ChunkManager` must debounce anchor changes so small aircraft movement near a chunk boundary or direction threshold does not repeatedly unload and reload neighboring chunks. The recommended first rule is:
 
 - Compute a candidate render chunk from the aircraft world block position.
 - Keep the existing `anchorChunk` while the aircraft remains within a hysteresis margin around it.
-- Switch to the candidate chunk only after the aircraft moves at least `8` cells into the candidate chunk, or after the candidate remains stable for a short dwell time such as `0.25` seconds.
+- Switch to the candidate chunk only after the aircraft moves at least `4` cells into the candidate chunk, or after the candidate remains stable for a short dwell time such as `0.25` seconds.
 - Rebuild the `3 x 3` active window only when `anchorChunk` changes.
 
 It should not know about achievements, comics, or story completion.
@@ -265,6 +265,7 @@ Focused tests should cover:
 
 - Global coordinate biome scoring uses `worldX/worldZ`.
 - Chunk-local coordinates convert correctly to global coordinates.
+- The first render chunk size is `32 x 32` cells.
 - `ChunkManager` keeps a stable `anchorChunk` while the aircraft jitters near a chunk boundary or direction threshold.
 - `ChunkManager` switches `anchorChunk` only after the hysteresis margin or dwell-time rule is satisfied.
 - The `3 x 3` active chunk window rebuilds only when `anchorChunk` changes.
@@ -286,7 +287,7 @@ Manual verification should cover:
 - The four-biome route is spatially readable from the top-down aircraft camera.
 - The player can fly away from the intended route without being blocked.
 - UI guidance still makes the next intended biome clear.
-- Chunk loading later keeps a small active chunk window visible, initially `3 x 3`, while maintaining continuous biome layout.
+- Chunk loading later keeps a small active chunk window visible, initially `3 x 3` of `32 x 32` render chunks, while maintaining continuous biome layout.
 - Small back-and-forth aircraft movement near chunk thresholds does not cause visible chunk unload/load flicker.
 
 ## Acceptance Criteria
@@ -300,7 +301,7 @@ Manual verification should cover:
 - Confirmed biome entry, discovery, and discovery achievements can happen out of story order.
 - Story progression advances in route order through ruins and comics.
 - Later-order ruins show a blocked-state message instead of preventing biome achievement unlocks.
-- The chunk-streaming design can keep a small active render chunk window visible, initially `3 x 3`, without duplicating biome layouts.
+- The chunk-streaming design can keep a small active render chunk window visible, initially `3 x 3` of `32 x 32` chunks, without duplicating biome layouts.
 - Chunk window updates are debounced so minor movement near thresholds does not repeatedly switch the active window.
 - Runtime UI and story overlays are separate from debug panels.
 - Existing terrain, prefab, water, lava, and aircraft systems remain separable from route progression logic.
