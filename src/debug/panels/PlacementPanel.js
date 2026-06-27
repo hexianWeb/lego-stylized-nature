@@ -4,6 +4,7 @@ export function createPlacementPanel(debug, config, onRegenerate) {
         return
     }
 
+    folder.addBinding(config.placement, 'enablePrefabs', { label: 'Prefabs' }).on('change', onRegenerate)
     folder.addBinding(config.placement, 'enableTrees', { label: 'Trees' }).on('change', onRegenerate)
     folder.addBinding(config.placement, 'rotationStep', { min: Math.PI / 8, max: Math.PI, step: Math.PI / 8 }).on('change', onRegenerate)
 }

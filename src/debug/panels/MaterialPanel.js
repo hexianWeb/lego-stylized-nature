@@ -1,11 +1,17 @@
 export function createMaterialPanel(
     debug,
     config,
-    { legoMaterial, waterMaterial }
+    { legoMaterial, waterMaterial },
+    onRegenerate = null
 ) {
     const folder = debug.addFolder({ title: 'Materials', expanded: false })
     if (!folder) {
         return
+    }
+
+    const waterToggle = folder.addBinding(config.water, 'enableWater', { label: 'Water' })
+    if (onRegenerate) {
+        waterToggle.on('change', onRegenerate)
     }
 
     if (legoMaterial) {

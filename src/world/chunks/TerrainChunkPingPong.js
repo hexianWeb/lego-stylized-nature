@@ -57,7 +57,8 @@ export default class TerrainChunkPingPong {
   }
 
   createSlot(index, brickGeometry) {
-    const prefabPlacer = this.prefabRegistry && this.biomeRegistry
+    const prefabsEnabled = this.config.placement?.enablePrefabs !== false
+    const prefabPlacer = prefabsEnabled && this.prefabRegistry && this.biomeRegistry
       ? new PrefabPlacer({
         config: this.config,
         biomeRegistry: this.biomeRegistry,
@@ -65,6 +66,7 @@ export default class TerrainChunkPingPong {
       })
       : null
 
+    const waterEnabled = this.config.water?.enableWater !== false
     return new ChunkRenderSlot({
       index,
       chunkSize: this.chunkSize,
@@ -75,11 +77,13 @@ export default class TerrainChunkPingPong {
       }),
       heightfieldAO: new HeightfieldAO({ config: this.config }),
       prefabPlacer,
-      waterRenderer: new WaterBrickRenderer({
-        config: this.config,
-        brickGeometry,
-        waterNoiseTexture: this.waterNoiseTexture
-      }),
+      waterRenderer: waterEnabled
+        ? new WaterBrickRenderer({
+          config: this.config,
+          brickGeometry,
+          waterNoiseTexture: this.waterNoiseTexture
+        })
+        : null,
       lavaRenderer: new LavaBrickRenderer({
         config: this.config,
         brickGeometry,

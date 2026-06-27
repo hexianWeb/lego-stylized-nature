@@ -48,7 +48,8 @@ test('water renderer uses chunk-local positions inside each slot', () => {
 
   renderer.build(terrainMap)
 
-  assert.equal(renderer.mesh.count, 2)
+  assert.equal(renderer.instanceCount, 4)
+  assert.equal(renderer.mesh.count, 4)
 
   const matrix = new THREE.Matrix4()
   const position = new THREE.Vector3()
@@ -56,6 +57,7 @@ test('water renderer uses chunk-local positions inside each slot', () => {
   position.setFromMatrixPosition(matrix)
   assert.ok(Math.abs(position.x - 0.1) < 1e-5)
   assert.ok(Math.abs(position.z - 0.1) < 1e-5)
+  assert.equal(position.y, 4)
 
   renderer.dispose()
 })
@@ -99,7 +101,7 @@ test('lava renderer uses chunk-local positions inside each slot', () => {
   renderer.dispose()
 })
 
-test('water renderer reuses InstancedMesh across rebuilds', () => {
+test('water renderer reuses fixed grid matrices across rebuilds', () => {
   const renderer = new WaterBrickRenderer({
     config: {
       terrain: { width: 3, depth: 1, cellSize: 0.2, layerHeight: 1, waterLevel: 4 },
@@ -108,15 +110,24 @@ test('water renderer reuses InstancedMesh across rebuilds', () => {
     brickGeometry: new THREE.BoxGeometry(1, 1, 1)
   })
   const terrainMap = {
-    getSurfaceCell(x) {
-      return { isWater: x < 2 }
+    getSurfaceCell() {
+      return { isWater: false }
     }
   }
 
   renderer.build(terrainMap)
   const firstMesh = renderer.mesh
+  const firstMatrix = new THREE.Matrix4()
+  renderer.mesh.getMatrixAt(0, firstMatrix)
+
   renderer.build(terrainMap)
 
   assert.equal(renderer.mesh, firstMesh)
+  assert.equal(renderer.mesh.count, 3)
+
+  const secondMatrix = new THREE.Matrix4()
+  renderer.mesh.getMatrixAt(0, secondMatrix)
+  assert.deepEqual(secondMatrix.elements, firstMatrix.elements)
+
   renderer.dispose()
 })

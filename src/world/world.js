@@ -119,27 +119,31 @@ export default class World {
             }
 
             if (!useChunkTerrain) {
-                this.waterBrickRenderer = new WaterBrickRenderer({
-                    config: this.config,
-                    brickGeometry: this.brickGeometry,
-                    waterNoiseTexture: resources.items.waterNoiseTexture
-                })
+                const waterEnabled = this.config.water?.enableWater !== false
+                if (waterEnabled) {
+                    this.waterBrickRenderer = new WaterBrickRenderer({
+                        config: this.config,
+                        brickGeometry: this.brickGeometry,
+                        waterNoiseTexture: resources.items.waterNoiseTexture
+                    })
+                    this.addSystem(this.waterBrickRenderer)
+                }
                 this.lavaBrickRenderer = new LavaBrickRenderer({
                     config: this.config,
                     brickGeometry: this.brickGeometry,
                     lavaConfig: this.biomeRegistry.get('volcano').lava,
                     lavaNoiseTexture: resources.items.lavaNoiseTexture
                 })
-
-                this.addSystem(this.waterBrickRenderer)
                 this.addSystem(this.lavaBrickRenderer)
 
-                this.prefabPlacer = new PrefabPlacer({
-                    config: this.config,
-                    biomeRegistry: this.biomeRegistry,
-                    prefabRegistry
-                })
-                this.addSystem(this.prefabPlacer)
+                if (this.config.placement?.enablePrefabs !== false) {
+                    this.prefabPlacer = new PrefabPlacer({
+                        config: this.config,
+                        biomeRegistry: this.biomeRegistry,
+                        prefabRegistry
+                    })
+                    this.addSystem(this.prefabPlacer)
+                }
             }
 
             this.playerAircraft = new PlayerAircraft(this.experience, { config: this.config })
@@ -155,7 +159,7 @@ export default class World {
         }
 
         const useChunkTerrain = Boolean(this.terrainChunkPingPong)
-        if (!useChunkTerrain && !this.waterBrickRenderer) {
+        if (!useChunkTerrain && !this.waterBrickRenderer && !this.lavaBrickRenderer) {
             return
         }
 
@@ -193,7 +197,7 @@ export default class World {
             const bootstrapZ = playerPosition?.z ?? centerZ
             this.terrainChunkPingPong.bootstrap(bootstrapX, bootstrapZ)
         } else {
-            this.waterBrickRenderer.build(this.terrainMap)
+            this.waterBrickRenderer?.build(this.terrainMap)
             this.lavaBrickRenderer.build(this.terrainMap)
             this.prefabPlacer?.build(this.terrainMap)
         }
@@ -246,7 +250,7 @@ export default class World {
                 ?? this.terrainBrickRenderer?.material,
             waterMaterial: this.terrainChunkPingPong?.getDebugMaterials().waterMaterial
                 ?? this.waterBrickRenderer?.material
-        })
+        }, onRegenerate)
 
         for (const child of this.children) {
             child.debuggerInit?.(debug)

@@ -39,7 +39,7 @@ test('creates animated noise-mixed water material with a procedural fallback', (
   assert.equal(texturedMaterial.metalness, 0)
 })
 
-test('maintains one reusable water mesh and disposes owned resources', () => {
+test('initializes a fixed water grid once and skips matrix uploads on rebuild', () => {
   const renderer = new WaterBrickRenderer({
     config: {
       terrain: {
@@ -54,14 +54,9 @@ test('maintains one reusable water mesh and disposes owned resources', () => {
     brickGeometry: new THREE.BoxGeometry(1, 1, 1),
     waterNoiseTexture: new THREE.Texture()
   })
-  let cells = [
-    { isWater: true },
-    { isWater: true },
-    { isWater: false }
-  ]
   const terrainMap = {
-    getSurfaceCell(x) {
-      return cells[x]
+    getSurfaceCell() {
+      return { isWater: false }
     }
   }
 
@@ -70,18 +65,14 @@ test('maintains one reusable water mesh and disposes owned resources', () => {
 
   assert.equal(renderer.group.children.length, 1)
   assert.equal(renderer.mesh.name, 'WaterBrickInstances')
-  assert.equal(renderer.mesh.count, 2)
+  assert.equal(renderer.mesh.count, 3)
+  assert.equal(renderer.instanceCount, 3)
 
-  cells = [
-    { isWater: true },
-    { isWater: false },
-    { isWater: false }
-  ]
   renderer.build(terrainMap)
 
   assert.equal(renderer.mesh, firstMesh)
   assert.equal(renderer.group.children.length, 1)
-  assert.equal(renderer.mesh.count, 1)
+  assert.equal(renderer.mesh.count, 3)
 
   let materialDisposed = false
   renderer.material.dispose = () => {
@@ -91,6 +82,5 @@ test('maintains one reusable water mesh and disposes owned resources', () => {
 
   assert.equal(materialDisposed, true)
   assert.equal(renderer.mesh, null)
-  assert.equal(renderer.capacity, 0)
   assert.equal(renderer.group.children.length, 0)
 })

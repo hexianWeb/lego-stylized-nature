@@ -40,6 +40,7 @@ export const worldConfig = {
     ]
   },
   placement: {
+    enablePrefabs: true,
     enableTrees: true,
     rotationStep: Math.PI / 2,
     prefabCapacity: {
@@ -103,6 +104,7 @@ export const worldConfig = {
     }
   },
   water: {
+    enableWater: true,
     darkColor: '#0757A6',
     midColor: '#168FD2',
     lightColor: '#42DDEB',
