@@ -1,5 +1,6 @@
 import * as THREE from 'three/webgpu'
 import { createLavaMaterial } from '../../materials/tsl/lavaMaterial.js'
+import { getTerrainIterationBounds } from '../terrain/terrainMapBounds.js'
 
 export default class LavaBrickRenderer {
   constructor({ config, brickGeometry, lavaConfig = {}, lavaNoiseTexture = null }) {
@@ -13,14 +14,21 @@ export default class LavaBrickRenderer {
   }
 
   build(terrainMap) {
-    const { width, depth, cellSize, layerHeight } = this.config.terrain
-
+    const { cellSize, layerHeight } = this.config.terrain
+    const bounds = getTerrainIterationBounds(terrainMap, this.config)
     const cells = []
-    for (let z = 0; z < depth; z++) {
-      for (let x = 0; x < width; x++) {
-        const surfaceCell = terrainMap.getSurfaceCell(x, z)
+
+    for (let localZ = 0; localZ < bounds.visibleDepth; localZ++) {
+      for (let localX = 0; localX < bounds.visibleWidth; localX++) {
+        const sampleX = bounds.halo + localX
+        const sampleZ = bounds.halo + localZ
+        const surfaceCell = terrainMap.getSurfaceCell(sampleX, sampleZ)
         if (surfaceCell.isLava) {
-          cells.push({ x, z, height: surfaceCell.lavaHeight ?? surfaceCell.height })
+          cells.push({
+            x: localX,
+            z: localZ,
+            height: surfaceCell.lavaHeight ?? surfaceCell.height
+          })
         }
       }
     }

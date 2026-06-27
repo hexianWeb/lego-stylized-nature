@@ -6,9 +6,9 @@ export const worldConfig = {
     tiltShift: { ...TILT_SHIFT_DEFAULTS }
   },
   terrain: {
-    width: 80,
-    depth: 80,
-    maxHeight: 28,
+    width: 128,
+    depth: 128,
+    maxHeight: 36,
     layerHeight: 0.095,
     cellSize: 0.2,
     waterLevel: 3,
@@ -41,7 +41,23 @@ export const worldConfig = {
   },
   placement: {
     enableTrees: true,
-    rotationStep: Math.PI / 2
+    rotationStep: Math.PI / 2,
+    prefabCapacity: {
+      default: 128,
+      tree: 128,
+      flora: 512,
+      rock: 128,
+      plant: 256,
+      waterAccent: 32,
+      waterPlant: 64,
+      prop: 64
+    }
+  },
+  chunks: {
+    enabled: true,
+    size: 72,
+    halo: 1,
+    prefetchThreshold: 0.2
   },
   player: {
     aircraft: {
@@ -60,7 +76,7 @@ export const worldConfig = {
       maxAngularSpeed: 2.8,
       cameraFollow: {
         enabled: true,
-        smoothing: 4
+        smoothing: 8
 
       },
       visualAttitude: {

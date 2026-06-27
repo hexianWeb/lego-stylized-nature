@@ -14,6 +14,7 @@ import LavaBrickRenderer from './bricks/LavaBrickRenderer.js'
 import PrefabRegistry from './prefabs/PrefabRegistry.js'
 import PrefabPlacer from './prefabs/PrefabPlacer.js'
 import PlayerAircraft from './player/PlayerAircraft.js'
+import TerrainChunkPingPong from './chunks/TerrainChunkPingPong.js'
 import { createTerrainPanel } from '../debug/panels/TerrainPanel.js'
 import { createAOPanel } from '../debug/panels/AOPanel.js'
 import { createBiomePanel } from '../debug/panels/BiomePanel.js'
@@ -49,6 +50,7 @@ export default class World {
         this.lavaBrickRenderer = null
         this.prefabPlacer = null
         this.playerAircraft = null
+        this.terrainChunkPingPong = null
     }
 
     addSystem(system) {
@@ -88,33 +90,57 @@ export default class World {
             })
             this.heightfieldAO = new HeightfieldAO({ config: this.config })
 
+            const useChunkTerrain = this.config.chunks?.enabled === true
+
             this.terrainBrickRenderer = new TerrainBrickRenderer({
                 config: this.config,
                 brickGeometry: this.brickGeometry
             })
-            this.waterBrickRenderer = new WaterBrickRenderer({
-                config: this.config,
-                brickGeometry: this.brickGeometry,
-                waterNoiseTexture: resources.items.waterNoiseTexture
-            })
-            this.lavaBrickRenderer = new LavaBrickRenderer({
-                config: this.config,
-                brickGeometry: this.brickGeometry,
-                lavaConfig: this.biomeRegistry.get('volcano').lava,
-                lavaNoiseTexture: resources.items.lavaNoiseTexture
-            })
-
-            this.addSystem(this.terrainBrickRenderer)
-            this.addSystem(this.waterBrickRenderer)
-            this.addSystem(this.lavaBrickRenderer)
 
             const prefabRegistry = new PrefabRegistry(resources)
-            this.prefabPlacer = new PrefabPlacer({
-                config: this.config,
-                biomeRegistry: this.biomeRegistry,
-                prefabRegistry
-            })
-            this.addSystem(this.prefabPlacer)
+
+            if (useChunkTerrain) {
+                this.terrainChunkPingPong = new TerrainChunkPingPong({
+                    config: this.config,
+                    terrainGenerator: this.terrainGenerator,
+                    layeredTerrainBuilder: this.layeredTerrainBuilder,
+                    brickColorResolver: this.brickColorResolver,
+                    brickGeometry: this.brickGeometry,
+                    parentGroup: this.group,
+                    biomeRegistry: this.biomeRegistry,
+                    prefabRegistry,
+                    waterNoiseTexture: resources.items.waterNoiseTexture,
+                    lavaConfig: this.biomeRegistry.get('volcano').lava,
+                    lavaNoiseTexture: resources.items.lavaNoiseTexture
+                })
+                this.terrainBrickRenderer.group.visible = false
+            } else {
+                this.addSystem(this.terrainBrickRenderer)
+            }
+
+            if (!useChunkTerrain) {
+                this.waterBrickRenderer = new WaterBrickRenderer({
+                    config: this.config,
+                    brickGeometry: this.brickGeometry,
+                    waterNoiseTexture: resources.items.waterNoiseTexture
+                })
+                this.lavaBrickRenderer = new LavaBrickRenderer({
+                    config: this.config,
+                    brickGeometry: this.brickGeometry,
+                    lavaConfig: this.biomeRegistry.get('volcano').lava,
+                    lavaNoiseTexture: resources.items.lavaNoiseTexture
+                })
+
+                this.addSystem(this.waterBrickRenderer)
+                this.addSystem(this.lavaBrickRenderer)
+
+                this.prefabPlacer = new PrefabPlacer({
+                    config: this.config,
+                    biomeRegistry: this.biomeRegistry,
+                    prefabRegistry
+                })
+                this.addSystem(this.prefabPlacer)
+            }
 
             this.playerAircraft = new PlayerAircraft(this.experience, { config: this.config })
             this.addSystem(this.playerAircraft)
@@ -124,13 +150,21 @@ export default class World {
     }
 
     regenerate() {
-        if (!this.terrainGenerator || !this.terrainBrickRenderer || !this.waterBrickRenderer) {
+        if (!this.terrainGenerator || !this.terrainBrickRenderer) {
+            return
+        }
+
+        const useChunkTerrain = Boolean(this.terrainChunkPingPong)
+        if (!useChunkTerrain && !this.waterBrickRenderer) {
             return
         }
 
         this.terrainMap = this.terrainGenerator.generate()
         this.terrainPlacements = this.layeredTerrainBuilder.buildPlacements(this.terrainMap)
-        this.heightfieldAO.build(this.terrainMap)
+
+        if (!this.terrainChunkPingPong) {
+            this.heightfieldAO.build(this.terrainMap)
+        }
 
         const { width, depth, cellSize, maxHeight, layerHeight } = this.config.terrain
         const centerX = width * cellSize * 0.5
@@ -145,14 +179,25 @@ export default class World {
             maxHeight: maxHeight * layerHeight + 8
         })
 
-        this.terrainBrickRenderer.build(
-            this.terrainPlacements,
-            this.brickColorResolver,
-            this.heightfieldAO
-        )
-        this.waterBrickRenderer.build(this.terrainMap)
-        this.lavaBrickRenderer.build(this.terrainMap)
-        this.prefabPlacer?.build(this.terrainMap)
+        if (!this.terrainChunkPingPong) {
+            this.terrainBrickRenderer.build(
+                this.terrainPlacements,
+                this.brickColorResolver,
+                this.heightfieldAO
+            )
+        }
+
+        if (this.terrainChunkPingPong) {
+            const playerPosition = this.playerAircraft?.state?.position
+            const bootstrapX = playerPosition?.x ?? centerX
+            const bootstrapZ = playerPosition?.z ?? centerZ
+            this.terrainChunkPingPong.bootstrap(bootstrapX, bootstrapZ)
+        } else {
+            this.waterBrickRenderer.build(this.terrainMap)
+            this.lavaBrickRenderer.build(this.terrainMap)
+            this.prefabPlacer?.build(this.terrainMap)
+        }
+
         this.refreshAOPreview()
     }
 
@@ -164,15 +209,17 @@ export default class World {
         }
 
         this.terrainBrickRenderer?.updateInstanceColors()
+        this.terrainChunkPingPong?.refreshAOPreview(!preview)
 
+        const useChunkTerrain = this.config.chunks?.enabled === true
         if (this.waterBrickRenderer?.group) {
-            this.waterBrickRenderer.group.visible = !preview
+            this.waterBrickRenderer.group.visible = !preview && !useChunkTerrain
         }
         if (this.lavaBrickRenderer?.group) {
-            this.lavaBrickRenderer.group.visible = !preview
+            this.lavaBrickRenderer.group.visible = !preview && !useChunkTerrain
         }
         if (this.prefabPlacer?.group) {
-            this.prefabPlacer.group.visible = !preview
+            this.prefabPlacer.group.visible = !preview && !useChunkTerrain
         }
         if (this.playerAircraft?.group) {
             this.playerAircraft.group.visible = !preview
@@ -195,8 +242,10 @@ export default class World {
         createBiomePanel(debug, this.config, onRegenerate)
         createPlacementPanel(debug, this.config, onRegenerate)
         createMaterialPanel(debug, this.config, {
-            legoMaterial: this.terrainBrickRenderer?.material,
-            waterMaterial: this.waterBrickRenderer?.material
+            legoMaterial: this.terrainChunkPingPong?.getDebugMaterials().legoMaterial
+                ?? this.terrainBrickRenderer?.material,
+            waterMaterial: this.terrainChunkPingPong?.getDebugMaterials().waterMaterial
+                ?? this.waterBrickRenderer?.material
         })
 
         for (const child of this.children) {
@@ -208,12 +257,19 @@ export default class World {
         for (const child of this.children) {
             child.update?.()
         }
+
+        if (this.terrainChunkPingPong && this.playerAircraft?.enabled) {
+            const { x, z } = this.playerAircraft.state.position
+            this.terrainChunkPingPong.update(x, z)
+        }
     }
 
     dispose() {
         for (const child of this.children) {
             child.dispose?.()
         }
+        this.terrainChunkPingPong?.dispose()
+        this.terrainChunkPingPong = null
         this.children.length = 0
         this.scene.remove(this.group)
     }

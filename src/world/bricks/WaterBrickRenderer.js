@@ -1,5 +1,6 @@
 import * as THREE from 'three/webgpu'
 import { createWaterMaterial } from '../../materials/tsl/waterMaterial.js'
+import { getTerrainIterationBounds } from '../terrain/terrainMapBounds.js'
 
 export default class WaterBrickRenderer {
   constructor({
@@ -17,14 +18,16 @@ export default class WaterBrickRenderer {
   }
 
   build(terrainMap) {
-    const { width, depth, cellSize, layerHeight, waterLevel } =
-      this.config.terrain
+    const { cellSize, layerHeight, waterLevel } = this.config.terrain
+    const bounds = getTerrainIterationBounds(terrainMap, this.config)
     const cells = []
 
-    for (let z = 0; z < depth; z++) {
-      for (let x = 0; x < width; x++) {
-        if (terrainMap.getSurfaceCell(x, z).isWater) {
-          cells.push({ x, z })
+    for (let localZ = 0; localZ < bounds.visibleDepth; localZ++) {
+      for (let localX = 0; localX < bounds.visibleWidth; localX++) {
+        const sampleX = bounds.halo + localX
+        const sampleZ = bounds.halo + localZ
+        if (terrainMap.getSurfaceCell(sampleX, sampleZ).isWater) {
+          cells.push({ x: localX, z: localZ })
         }
       }
     }

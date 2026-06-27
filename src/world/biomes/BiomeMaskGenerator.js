@@ -5,12 +5,16 @@ export default class BiomeMaskGenerator {
 
   generate() {
     const { width, depth } = this.config.terrain
+    return this.generateForBounds({ x: 0, z: 0 }, width, depth)
+  }
+
+  generateForBounds(origin, width, depth) {
     const cells = []
 
     for (let z = 0; z < depth; z++) {
       const row = []
       for (let x = 0; x < width; x++) {
-        row.push(this.getCellBiome(x, z))
+        row.push(this.getCellBiome(origin.x + x, origin.z + z))
       }
       cells.push(row)
     }

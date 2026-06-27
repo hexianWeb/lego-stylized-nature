@@ -17,13 +17,18 @@ export default class VolcanoSurfaceFeatureGenerator {
   }
 
   apply(biomeCells, surfaceCells) {
-    const { width, depth } = this.config.terrain
+    const depth = biomeCells.length
+    const width = biomeCells[0]?.length ?? 0
     const lavaConfig = this.getLavaConfig()
 
     for (let z = 0; z < depth; z++) {
       for (let x = 0; x < width; x++) {
         const biomeCell = biomeCells[z][x]
         const surfaceCell = surfaceCells[z][x]
+
+        if (!biomeCell || !surfaceCell) {
+          continue
+        }
 
         surfaceCell.isLava = false
         surfaceCell.lavaType = null
@@ -40,7 +45,7 @@ export default class VolcanoSurfaceFeatureGenerator {
       }
     }
 
-    this.assignPoolHeights(surfaceCells)
+    this.assignPoolHeights(surfaceCells, width, depth)
   }
 
   getLavaConfig() {
@@ -49,6 +54,10 @@ export default class VolcanoSurfaceFeatureGenerator {
   }
 
   canHostLava(biomeCell, surfaceCell, lavaConfig) {
+    if (!biomeCell || !surfaceCell) {
+      return false
+    }
+
     const volcanoWeight = biomeCell.weights.volcano ?? 0
     return volcanoWeight >= lavaConfig.minVolcanoWeight &&
       !surfaceCell.isWater &&
@@ -90,8 +99,7 @@ export default class VolcanoSurfaceFeatureGenerator {
     return poolValue > 1 - lavaConfig.poolDensity
   }
 
-  assignPoolHeights(surfaceCells) {
-    const { width, depth } = this.config.terrain
+  assignPoolHeights(surfaceCells, width, depth) {
     const visited = Array.from({ length: depth }, () => Array(width).fill(false))
 
     for (let z = 0; z < depth; z++) {

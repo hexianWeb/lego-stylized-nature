@@ -38,37 +38,49 @@ export default class HeightfieldAO {
       return this
     }
 
-    const { width, depth, waterLevel } = this.config.terrain
+    const { waterLevel } = this.config.terrain
+    const usesHeightField = Boolean(terrainMap.heightField)
+    const sampleWidth = usesHeightField ? terrainMap.heightField.width : this.config.terrain.width
+    const sampleDepth = usesHeightField ? terrainMap.heightField.depth : this.config.terrain.depth
+    const halo = usesHeightField ? (terrainMap.halo ?? 0) : 0
+    const visibleWidth = usesHeightField
+      ? (terrainMap.visibleSize ?? sampleWidth - halo * 2)
+      : sampleWidth
+    const visibleDepth = usesHeightField
+      ? (terrainMap.visibleSize ?? sampleDepth - halo * 2)
+      : sampleDepth
 
-    const effectiveHeight = (x, z) => {
-      if (x < 0 || z < 0 || x >= width || z >= depth) {
+    const effectiveHeight = (sampleX, sampleZ) => {
+      if (sampleX < 0 || sampleZ < 0 || sampleX >= sampleWidth || sampleZ >= sampleDepth) {
         return -1
       }
-      const h = terrainMap.getHeight(x, z)
+      const h = terrainMap.getHeight(sampleX, sampleZ)
       return h <= waterLevel ? waterLevel : h
     }
 
-    for (let z = 0; z < depth; z++) {
-      for (let x = 0; x < width; x++) {
-        const surfaceCell = terrainMap.getSurfaceCell(x, z)
+    for (let sampleZ = halo; sampleZ < halo + visibleDepth; sampleZ++) {
+      for (let sampleX = halo; sampleX < halo + visibleWidth; sampleX++) {
+        const x = sampleX - halo
+        const z = sampleZ - halo
+        const surfaceCell = terrainMap.getSurfaceCell(sampleX, sampleZ)
         if (surfaceCell.isWater) {
           continue
         }
 
         const h = surfaceCell.height
         const minNeighbor = Math.min(
-          effectiveHeight(x + 1, z),
-          effectiveHeight(x - 1, z),
-          effectiveHeight(x, z + 1),
-          effectiveHeight(x, z - 1)
+          effectiveHeight(sampleX + 1, sampleZ),
+          effectiveHeight(sampleX - 1, sampleZ),
+          effectiveHeight(sampleX, sampleZ + 1),
+          effectiveHeight(sampleX, sampleZ - 1)
         )
         const yStart = Math.min(h, minNeighbor + 1)
 
         for (let y = yStart; y <= h; y++) {
           const aoFactor = this._computeBlockAO({
-            x,
+            x: sampleX,
             y,
-            z,
+            z: sampleZ,
             h,
             minNeighbor,
             effectiveHeight,
