@@ -20,6 +20,7 @@ import { createAOPanel } from '../debug/panels/AOPanel.js'
 import { createBiomePanel } from '../debug/panels/BiomePanel.js'
 import { createPlacementPanel } from '../debug/panels/PlacementPanel.js'
 import { createMaterialPanel } from '../debug/panels/MaterialPanel.js'
+import { createChunksPanel } from '../debug/panels/ChunksPanel.js'
 
 export default class World {
     /**
@@ -251,6 +252,10 @@ export default class World {
             waterMaterial: this.terrainChunkManager?.getDebugMaterials().waterMaterial
                 ?? this.waterBrickRenderer?.material
         }, onRegenerate)
+
+        if (this.terrainChunkManager) {
+            createChunksPanel(debug, this.config, this.terrainChunkManager)
+        }
 
         for (const child of this.children) {
             child.debuggerInit?.(debug)

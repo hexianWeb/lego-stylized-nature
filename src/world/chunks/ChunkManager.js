@@ -48,6 +48,7 @@ export default class ChunkManager {
     this.maxPendingBuildsPerFrame = chunkConfig.maxPendingBuildsPerFrame ?? 1
     this.maxPrefabBuildsPerFrame = chunkConfig.maxPrefabBuildsPerFrame ?? 1
     this.visibilityPadding = chunkConfig.visibilityPadding ?? 0
+    this.debugSpacing = chunkConfig.debugSpacing ?? 0
     this.cellSize = config.terrain.cellSize
 
     const slotCount = (this.windowRadius * 2 + 1) ** 2
@@ -310,8 +311,18 @@ export default class ChunkManager {
       coord,
       terrainMap,
       placements,
-      colorResolver: this.brickColorResolver
+      colorResolver: this.brickColorResolver,
+      debugSpacing: this.debugSpacing
     })
+  }
+
+  setDebugSpacing(spacing) {
+    this.debugSpacing = spacing
+    this.config.chunks.debugSpacing = spacing
+
+    for (const slot of this.slots) {
+      slot.updateWorldPosition(spacing)
+    }
   }
 
   updateVisibility(worldBlock) {

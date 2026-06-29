@@ -21,6 +21,15 @@ export function getRenderChunkOrigin(coord, chunkSize) {
   }
 }
 
+export function getRenderChunkWorldPosition(coord, chunkSize, cellSize, debugSpacing = 0) {
+  const pitch = chunkSize * cellSize + debugSpacing
+
+  return {
+    x: coord.x * pitch,
+    z: coord.z * pitch
+  }
+}
+
 export function getChunkWindowCoords(centerCoord, radius = 1) {
   const coords = []
 

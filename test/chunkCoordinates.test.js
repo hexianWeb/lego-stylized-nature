@@ -12,6 +12,7 @@ import {
   getRenderChunkCoord,
   getRenderChunkKey,
   getRenderChunkOrigin,
+  getRenderChunkWorldPosition,
   getWorldBlockFromPosition,
   parseRenderChunkKey,
   toLocalCell
@@ -33,6 +34,25 @@ test('builds stable chunk keys and origins', () => {
   assert.equal(getRenderChunkKey(coord), '4:-2')
   assert.deepEqual(parseRenderChunkKey('4:-2'), coord)
   assert.deepEqual(getRenderChunkOrigin(coord, 32), { x: 128, z: -64 })
+})
+
+test('offsets render chunk world position for debug spacing', () => {
+  const chunkSize = 64
+  const cellSize = 0.2
+  const pitch = chunkSize * cellSize
+
+  assert.deepEqual(
+    getRenderChunkWorldPosition({ x: 0, z: 0 }, chunkSize, cellSize, 0),
+    { x: 0, z: 0 }
+  )
+  assert.deepEqual(
+    getRenderChunkWorldPosition({ x: 1, z: 0 }, chunkSize, cellSize, 2),
+    { x: pitch + 2, z: 0 }
+  )
+  assert.deepEqual(
+    getRenderChunkWorldPosition({ x: -1, z: 2 }, chunkSize, cellSize, 4),
+    { x: -(pitch + 4), z: (pitch + 4) * 2 }
+  )
 })
 
 test('converts world position to block coordinates', () => {

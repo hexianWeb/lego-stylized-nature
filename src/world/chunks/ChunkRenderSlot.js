@@ -1,5 +1,9 @@
 import * as THREE from 'three/webgpu'
-import { getRenderChunkKey, getRenderChunkOrigin } from './chunkCoordinates.js'
+import {
+  getRenderChunkKey,
+  getRenderChunkOrigin,
+  getRenderChunkWorldPosition
+} from './chunkCoordinates.js'
 
 export default class ChunkRenderSlot {
   constructor({
@@ -75,7 +79,8 @@ export default class ChunkRenderSlot {
     coord,
     terrainMap,
     placements,
-    colorResolver
+    colorResolver,
+    debugSpacing = 0
   }) {
     this.coord = { ...coord }
     this.origin = getRenderChunkOrigin(coord, this.chunkSize)
@@ -83,12 +88,9 @@ export default class ChunkRenderSlot {
     this.placements = placements
     this.prefabsBuiltForKey = null
     this.setPrefabsVisible(false)
+    this.debugSpacing = debugSpacing
 
-    this.group.position.set(
-      this.origin.x * this.cellSize,
-      0,
-      this.origin.z * this.cellSize
-    )
+    this.updateWorldPosition(debugSpacing)
 
     this.heightfieldAO.build(terrainMap)
     this.terrainRenderer.build(placements, colorResolver, this.heightfieldAO)
@@ -115,6 +117,21 @@ export default class ChunkRenderSlot {
     if (this.prefabPlacer?.group) {
       this.prefabPlacer.group.visible = visible
     }
+  }
+
+  updateWorldPosition(debugSpacing = this.debugSpacing ?? 0) {
+    if (!this.coord) {
+      return
+    }
+
+    this.debugSpacing = debugSpacing
+    const position = getRenderChunkWorldPosition(
+      this.coord,
+      this.chunkSize,
+      this.cellSize,
+      debugSpacing
+    )
+    this.group.position.set(position.x, 0, position.z)
   }
 
   updateInstanceColors() {

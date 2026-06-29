@@ -65,7 +65,9 @@ export const worldConfig = {
     halo: 1,
     windowRadius: 1,
     maxPendingBuildsPerFrame: 1,
-    visibilityPadding: 1
+    visibilityPadding: 1,
+    /** World-unit gap between adjacent chunks; use in #debug to inspect chunk boundaries. */
+    debugSpacing: 0
   },
   player: {
     aircraft: {
