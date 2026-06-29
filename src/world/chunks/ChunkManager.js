@@ -46,6 +46,7 @@ export default class ChunkManager {
     this.halo = chunkConfig.halo ?? 1
     this.windowRadius = chunkConfig.windowRadius ?? 1
     this.maxPendingBuildsPerFrame = chunkConfig.maxPendingBuildsPerFrame ?? 1
+    this.maxPrefabBuildsPerFrame = chunkConfig.maxPrefabBuildsPerFrame ?? 1
     this.visibilityPadding = chunkConfig.visibilityPadding ?? 0
     this.cellSize = config.terrain.cellSize
 
@@ -55,6 +56,8 @@ export default class ChunkManager {
     this.activeSlots = new Map()
     this.pendingQueue = []
     this.pendingKeys = new Set()
+    this.pendingPrefabBuildQueue = []
+    this.pendingPrefabBuildKeys = new Set()
     this.centerCoord = null
     this.bootstrapped = false
 
@@ -73,6 +76,8 @@ export default class ChunkManager {
     this.activeSlots.clear()
     this.pendingQueue.length = 0
     this.pendingKeys.clear()
+    this.pendingPrefabBuildQueue.length = 0
+    this.pendingPrefabBuildKeys.clear()
     this.freeSlots = [...this.slots]
     this.centerCoord = null
     this.bootstrapped = false
@@ -182,6 +187,7 @@ export default class ChunkManager {
 
       slot.hide()
       slot.setPrefabsVisible?.(false)
+      this.removePendingPrefabBuild(key)
       this.activeSlots.delete(key)
       this.freeSlots.push(slot)
     }
@@ -222,6 +228,15 @@ export default class ChunkManager {
     this.pendingKeys.delete(key)
   }
 
+  removePendingPrefabBuild(key) {
+    if (!this.pendingPrefabBuildKeys.has(key)) {
+      return
+    }
+
+    this.pendingPrefabBuildQueue = this.pendingPrefabBuildQueue.filter((pendingKey) => pendingKey !== key)
+    this.pendingPrefabBuildKeys.delete(key)
+  }
+
   buildPendingChunks() {
     let built = 0
 
@@ -231,6 +246,35 @@ export default class ChunkManager {
       if (this.loadCoordNow(coord)) {
         built++
       }
+    }
+  }
+
+  buildPendingPrefabs(desiredPrefabKeys) {
+    this.pendingPrefabBuildQueue = this.pendingPrefabBuildQueue.filter((key) => {
+      const keep = desiredPrefabKeys.has(key) && this.activeSlots.has(key)
+      if (!keep) {
+        this.pendingPrefabBuildKeys.delete(key)
+      }
+      return keep
+    })
+
+    let built = 0
+    while (built < this.maxPrefabBuildsPerFrame && this.pendingPrefabBuildQueue.length > 0) {
+      const key = this.pendingPrefabBuildQueue.shift()
+      this.pendingPrefabBuildKeys.delete(key)
+
+      if (!desiredPrefabKeys.has(key)) {
+        continue
+      }
+
+      const slot = this.activeSlots.get(key)
+      if (!slot) {
+        continue
+      }
+
+      slot.ensurePrefabsBuilt?.()
+      slot.setPrefabsVisible?.(true)
+      built++
     }
   }
 
@@ -279,13 +323,21 @@ export default class ChunkManager {
       slot.show()
 
       if (prefabActiveKeys.has(key)) {
-        slot.ensurePrefabsBuilt?.()
-        slot.setPrefabsVisible?.(true)
+        if (slot.prefabsBuiltForKey === key) {
+          slot.setPrefabsVisible?.(true)
+        } else if (!this.pendingPrefabBuildKeys.has(key)) {
+          slot.setPrefabsVisible?.(false)
+          this.pendingPrefabBuildQueue.push(key)
+          this.pendingPrefabBuildKeys.add(key)
+        }
         continue
       }
 
       slot.setPrefabsVisible?.(false)
+      this.removePendingPrefabBuild(key)
     }
+
+    this.buildPendingPrefabs(prefabActiveKeys)
   }
 
   refreshAOPreview(showOverlays = true) {
@@ -315,5 +367,7 @@ export default class ChunkManager {
     this.activeSlots.clear()
     this.pendingQueue.length = 0
     this.pendingKeys.clear()
+    this.pendingPrefabBuildQueue.length = 0
+    this.pendingPrefabBuildKeys.clear()
   }
 }

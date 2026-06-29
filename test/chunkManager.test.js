@@ -320,6 +320,27 @@ test('player active 2x2 loaded slots build prefabs once per chunk key', () => {
   assert.ok(visibleSlots.every((slot) => slot.prefabBuilds === 1))
 })
 
+test('player prefab window shift builds at most one newly active prefab chunk per frame', () => {
+  const manager = createManager()
+
+  manager.bootstrap(6.4, 6.4)
+  while (manager.pendingQueue.length > 0) {
+    manager.update(6.4, 6.4)
+  }
+
+  const buildsBeforeMove = new Map(
+    [...manager.activeSlots.entries()].map(([key, slot]) => [key, slot.prefabBuilds])
+  )
+
+  manager.update(9.6, 9.6)
+
+  const newBuilds = [...manager.activeSlots.entries()]
+    .filter(([key, slot]) => slot.prefabBuilds > (buildsBeforeMove.get(key) ?? 0))
+    .map(([key]) => key)
+
+  assert.equal(newBuilds.length, 1)
+})
+
 test('ao preview updates all slots and only shows overlays on visible slots', () => {
   const calls = []
   const manager = createManager({ calls })
