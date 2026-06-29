@@ -86,6 +86,8 @@ export default class PlayerAircraft {
 
     this.attitudeState = createVisualAttitudeState()
 
+    this.speedLineOpacity = 0
+
     this.visualRoot = null
 
     this.engineNodes = { left: null, right: null }
@@ -435,6 +437,8 @@ export default class PlayerAircraft {
 
     this._updateEngineFlames(this.experience.time.getElapsed())
 
+    this._updateSpeedLines(input, delta)
+
 
 
     if (this.cameraFollow.enabled) {
@@ -450,6 +454,40 @@ export default class PlayerAircraft {
       )
 
     }
+
+  }
+
+
+
+  _updateSpeedLines(input, delta) {
+
+    const speedRatio = computeSpeedRatio(this.state, this.motionConfig.maxSpeed)
+
+    const isThrusting = input.thrustInput > 0
+
+    const targetOpacity = THREE.MathUtils.clamp(
+
+      speedRatio * (isThrusting ? 0.85 : 0),
+
+      0,
+
+      0.85
+
+    )
+
+    this.speedLineOpacity = THREE.MathUtils.damp(
+
+      this.speedLineOpacity,
+
+      targetOpacity,
+
+      10,
+
+      delta
+
+    )
+
+    this.experience.renderer.setSpeedLineOpacity(this.speedLineOpacity)
 
   }
 

@@ -10,6 +10,11 @@ import {
 import { smaa } from 'three/addons/tsl/display/SMAANode.js'
 import { createTiltShiftEffect } from './postprocessing/createTiltShiftEffect.js'
 import { TILT_SHIFT_DEFAULTS } from './postprocessing/tiltShiftConfig.js'
+import { createSpeedLinesEffect } from './postprocessing/createSpeedLinesEffect.js'
+import {
+  SPEED_LINES_DEFAULTS,
+  normalizeSpeedLinesConfig
+} from './postprocessing/speedLinesConfig.js'
 
 // dist is scaled so screen corners sit near 1.0 (~sqrt(2)/2 * 1.42)
 const VIGNETTE_INNER = 0.22
@@ -33,6 +38,17 @@ export default class Renderer {
    *       focusWidth?: number,
    *       falloff?: number,
    *       blurStrength?: number
+   *     },
+   *     speedLines?: {
+   *       enabled?: boolean,
+   *       color?: { r?: number, g?: number, b?: number },
+   *       density?: number,
+   *       speed?: number,
+   *       thickness?: number,
+   *       minRadius?: number,
+   *       maxRadius?: number,
+   *       randomness?: number,
+   *       opacity?: number
    *     }
    *   }
    * }} options
@@ -46,14 +62,18 @@ export default class Renderer {
     this.instance.toneMapping = THREE.ACESFilmicToneMapping
     this.instance.toneMappingExposure = 0.9
     this.instance.shadowMap.enabled = true
-    this.instance.shadowMap.type = THREE.PCFShadowMap
+    this.instance.shadowMap.type = THREE.BasicShadowMap
 
     this.tiltShiftConfig =
       postProcessing.tiltShift ?? { ...TILT_SHIFT_DEFAULTS }
+    this.speedLinesConfig = normalizeSpeedLinesConfig(
+      postProcessing.speedLines ?? SPEED_LINES_DEFAULTS
+    )
 
     /** @type {THREE.RenderPipeline | null} */
     this.renderPipeline = null
     this.tiltShiftEffect = null
+    this.speedLinesEffect = null
     this.outputNodes = null
 
     this.postProcessingController = Object.freeze({
@@ -62,6 +82,15 @@ export default class Renderer {
       },
       syncTiltShift: (config) => {
         this.syncTiltShift(config)
+      },
+      setSpeedLinesEnabled: (enabled) => {
+        this.setSpeedLinesEnabled(enabled)
+      },
+      setSpeedLineOpacity: (opacity) => {
+        this.setSpeedLineOpacity(opacity)
+      },
+      syncSpeedLines: (config) => {
+        this.syncSpeedLines(config)
       }
     })
   }
@@ -76,8 +105,12 @@ export default class Renderer {
 
     const scenePass = pass(scene, camera)
     const sceneColor = scenePass.getTextureNode('output')
-    this.tiltShiftEffect = createTiltShiftEffect(
+    this.speedLinesEffect = createSpeedLinesEffect(
       sceneColor,
+      this.speedLinesConfig
+    )
+    this.tiltShiftEffect = createTiltShiftEffect(
+      this.speedLinesEffect.outputNode,
       this.tiltShiftConfig
     )
 
@@ -119,6 +152,37 @@ export default class Renderer {
     this.tiltShiftEffect?.sync(this.tiltShiftConfig)
   }
 
+  setSpeedLinesEnabled(enabled) {
+    this.speedLinesConfig.enabled = enabled === true
+    this.speedLinesEffect?.setEnabled(enabled)
+  }
+
+  setSpeedLineOpacity(opacity) {
+    const nextOpacity = THREE.MathUtils.clamp(opacity, 0, 1)
+    this.speedLinesConfig.opacity = nextOpacity
+    this.speedLinesEffect?.setOpacity(nextOpacity)
+  }
+
+  syncSpeedLines(config = {}) {
+    Object.assign(this.speedLinesConfig, config)
+    if (config.color) {
+      this.speedLinesConfig.color = {
+        ...this.speedLinesConfig.color,
+        ...config.color
+      }
+    }
+    this.speedLinesEffect?.sync(this.speedLinesConfig)
+  }
+
+  /**
+   * @param {number} elapsedSec
+   */
+  updatePostProcessingTime(elapsedSec) {
+    if (this.speedLinesEffect) {
+      this.speedLinesEffect.uniforms.uTime.value = elapsedSec
+    }
+  }
+
   async init() {
     await this.instance.init()
   }
@@ -139,6 +203,7 @@ export default class Renderer {
     this.tiltShiftEffect?.dispose()
     this.renderPipeline?.dispose()
     this.tiltShiftEffect = null
+    this.speedLinesEffect = null
     this.renderPipeline = null
     this.outputNodes = null
   }
