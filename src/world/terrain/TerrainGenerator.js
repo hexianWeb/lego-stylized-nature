@@ -3,6 +3,7 @@ import HeightField from './HeightField.js'
 import TerrainMap from './TerrainMap.js'
 import SurfaceClassifier from './SurfaceClassifier.js'
 import VolcanoSurfaceFeatureGenerator from './VolcanoSurfaceFeatureGenerator.js'
+import DesertSurfaceFeatureGenerator from './DesertSurfaceFeatureGenerator.js'
 import { mulberry32 } from '../../utils/random.js'
 
 export default class TerrainGenerator {
@@ -12,6 +13,10 @@ export default class TerrainGenerator {
     this.biomeBlender = biomeBlender
     this.surfaceClassifier = new SurfaceClassifier(config)
     this.volcanoSurfaceFeatureGenerator = new VolcanoSurfaceFeatureGenerator({
+      config,
+      biomeRegistry
+    })
+    this.desertSurfaceFeatureGenerator = new DesertSurfaceFeatureGenerator({
       config,
       biomeRegistry
     })
@@ -53,6 +58,7 @@ export default class TerrainGenerator {
     )
     const surfaceCells = this.surfaceClassifier.classify(heightField)
     this.volcanoSurfaceFeatureGenerator.apply(biomeCells, surfaceCells)
+    this.desertSurfaceFeatureGenerator.apply(biomeCells, surfaceCells)
 
     return new TerrainMap({
       heightField,
