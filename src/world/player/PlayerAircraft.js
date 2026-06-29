@@ -16,6 +16,8 @@ import {
 
 import {
 
+  computeSpeedRatio,
+
   createVisualAttitudeState,
 
   normalizeVisualAttitudeConfig,
@@ -23,6 +25,18 @@ import {
   stepVisualAttitude
 
 } from './aircraftVisualAttitude.js'
+
+import {
+
+  applyFlameResponseScale,
+
+  createEngineFlameVFX,
+
+  normalizeEngineFlameConfig,
+
+  resolveFlameResponseScale
+
+} from './engineFlameVFX.js'
 
 
 
@@ -68,11 +82,15 @@ export default class PlayerAircraft {
 
     this.visualConfig = normalizeVisualAttitudeConfig(playerConfig.visualAttitude)
 
+    this.flameConfig = normalizeEngineFlameConfig(playerConfig.engineFlame)
+
     this.attitudeState = createVisualAttitudeState()
 
     this.visualRoot = null
 
     this.engineNodes = { left: null, right: null }
+
+    this.engineFlames = { left: null, right: null }
 
     this._engineBaseEmissive = new WeakMap()
 
@@ -169,6 +187,7 @@ export default class PlayerAircraft {
 
 
     this._resolveEngineNodes(model)
+    this._attachEngineFlames()
     this._enableModelShadows(model)
 
     this.enabled = true
@@ -294,6 +313,90 @@ export default class PlayerAircraft {
 
 
 
+  _attachEngineFlames() {
+
+    if (!this.flameConfig.enabled) {
+
+      return
+
+    }
+
+
+
+    const attach = (node, key) => {
+
+      if (!node) {
+
+        return
+
+      }
+
+      this.engineFlames[key] = createEngineFlameVFX(node, this.flameConfig)
+
+    }
+
+
+
+    attach(this.engineNodes.left, 'left')
+
+    attach(this.engineNodes.right, 'right')
+
+  }
+
+
+
+  _resolveFlameValues(thrusterIntensity) {
+
+    const speedRatio = computeSpeedRatio(this.state, this.motionConfig.maxSpeed)
+
+    const scale = resolveFlameResponseScale(this.flameConfig, speedRatio, thrusterIntensity)
+
+    return applyFlameResponseScale(this.flameConfig, scale)
+
+  }
+
+
+
+  _updateEngineFlames(elapsed) {
+
+    if (!this.flameConfig.enabled) {
+
+      return
+
+    }
+
+
+
+    if (this.engineFlames.left) {
+
+      this.engineFlames.left.update(
+
+        elapsed,
+
+        this._resolveFlameValues(this.attitudeState.leftThruster)
+
+      )
+
+    }
+
+
+
+    if (this.engineFlames.right) {
+
+      this.engineFlames.right.update(
+
+        elapsed,
+
+        this._resolveFlameValues(this.attitudeState.rightThruster)
+
+      )
+
+    }
+
+  }
+
+
+
   update() {
 
     if (!this.enabled) {
@@ -329,6 +432,8 @@ export default class PlayerAircraft {
     this._applyThrusterVisuals()
 
     this._applyTransform()
+
+    this._updateEngineFlames(this.experience.time.getElapsed())
 
 
 
@@ -384,6 +489,36 @@ export default class PlayerAircraft {
 
     attitudeFolder.addBinding(this.visualConfig.hover, 'frequency', { min: 0.2, max: 4, step: 0.1, label: 'Hover Hz' })
 
+
+
+    const flameFolder = folder.addFolder({ title: 'Engine Flame', expanded: false })
+
+    flameFolder.addBinding(this.flameConfig, 'enabled', { label: 'Enabled' })
+
+      .on('change', ({ value }) => {
+
+        for (const flame of Object.values(this.engineFlames)) {
+
+          flame?.setVisible(value)
+
+        }
+
+      })
+
+    flameFolder.addBinding(this.flameConfig, 'intensity', { min: 0.2, max: 2.2, step: 0.01, label: 'Intensity' })
+
+    flameFolder.addBinding(this.flameConfig, 'length', { min: 0.08, max: 0.8, step: 0.01, label: 'Length' })
+
+    flameFolder.addBinding(this.flameConfig, 'radius', { min: 0.01, max: 0.12, step: 0.001, label: 'Radius' })
+
+    flameFolder.addBinding(this.flameConfig, 'speed', { min: 0.2, max: 2.4, step: 0.01, label: 'Speed' })
+
+    flameFolder.addBinding(this.flameConfig, 'respondToSpeed', { label: 'Speed React' })
+
+    flameFolder.addBinding(this.flameConfig, 'respondToThrusters', { label: 'Thrust React' })
+
+    flameFolder.addBinding(this.flameConfig, 'minIntensity', { min: 0, max: 1, step: 0.01, label: 'Min Scale' })
+
   }
 
 
@@ -391,6 +526,14 @@ export default class PlayerAircraft {
   dispose() {
 
     this.input.dispose()
+
+    for (const flame of Object.values(this.engineFlames)) {
+
+      flame?.dispose()
+
+    }
+
+    this.engineFlames = { left: null, right: null }
 
     this.group.clear()
 
