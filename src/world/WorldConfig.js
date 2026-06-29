@@ -99,6 +99,20 @@ export const worldConfig = {
           frequency: 0.7,
           fadeSpeedRatio: 0.25
         },
+        turbulence: {
+          enabled: true,
+          pitchAmplitude: 0.018,
+          rollAmplitude: 0.028,
+          yawAmplitude: 0.012,
+          verticalAmplitude: 0.022,
+          frequency: 1.1,
+          pitchFrequencyScale: 1,
+          rollFrequencyScale: 1.35,
+          yawFrequencyScale: 0.75,
+          verticalFrequencyScale: 1.6,
+          minSpeedRatio: 0.05,
+          fullSpeedRatio: 0.45
+        },
         thrusters: {
           enabled: true,
           baseIntensity: 0.35,

@@ -265,7 +265,7 @@ export default class PlayerAircraft {
 
 
     // Aircraft forward is +X after model.rotation.y = PI/2, so pitch = Z and roll = X.
-    this.visualRoot.rotation.set(this.attitudeState.roll, 0, this.attitudeState.pitch)
+    this.visualRoot.rotation.set(this.attitudeState.roll, this.attitudeState.yawWobble, this.attitudeState.pitch)
 
     this.visualRoot.position.y = this.attitudeState.hoverOffset
 
@@ -526,6 +526,14 @@ export default class PlayerAircraft {
     attitudeFolder.addBinding(this.visualConfig.hover, 'amplitude', { min: 0, max: 0.2, step: 0.005, label: 'Hover Amp' })
 
     attitudeFolder.addBinding(this.visualConfig.hover, 'frequency', { min: 0.2, max: 4, step: 0.1, label: 'Hover Hz' })
+
+    const turbulenceFolder = attitudeFolder.addFolder({ title: 'Flight Turbulence', expanded: false })
+    turbulenceFolder.addBinding(this.visualConfig.turbulence, 'enabled', { label: 'Enabled' })
+    turbulenceFolder.addBinding(this.visualConfig.turbulence, 'frequency', { min: 0.2, max: 4, step: 0.05, label: 'Frequency' })
+    turbulenceFolder.addBinding(this.visualConfig.turbulence, 'pitchAmplitude', { min: 0, max: 0.08, step: 0.001, label: 'Pitch' })
+    turbulenceFolder.addBinding(this.visualConfig.turbulence, 'rollAmplitude', { min: 0, max: 0.08, step: 0.001, label: 'Roll' })
+    turbulenceFolder.addBinding(this.visualConfig.turbulence, 'yawAmplitude', { min: 0, max: 0.05, step: 0.001, label: 'Yaw' })
+    turbulenceFolder.addBinding(this.visualConfig.turbulence, 'verticalAmplitude', { min: 0, max: 0.08, step: 0.001, label: 'Vertical' })
 
 
 
