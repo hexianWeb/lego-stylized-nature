@@ -33,10 +33,10 @@ export default class Environment {
         this.directionalLight = new THREE.DirectionalLight(0xffffff, 1.85)
         this.directionalLight.position.set(8, 23, 10)
         this.directionalLight.castShadow = true
-        this.directionalLight.shadow.mapSize.set(2048, 2048)
+        this.directionalLight.shadow.mapSize.set(1024, 1024)
         this.directionalLight.shadow.bias = -0.0002
         this.directionalLight.shadow.normalBias = 0.015
-        this.directionalLight.shadow.radius = 1.5
+        this.directionalLight.shadow.radius = 0
         this.scene.add(this.directionalLight)
         this.scene.add(this.directionalLight.target)
 

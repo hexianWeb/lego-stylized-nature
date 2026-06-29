@@ -263,6 +263,7 @@ test('binds all tilt-shift controls to the renderer controller', () => {
     'falloff',
     'blurStrength'
   ])
+  assert.equal(bindings.get('enabled').options.label, 'tiltShift enabled')
   assert.deepEqual(
     bindings.get('focusCenter').options,
     { ...TILT_SHIFT_RANGES.focusCenter, label: 'focusCenter' }

@@ -88,6 +88,7 @@ export default class Experience {
         this.worldCamera.update()
         this.world.update()
         this.environment.update()
+        this.renderer.updatePostProcessingTime(this.time.getElapsed())
         this.renderer.render()
     }
 
