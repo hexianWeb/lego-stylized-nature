@@ -264,6 +264,16 @@ export default class World {
 
         if (this.terrainChunkManager && this.playerAircraft?.enabled) {
             const { x, z } = this.playerAircraft.state.position
+            const chunkWorldSize = this.config.chunks.size * this.config.terrain.cellSize
+            const maxHeight = this.config.terrain.maxHeight * this.config.terrain.layerHeight + 8
+
+            this.experience.environment.followPlayerShadow?.(
+                this.playerAircraft.state.position,
+                {
+                    halfExtent: chunkWorldSize,
+                    maxHeight
+                }
+            )
             this.terrainChunkManager.update(x, z, this.experience.worldCamera.instance)
         }
     }

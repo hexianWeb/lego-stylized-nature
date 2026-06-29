@@ -5,6 +5,20 @@ import { createFogPanel } from '../debug/panels/FogPanel.js'
 import { createLightPanel } from '../debug/panels/LightPanel.js'
 import { createShadowPanel } from '../debug/panels/ShadowPanel.js'
 
+const PLAYER_SHADOW_LIGHT_OFFSET = new THREE.Vector3(
+    14.48,
+    20.78,
+    8.48
+)
+const PLAYER_SHADOW_TARGET_OFFSET = new THREE.Vector3(
+    -1.63,
+    -10,
+    -1.63
+)
+const PLAYER_SHADOW_FAR_PADDING = 8
+const PLAYER_SHADOW_MIN_CAMERA_DEPTH =
+    PLAYER_SHADOW_LIGHT_OFFSET.distanceTo(PLAYER_SHADOW_TARGET_OFFSET) + PLAYER_SHADOW_FAR_PADDING
+
 export default class Environment {
     /**
      * @param {THREE.Scene} scene
@@ -19,8 +33,6 @@ export default class Environment {
         /** 0 = darker shadows, 1 = more ambient/env fill */
         this.shadowFill = 0.25
         this.shadowBounds = {
-            centerX: 0,
-            centerZ: 0,
             halfExtent: 14,
             maxHeight: 10
         }
@@ -115,8 +127,6 @@ export default class Environment {
      * @param {{ centerX: number, centerZ: number, halfExtent: number, maxHeight: number }} bounds
      */
     configureShadows({ centerX, centerZ, halfExtent, maxHeight }) {
-        this.shadowBounds.centerX = centerX
-        this.shadowBounds.centerZ = centerZ
         this.shadowBounds.halfExtent = halfExtent
         this.shadowBounds.maxHeight = maxHeight
 
@@ -125,6 +135,27 @@ export default class Environment {
             this.directionalTarget.y = 12
             this.directionalTarget.z = centerZ
         }
+
+        this.applyShadowBounds()
+    }
+
+    /**
+     * @param {THREE.Vector3 | { x: number, y: number, z: number }} playerPosition
+     * @param {{ halfExtent: number, maxHeight: number }} shadowConfig
+     */
+    followPlayerShadow(playerPosition, { halfExtent, maxHeight }) {
+        this.shadowBounds.halfExtent = halfExtent
+        this.directionalTarget.x = playerPosition.x + PLAYER_SHADOW_TARGET_OFFSET.x
+        this.directionalTarget.y = playerPosition.y + PLAYER_SHADOW_TARGET_OFFSET.y
+        this.directionalTarget.z = playerPosition.z + PLAYER_SHADOW_TARGET_OFFSET.z
+
+        this.directionalLight.position.set(
+            playerPosition.x + PLAYER_SHADOW_LIGHT_OFFSET.x,
+            playerPosition.y + PLAYER_SHADOW_LIGHT_OFFSET.y,
+            playerPosition.z + PLAYER_SHADOW_LIGHT_OFFSET.z
+        )
+
+        this.shadowBounds.maxHeight = Math.max(maxHeight, PLAYER_SHADOW_MIN_CAMERA_DEPTH)
 
         this.applyShadowBounds()
     }

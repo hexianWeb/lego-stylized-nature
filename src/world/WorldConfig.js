@@ -49,14 +49,14 @@ export const worldConfig = {
     enableTrees: true,
     rotationStep: Math.PI / 2,
     prefabCapacity: {
-      default: 128*2,
-      tree: 128*2,
-      flora: 512*2,
-      rock: 128*2,
-      plant: 256*2,
-      waterAccent: 32*2,
-      waterPlant: 64*2,
-      prop: 64*2
+      default: 12,
+      tree: 128,
+      flora: 512,
+      rock: 128,
+      plant: 256,
+      waterAccent: 32,
+      waterPlant: 64,
+      prop: 64
     }
   },
   chunks: {
