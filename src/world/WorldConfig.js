@@ -1,9 +1,14 @@
 import { TILT_SHIFT_DEFAULTS } from '../renderer/postprocessing/tiltShiftConfig.js'
+import { SPEED_LINES_DEFAULTS } from '../renderer/postprocessing/speedLinesConfig.js'
 
 export const worldConfig = {
   seed: 20260608,
   postProcessing: {
-    tiltShift: { ...TILT_SHIFT_DEFAULTS }
+    tiltShift: { ...TILT_SHIFT_DEFAULTS },
+    speedLines: {
+      ...SPEED_LINES_DEFAULTS,
+      color: { ...SPEED_LINES_DEFAULTS.color }
+    }
   },
   terrain: {
     width: 128,
@@ -33,10 +38,10 @@ export const worldConfig = {
   },
   biomes: {
     regions: [
-      { id: 'forest', center: [24, 34], radius: 30, weight: 1 },
-      { id: 'autumnForest', center: [45, 28], radius: 28, weight: 1 },
-      { id: 'desert', center: [72, 42], radius: 30, weight: 1 },
-      { id: 'volcano', center: [58, 74], radius: 32, weight: 1 }
+      { id: 'forest', center: [0, 0], radius: 120, weight: 1 },
+      { id: 'autumnForest', center: [200, 200], radius: 120, weight: 1 },
+      { id: 'desert', center: [200, -200], radius: 120, weight: 1 },
+      { id: 'volcano', center: [-200, 200], radius: 120, weight: 1 }
     ]
   },
   placement: {
@@ -44,14 +49,14 @@ export const worldConfig = {
     enableTrees: true,
     rotationStep: Math.PI / 2,
     prefabCapacity: {
-      default: 128,
-      tree: 128,
-      flora: 512,
-      rock: 128,
-      plant: 256,
-      waterAccent: 32,
-      waterPlant: 64,
-      prop: 64
+      default: 128*2,
+      tree: 128*2,
+      flora: 512*2,
+      rock: 128*2,
+      plant: 256*2,
+      waterAccent: 32*2,
+      waterPlant: 64*2,
+      prop: 64*2
     }
   },
   chunks: {
@@ -102,6 +107,15 @@ export const worldConfig = {
           leftNodeName: 'left_engine',
           rightNodeName: 'right_engine'
         }
+      },
+      engineFlame: {
+        enabled: true,
+        intensity: 1.15,
+        length: 0.28,
+        radius: 0.03,
+        speed: 1.05,
+        respondToThrusters: true,
+        minIntensity: 0.15
       }
     }
   },
