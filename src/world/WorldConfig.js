@@ -49,10 +49,10 @@ export const worldConfig = {
     enableTrees: true,
     rotationStep: Math.PI / 2,
     prefabCapacity: {
-      default: 12,
+      default: 128,
       tree: 128,
       flora: 512,
-      rock: 128,
+      rock: 256,
       plant: 256,
       waterAccent: 32,
       waterPlant: 64,
