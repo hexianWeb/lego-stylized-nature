@@ -24,6 +24,8 @@ export default class ChunkRenderSlot {
     this.origin = null
     this.terrainMap = null
     this.placements = []
+    this.prefabsBuiltForKey = null
+    this.prefabsVisible = false
     this.group = new THREE.Group()
     this.group.name = `ChunkRenderSlot:${index}`
     this.group.add(terrainRenderer.group)
@@ -56,9 +58,6 @@ export default class ChunkRenderSlot {
   }
 
   setOverlaysVisible(visible) {
-    if (this.prefabPlacer?.group) {
-      this.prefabPlacer.group.visible = visible
-    }
     if (this.waterRenderer?.group) {
       this.waterRenderer.group.visible = visible
     }
@@ -82,6 +81,8 @@ export default class ChunkRenderSlot {
     this.origin = getRenderChunkOrigin(coord, this.chunkSize)
     this.terrainMap = terrainMap
     this.placements = placements
+    this.prefabsBuiltForKey = null
+    this.setPrefabsVisible(false)
 
     this.group.position.set(
       this.origin.x * this.cellSize,
@@ -93,8 +94,27 @@ export default class ChunkRenderSlot {
     this.terrainRenderer.build(placements, colorResolver, this.heightfieldAO)
     this.waterRenderer?.build(terrainMap)
     this.lavaRenderer?.build(terrainMap)
-    this.prefabPlacer?.build(terrainMap)
     this.syncOverlayVisibility()
+  }
+
+  ensurePrefabsBuilt() {
+    if (!this.prefabPlacer || !this.terrainMap || !this.key) {
+      return
+    }
+
+    if (this.prefabsBuiltForKey === this.key) {
+      return
+    }
+
+    this.prefabPlacer.build(this.terrainMap)
+    this.prefabsBuiltForKey = this.key
+  }
+
+  setPrefabsVisible(visible) {
+    this.prefabsVisible = visible
+    if (this.prefabPlacer?.group) {
+      this.prefabPlacer.group.visible = visible
+    }
   }
 
   updateInstanceColors() {

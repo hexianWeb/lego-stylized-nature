@@ -56,9 +56,11 @@ export const worldConfig = {
   },
   chunks: {
     enabled: true,
-    size: 72,
+    size: 64,
     halo: 1,
-    prefetchThreshold: 0.2
+    windowRadius: 1,
+    maxPendingBuildsPerFrame: 1,
+    visibilityPadding: 1
   },
   player: {
     aircraft: {

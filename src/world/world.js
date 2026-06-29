@@ -14,7 +14,7 @@ import LavaBrickRenderer from './bricks/LavaBrickRenderer.js'
 import PrefabRegistry from './prefabs/PrefabRegistry.js'
 import PrefabPlacer from './prefabs/PrefabPlacer.js'
 import PlayerAircraft from './player/PlayerAircraft.js'
-import TerrainChunkPingPong from './chunks/TerrainChunkPingPong.js'
+import ChunkManager from './chunks/ChunkManager.js'
 import { createTerrainPanel } from '../debug/panels/TerrainPanel.js'
 import { createAOPanel } from '../debug/panels/AOPanel.js'
 import { createBiomePanel } from '../debug/panels/BiomePanel.js'
@@ -50,7 +50,7 @@ export default class World {
         this.lavaBrickRenderer = null
         this.prefabPlacer = null
         this.playerAircraft = null
-        this.terrainChunkPingPong = null
+        this.terrainChunkManager = null
     }
 
     addSystem(system) {
@@ -100,7 +100,7 @@ export default class World {
             const prefabRegistry = new PrefabRegistry(resources)
 
             if (useChunkTerrain) {
-                this.terrainChunkPingPong = new TerrainChunkPingPong({
+                this.terrainChunkManager = new ChunkManager({
                     config: this.config,
                     terrainGenerator: this.terrainGenerator,
                     layeredTerrainBuilder: this.layeredTerrainBuilder,
@@ -158,21 +158,15 @@ export default class World {
             return
         }
 
-        const useChunkTerrain = Boolean(this.terrainChunkPingPong)
+        const useChunkTerrain = Boolean(this.terrainChunkManager)
         if (!useChunkTerrain && !this.waterBrickRenderer && !this.lavaBrickRenderer) {
             return
         }
 
-        this.terrainMap = this.terrainGenerator.generate()
-        this.terrainPlacements = this.layeredTerrainBuilder.buildPlacements(this.terrainMap)
-
-        if (!this.terrainChunkPingPong) {
-            this.heightfieldAO.build(this.terrainMap)
-        }
-
         const { width, depth, cellSize, maxHeight, layerHeight } = this.config.terrain
-        const centerX = width * cellSize * 0.5
-        const centerZ = depth * cellSize * 0.5
+        const playerPosition = this.playerAircraft?.state?.position
+        const centerX = playerPosition?.x ?? width * cellSize * 0.5
+        const centerZ = playerPosition?.z ?? depth * cellSize * 0.5
         const halfExtent = Math.max(width, depth) * cellSize * 0.55
 
         this.experience.worldCamera.lookAt(new THREE.Vector3(centerX, 0, centerZ))
@@ -183,24 +177,30 @@ export default class World {
             maxHeight: maxHeight * layerHeight + 8
         })
 
-        if (!this.terrainChunkPingPong) {
-            this.terrainBrickRenderer.build(
-                this.terrainPlacements,
-                this.brickColorResolver,
-                this.heightfieldAO
+        if (useChunkTerrain) {
+            this.terrainMap = null
+            this.terrainPlacements = []
+            this.terrainChunkManager.bootstrap(
+                centerX,
+                centerZ,
+                this.experience.worldCamera.instance
             )
+            this.refreshAOPreview()
+            return
         }
 
-        if (this.terrainChunkPingPong) {
-            const playerPosition = this.playerAircraft?.state?.position
-            const bootstrapX = playerPosition?.x ?? centerX
-            const bootstrapZ = playerPosition?.z ?? centerZ
-            this.terrainChunkPingPong.bootstrap(bootstrapX, bootstrapZ)
-        } else {
-            this.waterBrickRenderer?.build(this.terrainMap)
-            this.lavaBrickRenderer.build(this.terrainMap)
-            this.prefabPlacer?.build(this.terrainMap)
-        }
+        this.terrainMap = this.terrainGenerator.generate()
+        this.terrainPlacements = this.layeredTerrainBuilder.buildPlacements(this.terrainMap)
+        this.heightfieldAO.build(this.terrainMap)
+
+        this.terrainBrickRenderer.build(
+            this.terrainPlacements,
+            this.brickColorResolver,
+            this.heightfieldAO
+        )
+        this.waterBrickRenderer?.build(this.terrainMap)
+        this.lavaBrickRenderer.build(this.terrainMap)
+        this.prefabPlacer?.build(this.terrainMap)
 
         this.refreshAOPreview()
     }
@@ -213,7 +213,7 @@ export default class World {
         }
 
         this.terrainBrickRenderer?.updateInstanceColors()
-        this.terrainChunkPingPong?.refreshAOPreview(!preview)
+        this.terrainChunkManager?.refreshAOPreview(!preview)
 
         const useChunkTerrain = this.config.chunks?.enabled === true
         if (this.waterBrickRenderer?.group) {
@@ -246,9 +246,9 @@ export default class World {
         createBiomePanel(debug, this.config, onRegenerate)
         createPlacementPanel(debug, this.config, onRegenerate)
         createMaterialPanel(debug, this.config, {
-            legoMaterial: this.terrainChunkPingPong?.getDebugMaterials().legoMaterial
+            legoMaterial: this.terrainChunkManager?.getDebugMaterials().legoMaterial
                 ?? this.terrainBrickRenderer?.material,
-            waterMaterial: this.terrainChunkPingPong?.getDebugMaterials().waterMaterial
+            waterMaterial: this.terrainChunkManager?.getDebugMaterials().waterMaterial
                 ?? this.waterBrickRenderer?.material
         }, onRegenerate)
 
@@ -262,9 +262,9 @@ export default class World {
             child.update?.()
         }
 
-        if (this.terrainChunkPingPong && this.playerAircraft?.enabled) {
+        if (this.terrainChunkManager && this.playerAircraft?.enabled) {
             const { x, z } = this.playerAircraft.state.position
-            this.terrainChunkPingPong.update(x, z)
+            this.terrainChunkManager.update(x, z, this.experience.worldCamera.instance)
         }
     }
 
@@ -272,8 +272,8 @@ export default class World {
         for (const child of this.children) {
             child.dispose?.()
         }
-        this.terrainChunkPingPong?.dispose()
-        this.terrainChunkPingPong = null
+        this.terrainChunkManager?.dispose()
+        this.terrainChunkManager = null
         this.children.length = 0
         this.scene.remove(this.group)
     }
