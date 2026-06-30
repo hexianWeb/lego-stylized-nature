@@ -4,7 +4,7 @@
 
 **Goal:** Add a player-centered biome radar HUD that shows all configured biome center points as equal-priority colored dots.
 
-**Architecture:** Implement a standalone 2D canvas HUD class in `src/ui/BiomeRadarHUD.js`, configure it from `worldConfig.ui.biomeRadar`, and wire it into `World` as a direct DOM HUD field. The radar reads biome centers from `worldConfig.biomes.regions`, uses player world X/Z as the center, and clamps far targets to the radar edge.
+**Architecture:** Implement a standalone 2D canvas HUD class in `src/ui/BiomeRadarHUD.js`, configure it from `worldConfig.ui.biomeRadar`, and wire it into `World` as a direct DOM HUD field. The radar reads biome centers from `worldConfig.biomes.regions`, converts player world X/Z into terrain block coordinates using `terrain.cellSize`, and clamps far targets to the radar edge.
 
 **Tech Stack:** JavaScript ES modules, DOM canvas 2D rendering, existing `World` lifecycle, Vite build validation. No new radar `test.js` file.
 
@@ -16,7 +16,7 @@
   - Owns DOM container and canvas.
   - Stores biome targets and color config.
   - Draws background rings, scan line, player center marker, and biome dots.
-  - Projects world-space biome centers into radar-space points.
+  - Projects block-space biome centers into radar-space points.
   - Disposes DOM resources.
 - Modify `src/world/WorldConfig.js`
   - Adds `ui.biomeRadar` defaults.

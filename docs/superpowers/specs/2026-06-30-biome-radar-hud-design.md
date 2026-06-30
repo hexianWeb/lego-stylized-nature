@@ -12,7 +12,7 @@ The visual direction should be inspired by the provided ShaderToy radar referenc
 - Every configured biome center is shown as one radar dot.
 - Dots are equal priority. There is no selected target, pulse highlight, or recommended route.
 - Each biome uses a distinct dot color.
-- A dot's direction comes from the vector between the player's current world position and the biome center.
+- A dot's direction comes from the vector between the player's current terrain block position and the biome center.
 - A dot's distance from the radar center represents approximate distance until it reaches the radar's configured range.
 - When a biome center is farther than the radar range, its dot clamps to the outer radar edge and continues to show direction.
 - The radar helps the player fly toward biome centers and interact with objects placed there.
@@ -22,7 +22,7 @@ The visual direction should be inspired by the provided ShaderToy radar referenc
 Use `worldConfig.biomes.regions` as the target source. For each entry:
 
 - `id` identifies the biome and resolves the dot color.
-- `center` is the target point in world-space X/Z coordinates.
+- `center` is the target point in terrain block X/Z coordinates, matching the coordinates used by `BiomeMaskGenerator`.
 - `radius` remains biome generation data and is not drawn by this radar.
 
 The radar must not derive targets from loaded chunks, visible chunks, prefab visibility, or camera bounds. Chunk lifecycle and radar guidance stay separate.
@@ -71,13 +71,14 @@ The exact color values can be tuned during implementation. The important behavio
 
 For each biome target:
 
-1. Compute `dx = target.center[0] - player.x`.
-2. Compute `dz = target.center[1] - player.z`.
-3. Compute distance from `sqrt(dx * dx + dz * dz)`.
-4. Normalize the direction when distance is non-zero.
-5. Convert world distance to radar distance with `distance / range * radarRadius`.
-6. Clamp the radar distance to `radarRadius`.
-7. Draw the dot at the center plus the clamped vector.
+1. Convert the player's Three.js world position to terrain block coordinates by dividing X/Z by `terrain.cellSize`.
+2. Compute `dx = target.center[0] - playerBlockX`.
+3. Compute `dz = target.center[1] - playerBlockZ`.
+4. Compute distance from `sqrt(dx * dx + dz * dz)`.
+5. Normalize the direction when distance is non-zero.
+6. Convert block distance to radar distance with `distance / range * radarRadius`.
+7. Clamp the radar distance to `radarRadius`.
+8. Draw the dot at the center plus the clamped vector.
 
 If the player is exactly on a biome center, draw that biome dot at the player center or just outside the center marker if overlap readability requires it.
 

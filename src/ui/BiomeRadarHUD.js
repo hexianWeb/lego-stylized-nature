@@ -14,6 +14,7 @@ export default class BiomeRadarHUD {
     this.targets = this.buildTargets(config?.biomes?.regions ?? [])
     this.scanAngle = -Math.PI * 0.5
     this.playerPosition = { x: 0, z: 0 }
+    this.cellSize = this.resolveCellSize(config)
     this.pixelRatio = 1
     this.size = this.radarConfig.size ?? 220
     this.radius = this.size * 0.43
@@ -64,19 +65,36 @@ export default class BiomeRadarHUD {
       .filter((target) => Number.isFinite(target.x) && Number.isFinite(target.z))
   }
 
+  resolveCellSize(config) {
+    const cellSize = config?.terrain?.cellSize
+    return Number.isFinite(cellSize) && cellSize > 0 ? cellSize : 1
+  }
+
   update(playerPosition, delta = 1 / 60) {
-    if (!this.enabled || !this.context) {
+    if (!this.enabled) {
       return
     }
 
     if (playerPosition) {
-      this.playerPosition.x = playerPosition.x ?? this.playerPosition.x
-      this.playerPosition.z = playerPosition.z ?? this.playerPosition.z
+      this.playerPosition.x = this.toBiomeCoordinate(playerPosition.x, this.playerPosition.x)
+      this.playerPosition.z = this.toBiomeCoordinate(playerPosition.z, this.playerPosition.z)
+    }
+
+    if (!this.context) {
+      return
     }
 
     const scanSpeed = this.radarConfig.scanSpeed ?? 0.9
     this.scanAngle = (this.scanAngle + delta * scanSpeed * Math.PI * 2) % (Math.PI * 2)
     this.draw()
+  }
+
+  toBiomeCoordinate(worldCoordinate, fallback) {
+    if (!Number.isFinite(worldCoordinate)) {
+      return fallback
+    }
+
+    return worldCoordinate / this.cellSize
   }
 
   resizeCanvas() {
