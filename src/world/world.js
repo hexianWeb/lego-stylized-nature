@@ -16,6 +16,7 @@ import PrefabPlacer from './prefabs/PrefabPlacer.js'
 import PlayerAircraft from './player/PlayerAircraft.js'
 import ChunkManager from './chunks/ChunkManager.js'
 import BiomeRadarHUD from '../ui/BiomeRadarHUD.js'
+import ControlGuideHUD from '../ui/ControlGuideHUD.js'
 import { createTerrainPanel } from '../debug/panels/TerrainPanel.js'
 import { createAOPanel } from '../debug/panels/AOPanel.js'
 import { createBiomePanel } from '../debug/panels/BiomePanel.js'
@@ -54,6 +55,7 @@ export default class World {
         this.playerAircraft = null
         this.terrainChunkManager = null
         this.biomeRadarHUD = null
+        this.controlGuideHUD = null
     }
 
     addSystem(system) {
@@ -154,6 +156,10 @@ export default class World {
 
             if (!this.biomeRadarHUD && this.config.ui?.biomeRadar?.enabled !== false) {
                 this.biomeRadarHUD = new BiomeRadarHUD({ config: this.config })
+            }
+
+            if (!this.controlGuideHUD && this.config.ui?.controlGuide?.enabled !== false) {
+                this.controlGuideHUD = new ControlGuideHUD({ config: this.config })
             }
         }
 
@@ -299,8 +305,10 @@ export default class World {
         }
         this.terrainChunkManager?.dispose()
         this.biomeRadarHUD?.dispose()
+        this.controlGuideHUD?.dispose()
         this.terrainChunkManager = null
         this.biomeRadarHUD = null
+        this.controlGuideHUD = null
         this.children.length = 0
         this.scene.remove(this.group)
     }

@@ -8,6 +8,7 @@ html,
 body
 {
     overflow: hidden;
+
 }
 
 .webgl
@@ -30,4 +31,139 @@ body
     font-size: 0.875rem;
     color: #fff;
     background: #b00020;
+}
+
+.control-guide-hud
+{
+    font-family: "Orbitron", sans-serif;
+    position: fixed;
+    top: 50%;
+    right: 10%;
+    zoom: 2;
+    transform: translateY(-50%);
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 12px 14px;
+    border: 1px solid rgba(255, 255, 255, 0.88);
+    border-radius: 6px;
+    background: rgba(0, 0, 0, 0.52);
+    pointer-events: none;
+    user-select: none;
+    box-sizing: border-box;
+}
+
+.control-guide-hud__row
+{
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-height: 26px;
+}
+
+.control-guide-hud__key
+{
+    display: inline-flex;
+    flex: 0 0 26px;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    border: 1px solid rgba(255, 255, 255, 0.92);
+    border-radius: 4px;
+    box-sizing: border-box;
+    color: #ffffff;
+    font-family: "Orbitron", sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 1;
+    letter-spacing: 0;
+}
+
+.control-guide-hud__label
+{
+    color: #ffffff;
+    font-family: "Orbitron", sans-serif;
+    font-size: 14px;
+    font-weight: 400;
+    line-height: 1;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+}
+
+.line-box-overlay
+{
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 9999;
+    pointer-events: none;
+    user-select: none;
+    background-image: url('/img/line_box.png');
+    opacity: 0.75;
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: 100% 100%;
+    mix-blend-mode: screen;
+}
+
+.biome-radar-hud
+{
+    position: fixed;
+    top: 75px;
+    left: 75px;
+    z-index: 2;
+    pointer-events: none;
+    user-select: none;
+    box-sizing: border-box;
+}
+
+.biome-radar-hud__compass-label
+{
+    position: absolute;
+    z-index: 1;
+    color: rgba(236, 255, 255, 0.95);
+    font-family: "Orbitron", sans-serif;
+    font-size: 24px;
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: 0.04em;
+    text-shadow: 0 0 10px rgba(116, 223, 255, 0.85);
+}
+
+.biome-radar-hud__compass-label--n
+{
+    top: 1em;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+.biome-radar-hud__compass-label--s
+{
+    bottom:1em;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+.biome-radar-hud__compass-label--w
+{
+    left:1em;
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+.biome-radar-hud__compass-label--e
+{
+    right: 1em;
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+.biome-radar-hud__canvas
+{
+    display: block;
+    width: 100%;
+    height: 100%;
 }

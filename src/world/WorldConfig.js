@@ -11,12 +11,20 @@ export const worldConfig = {
     }
   },
   ui: {
+    controlGuide: {
+      enabled: true,
+      screenOffset: {
+        right: 40,
+        verticalAlign: 'center'
+      },
+      opacity: 1
+    },
     biomeRadar: {
       enabled: true,
-      size: 220,
+      size: 300,
       screenOffset: {
-        left: 24,
-        bottom: 24
+        left: 75,
+        top: 75
       },
       range: 360,
       scanSpeed: 0.9,

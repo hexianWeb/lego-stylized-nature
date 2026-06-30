@@ -13,10 +13,11 @@ export default class BiomeRadarHUD {
     this.parent = parent ?? (typeof document !== 'undefined' ? document.body : null)
     this.targets = this.buildTargets(config?.biomes?.regions ?? [])
     this.scanAngle = -Math.PI * 0.5
+    this.pulseTime = 0
     this.playerPosition = { x: 0, z: 0 }
     this.cellSize = this.resolveCellSize(config)
     this.pixelRatio = 1
-    this.size = this.radarConfig.size ?? 220
+    this.size = this.radarConfig.size ?? 300
     this.radius = this.size * 0.43
     this.center = this.size * 0.5
 
@@ -26,26 +27,35 @@ export default class BiomeRadarHUD {
 
     this.element = document.createElement('div')
     this.element.className = 'biome-radar-hud'
-    this.element.style.position = 'fixed'
-    this.element.style.left = `${this.radarConfig.screenOffset?.left ?? 24}px`
-    this.element.style.bottom = `${this.radarConfig.screenOffset?.bottom ?? 24}px`
     this.element.style.width = `${this.size}px`
     this.element.style.height = `${this.size}px`
-    this.element.style.zIndex = '2'
-    this.element.style.pointerEvents = 'none'
     this.element.style.opacity = String(this.radarConfig.opacity ?? 0.9)
 
     this.canvas = document.createElement('canvas')
     this.canvas.className = 'biome-radar-hud__canvas'
-    this.canvas.style.display = 'block'
-    this.canvas.style.width = '100%'
-    this.canvas.style.height = '100%'
     this.element.appendChild(this.canvas)
+    this.createCompassLabels()
     this.parent.appendChild(this.element)
 
     this.context = this.canvas.getContext('2d')
     this.resizeCanvas()
     this.draw()
+  }
+
+  createCompassLabels() {
+    const labels = [
+      { direction: 'n', text: 'N' },
+      { direction: 'e', text: 'E' },
+      { direction: 's', text: 'S' },
+      { direction: 'w', text: 'W' }
+    ]
+
+    for (const { direction, text } of labels) {
+      const label = document.createElement('span')
+      label.className = `biome-radar-hud__compass-label biome-radar-hud__compass-label--${direction}`
+      label.textContent = text
+      this.element.appendChild(label)
+    }
   }
 
   buildTargets(regions) {
@@ -86,6 +96,7 @@ export default class BiomeRadarHUD {
 
     const scanSpeed = this.radarConfig.scanSpeed ?? 0.9
     this.scanAngle = (this.scanAngle + delta * scanSpeed * Math.PI * 2) % (Math.PI * 2)
+    this.pulseTime += delta
     this.draw()
   }
 
@@ -155,7 +166,7 @@ export default class BiomeRadarHUD {
     ctx.fill()
 
     ctx.strokeStyle = 'rgba(116, 223, 255, 0.68)'
-    ctx.lineWidth = 1
+    ctx.lineWidth = 2
     for (const scale of [0.38, 0.68, 1]) {
       ctx.beginPath()
       ctx.arc(center, center, radius * scale, 0, Math.PI * 2)
@@ -187,15 +198,41 @@ export default class BiomeRadarHUD {
   }
 
   drawTargets(ctx) {
-    for (const target of this.targets) {
+    const pulseSpeed = this.radarConfig.pulseSpeed ?? 1.1
+    const pulseRingCount = 2
+
+    for (let index = 0; index < this.targets.length; index++) {
+      const target = this.targets[index]
       const point = this.projectTarget(target)
       const dotRadius = point.clamped ? 4.5 : 5.5
+      const phaseOffset = index * 0.38
+      const pulsePhase = this.pulseTime * pulseSpeed + phaseOffset
+
+      for (let ring = 0; ring < pulseRingCount; ring++) {
+        const ringT = (pulsePhase + ring / pulseRingCount) % 1
+        const ringRadius = dotRadius + 4 + ringT * 18
+        const alpha = (1 - ringT) * 0.55
+
+        ctx.save()
+        ctx.globalAlpha = alpha
+        ctx.strokeStyle = target.color
+        ctx.lineWidth = 1.5
+        ctx.shadowColor = target.color
+        ctx.shadowBlur = 10
+        ctx.beginPath()
+        ctx.arc(point.x, point.y, ringRadius, 0, Math.PI * 2)
+        ctx.stroke()
+        ctx.restore()
+      }
+
+      const coreScale = 1 + Math.sin(pulsePhase * Math.PI * 2) * 0.12
+      const coreRadius = dotRadius * coreScale
 
       ctx.fillStyle = target.color
       ctx.shadowColor = target.color
-      ctx.shadowBlur = 12
+      ctx.shadowBlur = 12 + Math.sin(pulsePhase * Math.PI * 2) * 4
       ctx.beginPath()
-      ctx.arc(point.x, point.y, dotRadius, 0, Math.PI * 2)
+      ctx.arc(point.x, point.y, coreRadius, 0, Math.PI * 2)
       ctx.fill()
       ctx.shadowBlur = 0
     }
