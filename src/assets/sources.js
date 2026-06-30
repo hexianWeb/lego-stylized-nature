@@ -5,6 +5,7 @@ export default [
 
   { name: 'brick2x2Model', type: 'gltfModel', path: 'model/terrain/legoBlock2x2.glb' },
   { name: 'playerAircraftModel', type: 'gltfModel', path: 'model/player/fly.glb' },
+  { name: 'biomeTowerModel', type: 'gltfModel', path: 'model/tower/tower.glb' },
 
   { name: 'waterBubbleModel', type: 'gltfModel', path: 'model/prefab/bubble.glb' },
   { name: 'waterDuckweedModel', type: 'gltfModel', path: 'model/prefab/duckweed.glb' },

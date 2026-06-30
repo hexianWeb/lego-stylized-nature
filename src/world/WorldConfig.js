@@ -71,6 +71,43 @@ export const worldConfig = {
       { id: 'volcano', center: [-400, 400], radius: 120, weight: 1 }
     ]
   },
+  biomeCenters: {
+    enabled: true,
+    assetName: 'biomeTowerModel',
+    triggerRadius: 3,
+    lightMeshName: 'light',
+    towers: {
+      forest: {
+        light: {
+          color: '#43ff7a',
+          emissiveIntensity: 1.8
+        },
+        log: 'Forest validation reached: biomass exploitation record unlocked.'
+      },
+      autumnForest: {
+        storyAlias: 'badlands',
+        light: {
+          color: '#b24cff',
+          emissiveIntensity: 1.6
+        },
+        log: 'Badlands validation reached: mining waste record unlocked.'
+      },
+      desert: {
+        light: {
+          color: '#ffd34a',
+          emissiveIntensity: 1.5
+        },
+        log: 'Desert validation reached: groundwater collapse record unlocked.'
+      },
+      volcano: {
+        light: {
+          color: '#ff4a1f',
+          emissiveIntensity: 2.2
+        },
+        log: 'Volcano validation reached: geothermal extraction record unlocked.'
+      }
+    }
+  },
   placement: {
     enablePrefabs: true,
     enableTrees: true,

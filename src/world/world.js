@@ -3,6 +3,7 @@ import { worldConfig } from './WorldConfig.js'
 import BiomeRegistry from './biomes/BiomeRegistry.js'
 import BiomeBlender from './biomes/BiomeBlender.js'
 import BiomeMaskGenerator from './biomes/BiomeMaskGenerator.js'
+import BiomeCenterSystem from './biomes/BiomeCenterSystem.js'
 import TerrainGenerator from './terrain/TerrainGenerator.js'
 import LayeredTerrainBuilder from './terrain/LayeredTerrainBuilder.js'
 import { extractBrickGeometry } from './bricks/BrickGeometry.js'
@@ -53,6 +54,7 @@ export default class World {
         this.lavaBrickRenderer = null
         this.prefabPlacer = null
         this.playerAircraft = null
+        this.biomeCenterSystem = null
         this.terrainChunkManager = null
         this.biomeRadarHUD = null
         this.controlGuideHUD = null
@@ -153,6 +155,16 @@ export default class World {
 
             this.playerAircraft = new PlayerAircraft(this.experience, { config: this.config })
             this.addSystem(this.playerAircraft)
+
+            if (!this.biomeCenterSystem && this.config.biomeCenters?.enabled !== false) {
+                this.biomeCenterSystem = new BiomeCenterSystem({
+                    config: this.config,
+                    resources,
+                    terrainGenerator: this.terrainGenerator
+                })
+                this.biomeCenterSystem.build()
+                this.addSystem(this.biomeCenterSystem)
+            }
 
             if (!this.biomeRadarHUD && this.config.ui?.biomeRadar?.enabled !== false) {
                 this.biomeRadarHUD = new BiomeRadarHUD({ config: this.config })
@@ -283,6 +295,10 @@ export default class World {
             this.biomeRadarHUD.update(this.playerAircraft.state.position)
         }
 
+        if (this.biomeCenterSystem && this.playerAircraft?.enabled) {
+            this.biomeCenterSystem.update(this.playerAircraft.state.position)
+        }
+
         if (this.terrainChunkManager && this.playerAircraft?.enabled) {
             const { x, z } = this.playerAircraft.state.position
             const chunkWorldSize = this.config.chunks.size * this.config.terrain.cellSize
@@ -307,6 +323,7 @@ export default class World {
         this.biomeRadarHUD?.dispose()
         this.controlGuideHUD?.dispose()
         this.terrainChunkManager = null
+        this.biomeCenterSystem = null
         this.biomeRadarHUD = null
         this.controlGuideHUD = null
         this.children.length = 0
