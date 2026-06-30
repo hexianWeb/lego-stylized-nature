@@ -15,6 +15,7 @@ import PrefabRegistry from './prefabs/PrefabRegistry.js'
 import PrefabPlacer from './prefabs/PrefabPlacer.js'
 import PlayerAircraft from './player/PlayerAircraft.js'
 import ChunkManager from './chunks/ChunkManager.js'
+import BiomeRadarHUD from '../ui/BiomeRadarHUD.js'
 import { createTerrainPanel } from '../debug/panels/TerrainPanel.js'
 import { createAOPanel } from '../debug/panels/AOPanel.js'
 import { createBiomePanel } from '../debug/panels/BiomePanel.js'
@@ -52,6 +53,7 @@ export default class World {
         this.prefabPlacer = null
         this.playerAircraft = null
         this.terrainChunkManager = null
+        this.biomeRadarHUD = null
     }
 
     addSystem(system) {
@@ -149,6 +151,10 @@ export default class World {
 
             this.playerAircraft = new PlayerAircraft(this.experience, { config: this.config })
             this.addSystem(this.playerAircraft)
+
+            if (!this.biomeRadarHUD && this.config.ui?.biomeRadar?.enabled !== false) {
+                this.biomeRadarHUD = new BiomeRadarHUD({ config: this.config })
+            }
         }
 
         this.regenerate()
@@ -267,6 +273,10 @@ export default class World {
             child.update?.()
         }
 
+        if (this.biomeRadarHUD && this.playerAircraft?.enabled) {
+            this.biomeRadarHUD.update(this.playerAircraft.state.position)
+        }
+
         if (this.terrainChunkManager && this.playerAircraft?.enabled) {
             const { x, z } = this.playerAircraft.state.position
             const chunkWorldSize = this.config.chunks.size * this.config.terrain.cellSize
@@ -288,7 +298,9 @@ export default class World {
             child.dispose?.()
         }
         this.terrainChunkManager?.dispose()
+        this.biomeRadarHUD?.dispose()
         this.terrainChunkManager = null
+        this.biomeRadarHUD = null
         this.children.length = 0
         this.scene.remove(this.group)
     }

@@ -10,6 +10,25 @@ export const worldConfig = {
       color: { ...SPEED_LINES_DEFAULTS.color }
     }
   },
+  ui: {
+    biomeRadar: {
+      enabled: true,
+      size: 220,
+      screenOffset: {
+        left: 24,
+        bottom: 24
+      },
+      range: 360,
+      scanSpeed: 0.9,
+      opacity: 0.9,
+      colors: {
+        forest: '#53D86A',
+        autumnForest: '#F4A13D',
+        desert: '#E8D45A',
+        volcano: '#FF513D'
+      }
+    }
+  },
   terrain: {
     width: 128,
     depth: 128,
