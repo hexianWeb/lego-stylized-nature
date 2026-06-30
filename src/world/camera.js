@@ -1,5 +1,6 @@
 import * as THREE from 'three/webgpu'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
+import { TrackballControls } from 'three/addons/controls/TrackballControls.js'
 
 export default class WorldCamera {
     /**
@@ -25,13 +26,29 @@ export default class WorldCamera {
 
         this.controls = new OrbitControls(this.instance, canvas)
         this.controls.enableDamping = true
-        this.controls.maxPolarAngle = Math.PI / 2
-        this.controls.minZoom = 0.5
-        this.controls.maxZoom = 6
+        this.controls.enableRotate = true
+        this.controls.enablePan = false
+        this.controls.enableZoom = false
+        this.controls.minPolarAngle = 0
+        this.controls.maxPolarAngle = Math.PI / 4
+
+        this.trackballControls = new TrackballControls(this.instance, canvas)
+        this.trackballControls.noRotate = true
+        this.trackballControls.noPan = true
+        this.trackballControls.staticMoving = false
+        this.trackballControls.dynamicDampingFactor = 0.2
+        this.trackballControls.minZoom = 0.5
+        this.trackballControls.maxZoom = 2
+        this.trackballControls.target.copy(this.controls.target)
+    }
+
+    _syncTrackballTarget() {
+        this.trackballControls.target.copy(this.controls.target)
     }
 
     lookAt(target) {
         this.controls.target.copy(target)
+        this._syncTrackballTarget()
         this.controls.update()
     }
 
@@ -47,6 +64,7 @@ export default class WorldCamera {
         const movement = nextTarget.sub(previousTarget)
         this.controls.target.copy(previousTarget).add(movement)
         this.instance.position.add(movement)
+        this._syncTrackballTarget()
         this.controls.update()
     }
 
@@ -57,10 +75,13 @@ export default class WorldCamera {
         this.instance.top = this._frustumHeight * 0.5
         this.instance.bottom = -this._frustumHeight * 0.5
         this.instance.updateProjectionMatrix()
+        this.trackballControls.handleResize()
     }
 
     update() {
         this.controls.update()
+        this._syncTrackballTarget()
+        this.trackballControls.update()
     }
 
     /**
@@ -79,5 +100,6 @@ export default class WorldCamera {
 
     dispose() {
         this.controls.dispose()
+        this.trackballControls.dispose()
     }
 }
