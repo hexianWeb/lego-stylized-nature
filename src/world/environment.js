@@ -28,8 +28,6 @@ export default class Environment {
         this.envMap = null
         this.environmentIntensity = 0.22
         this.useEnvBackground = true
-        this.showShadowHelper = true
-        this.showLightHelper = false
         /** 0 = darker shadows, 1 = more ambient/env fill */
         this.shadowFill = 0.25
         this.shadowBounds = {
@@ -51,15 +49,6 @@ export default class Environment {
         this.directionalLight.shadow.radius = 0
         this.scene.add(this.directionalLight)
         this.scene.add(this.directionalLight.target)
-
-        this.shadowCameraHelper = new THREE.CameraHelper(this.directionalLight.shadow.camera)
-        this.shadowCameraHelper.frustumCulled = false
-        this.shadowCameraHelper.visible = this.showShadowHelper
-        this.scene.add(this.shadowCameraHelper)
-
-        this.directionalLightHelper = new THREE.DirectionalLightHelper(this.directionalLight, 4, 0xffcc00)
-        this.directionalLightHelper.visible = this.showLightHelper
-        this.scene.add(this.directionalLightHelper)
 
         this.fogColor = uniform(color('#333'))
         this.fogControl = { color: '#333' }
@@ -169,7 +158,6 @@ export default class Environment {
         this.directionalLight.target.updateMatrixWorld()
         this.directionalLight.shadow.needsUpdate = true
         this.directionalLight.shadow.updateMatrices(this.directionalLight)
-        this.updateShadowHelpers()
     }
 
     applyShadowBounds() {
@@ -188,30 +176,6 @@ export default class Environment {
 
         this.directionalLight.shadow.needsUpdate = true
         this.directionalLight.shadow.updateMatrices(this.directionalLight)
-        this.updateShadowHelpers()
-    }
-
-    syncShadowHelperVisibility() {
-        if (this.shadowCameraHelper) {
-            this.shadowCameraHelper.visible = this.showShadowHelper
-        }
-        if (this.directionalLightHelper) {
-            this.directionalLightHelper.visible = this.showLightHelper
-        }
-    }
-
-    updateShadowHelpers() {
-        if (this.showShadowHelper && this.shadowCameraHelper) {
-            this.directionalLight.shadow.updateMatrices(this.directionalLight)
-            this.shadowCameraHelper.update()
-        }
-        if (this.showLightHelper && this.directionalLightHelper) {
-            this.directionalLightHelper.update()
-        }
-    }
-
-    update() {
-        this.updateShadowHelpers()
     }
 
     /**
@@ -236,9 +200,5 @@ export default class Environment {
         this.scene.remove(this.ambientLight)
         this.scene.remove(this.directionalLight)
         this.scene.remove(this.directionalLight.target)
-        this.shadowCameraHelper?.dispose()
-        this.directionalLightHelper?.dispose()
-        this.scene.remove(this.shadowCameraHelper)
-        this.scene.remove(this.directionalLightHelper)
     }
 }

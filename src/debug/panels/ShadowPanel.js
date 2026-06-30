@@ -13,16 +13,6 @@ export function createShadowPanel(debug, environment) {
         environment.applyShadowFill()
     })
 
-    folder.addBinding(environment, 'showShadowHelper', { label: 'showCameraHelper' })
-        .on('change', () => {
-            environment.syncShadowHelperVisibility()
-        })
-
-    folder.addBinding(environment, 'showLightHelper', { label: 'showLightHelper' })
-        .on('change', () => {
-            environment.syncShadowHelperVisibility()
-        })
-
     folder.addBinding(environment.shadowBounds, 'halfExtent', {
         min: 4,
         max: 40,
