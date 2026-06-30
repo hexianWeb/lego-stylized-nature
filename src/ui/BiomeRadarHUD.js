@@ -1,3 +1,7 @@
+import { eventBus } from '../utils/event-bus.js'
+
+export const BIOME_RADAR_HUD_UPDATE_EVENT = 'hud:biome-radar:update'
+
 const DEFAULT_COLORS = {
   forest: '#53D86A',
   autumnForest: '#F4A13D',
@@ -15,15 +19,21 @@ export default class BiomeRadarHUD {
     this.scanAngle = -Math.PI * 0.5
     this.pulseTime = 0
     this.playerPosition = { x: 0, z: 0 }
+    this.playerYaw = 0
     this.cellSize = this.resolveCellSize(config)
     this.pixelRatio = 1
     this.size = this.radarConfig.size ?? 300
     this.radius = this.size * 0.43
     this.center = this.size * 0.5
+    this._onPlayerStateUpdate = (payload) => {
+      this.setPlayerState(payload)
+    }
 
     if (!this.enabled || typeof document === 'undefined' || !this.parent) {
       return
     }
+
+    eventBus.on(BIOME_RADAR_HUD_UPDATE_EVENT, this._onPlayerStateUpdate)
 
     this.element = document.createElement('div')
     this.element.className = 'biome-radar-hud'
@@ -80,14 +90,24 @@ export default class BiomeRadarHUD {
     return Number.isFinite(cellSize) && cellSize > 0 ? cellSize : 1
   }
 
-  update(playerPosition, delta = 1 / 60) {
+  setPlayerState({ position, yaw } = {}) {
     if (!this.enabled) {
       return
     }
 
-    if (playerPosition) {
-      this.playerPosition.x = this.toBiomeCoordinate(playerPosition.x, this.playerPosition.x)
-      this.playerPosition.z = this.toBiomeCoordinate(playerPosition.z, this.playerPosition.z)
+    if (position) {
+      this.playerPosition.x = this.toBiomeCoordinate(position.x, this.playerPosition.x)
+      this.playerPosition.z = this.toBiomeCoordinate(position.z, this.playerPosition.z)
+    }
+
+    if (Number.isFinite(yaw)) {
+      this.playerYaw = yaw
+    }
+  }
+
+  update(delta = 1 / 60) {
+    if (!this.enabled) {
+      return
     }
 
     if (!this.context) {
@@ -95,8 +115,9 @@ export default class BiomeRadarHUD {
     }
 
     const scanSpeed = this.radarConfig.scanSpeed ?? 0.9
-    this.scanAngle = (this.scanAngle + delta * scanSpeed * Math.PI * 2) % (Math.PI * 2)
-    this.pulseTime += delta
+    const frameDelta = Number.isFinite(delta) ? delta : 1 / 60
+    this.scanAngle = (this.scanAngle + frameDelta * scanSpeed * Math.PI * 2) % (Math.PI * 2)
+    this.pulseTime += frameDelta
     this.draw()
   }
 
@@ -243,13 +264,33 @@ export default class BiomeRadarHUD {
     ctx.lineWidth = 1.5
     ctx.shadowColor = 'rgba(236, 255, 255, 0.85)'
     ctx.shadowBlur = 10
+
     ctx.beginPath()
     ctx.arc(this.center, this.center, 8, 0, Math.PI * 2)
     ctx.stroke()
+
+    ctx.save()
+    ctx.translate(this.center, this.center)
+    ctx.rotate(this.playerYaw + Math.PI * 0.5)
+
+    ctx.fillStyle = 'rgba(236, 255, 255, 0.16)'
+    ctx.beginPath()
+    ctx.moveTo(0, -14)
+    ctx.lineTo(8, 9)
+    ctx.lineTo(0, 5)
+    ctx.lineTo(-8, 9)
+    ctx.closePath()
+    ctx.fill()
+    ctx.stroke()
+    ctx.restore()
+
     ctx.shadowBlur = 0
   }
 
   dispose() {
+    if (this._onPlayerStateUpdate) {
+      eventBus.off(BIOME_RADAR_HUD_UPDATE_EVENT, this._onPlayerStateUpdate)
+    }
     this.element?.remove()
     this.context = null
     this.canvas = null

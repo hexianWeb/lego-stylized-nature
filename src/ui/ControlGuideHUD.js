@@ -1,8 +1,8 @@
 const DEFAULT_BINDINGS = [
   { key: 'W', label: 'Accelerate' },
   { key: 'S', label: 'Brake' },
-  { key: 'A', label: 'Turn Left' },
-  { key: 'D', label: 'Turn Right' }
+  { key: 'A', label: 'Turn Right' },
+  { key: 'D', label: 'Turn Left' }
 ]
 
 export default class ControlGuideHUD {

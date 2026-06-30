@@ -16,8 +16,9 @@ import PrefabRegistry from './prefabs/PrefabRegistry.js'
 import PrefabPlacer from './prefabs/PrefabPlacer.js'
 import PlayerAircraft from './player/PlayerAircraft.js'
 import ChunkManager from './chunks/ChunkManager.js'
-import BiomeRadarHUD from '../ui/BiomeRadarHUD.js'
+import BiomeRadarHUD, { BIOME_RADAR_HUD_UPDATE_EVENT } from '../ui/BiomeRadarHUD.js'
 import ControlGuideHUD from '../ui/ControlGuideHUD.js'
+import { eventBus } from '../utils/event-bus.js'
 import { createTerrainPanel } from '../debug/panels/TerrainPanel.js'
 import { createAOPanel } from '../debug/panels/AOPanel.js'
 import { createBiomePanel } from '../debug/panels/BiomePanel.js'
@@ -57,6 +58,7 @@ export default class World {
         this.biomeCenterSystem = null
         this.terrainChunkManager = null
         this.biomeRadarHUD = null
+        this._lastBiomeRadarHUDUpdate = null
         this.controlGuideHUD = null
     }
 
@@ -292,7 +294,8 @@ export default class World {
         }
 
         if (this.biomeRadarHUD && this.playerAircraft?.enabled) {
-            this.biomeRadarHUD.update(this.playerAircraft.state.position)
+            this.emitBiomeRadarHUDUpdateIfNeeded()
+            this.biomeRadarHUD.update(this.experience.time.getDelta())
         }
 
         if (this.biomeCenterSystem && this.playerAircraft?.enabled) {
@@ -313,6 +316,51 @@ export default class World {
             )
             this.terrainChunkManager.update(x, z, this.experience.worldCamera.instance)
         }
+    }
+
+    emitBiomeRadarHUDUpdateIfNeeded() {
+        const state = this.playerAircraft?.state
+
+        if (!state) {
+            return
+        }
+
+        const thresholds = this.config.ui?.biomeRadar?.updateThreshold ?? {}
+        const positionThreshold = Number.isFinite(thresholds.position) ? thresholds.position : 0.02
+        const yawThreshold = Number.isFinite(thresholds.yaw) ? thresholds.yaw : 0.01
+        const payload = {
+            position: {
+                x: state.position.x,
+                z: state.position.z
+            },
+            yaw: state.yaw
+        }
+
+        if (!this._lastBiomeRadarHUDUpdate || this.hasBiomeRadarHUDUpdateChanged(payload, {
+            positionThreshold,
+            yawThreshold
+        })) {
+            eventBus.emit(BIOME_RADAR_HUD_UPDATE_EVENT, payload)
+            this._lastBiomeRadarHUDUpdate = payload
+        }
+    }
+
+    hasBiomeRadarHUDUpdateChanged(payload, { positionThreshold, yawThreshold }) {
+        const previous = this._lastBiomeRadarHUDUpdate
+
+        if (!previous) {
+            return true
+        }
+
+        const dx = payload.position.x - previous.position.x
+        const dz = payload.position.z - previous.position.z
+        const positionDelta = Math.sqrt(dx * dx + dz * dz)
+        const yawDelta = Math.abs(Math.atan2(
+            Math.sin(payload.yaw - previous.yaw),
+            Math.cos(payload.yaw - previous.yaw)
+        ))
+
+        return positionDelta > positionThreshold || yawDelta > yawThreshold
     }
 
     dispose() {

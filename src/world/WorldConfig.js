@@ -28,6 +28,10 @@ export const worldConfig = {
       },
       range: 360,
       scanSpeed: 0.9,
+      updateThreshold: {
+        position: 0.02,
+        yaw: 0.01
+      },
       opacity: 0.9,
       colors: {
         forest: '#53D86A',
