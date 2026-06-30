@@ -1,12 +1,16 @@
-const CONTROL_CODES = ['KeyW', 'KeyA', 'KeyS', 'KeyD']
+const CONTROL_CODES = [
+  'KeyW',
+  'KeyA',
+  'KeyS',
+  'KeyD',
+  'ArrowUp',
+  'ArrowDown',
+  'ArrowLeft',
+  'ArrowRight'
+]
 
 function createEmptyKeys() {
-  return {
-    KeyW: false,
-    KeyA: false,
-    KeyS: false,
-    KeyD: false
-  }
+  return Object.fromEntries(CONTROL_CODES.map((code) => [code, false]))
 }
 
 export default class AircraftInput {

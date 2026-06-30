@@ -58,9 +58,9 @@ export const worldConfig = {
   biomes: {
     regions: [
       { id: 'forest', center: [0, 0], radius: 120, weight: 1 },
-      { id: 'autumnForest', center: [200, 200], radius: 120, weight: 1 },
-      { id: 'desert', center: [200, -200], radius: 120, weight: 1 },
-      { id: 'volcano', center: [-200, 200], radius: 120, weight: 1 }
+      { id: 'autumnForest', center: [400, 400], radius: 120, weight: 1 },
+      { id: 'desert', center: [400, -400], radius: 120, weight: 1 },
+      { id: 'volcano', center: [-400, 400], radius: 120, weight: 1 }
     ]
   },
   placement: {
@@ -80,7 +80,7 @@ export const worldConfig = {
   },
   chunks: {
     enabled: true,
-    size: 64,
+    size: 72,
     halo: 1,
     windowRadius: 1,
     maxPendingBuildsPerFrame: 1,

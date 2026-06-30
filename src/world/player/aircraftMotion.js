@@ -55,10 +55,10 @@ export function createAircraftState(options = {}) {
 }
 
 export function resolveAircraftInput(keys = {}) {
-  const forward = keys.KeyW === true ? 1 : 0
-  const reverse = keys.KeyS === true ? 1 : 0
-  const left = keys.KeyA === true ? 1 : 0
-  const right = keys.KeyD === true ? 1 : 0
+  const forward = keys.KeyW === true || keys.ArrowUp === true ? 1 : 0
+  const reverse = keys.KeyS === true || keys.ArrowDown === true ? 1 : 0
+  const left = keys.KeyA === true || keys.ArrowLeft === true ? 1 : 0
+  const right = keys.KeyD === true || keys.ArrowRight === true ? 1 : 0
 
   return {
     thrustInput: forward - reverse,
