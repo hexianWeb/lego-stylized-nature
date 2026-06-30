@@ -75,6 +75,7 @@ export const worldConfig = {
     enabled: true,
     assetName: 'biomeTowerModel',
     triggerRadius: 3,
+    footprintCells: 4,
     lightMeshName: 'light',
     towers: {
       forest: {

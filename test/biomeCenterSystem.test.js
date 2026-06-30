@@ -54,9 +54,23 @@ function createTerrainGenerator(height = 7) {
       this.calls.push({ origin, width, depth, meta })
       return {
         getHeight(x, z) {
-          assert.equal(x, 0)
-          assert.equal(z, 0)
+          assert.equal(x >= 0 && x < width, true)
+          assert.equal(z >= 0 && z < depth, true)
           return height
+        }
+      }
+    }
+  }
+}
+
+function createGridTerrainGenerator(heights) {
+  return {
+    calls: [],
+    generateForBounds(origin, width, depth, meta) {
+      this.calls.push({ origin, width, depth, meta })
+      return {
+        getHeight(x, z) {
+          return heights[z]?.[x] ?? 0
         }
       }
     }
@@ -73,6 +87,7 @@ test('registers the biome tower model source and config', () => {
   })
   assert.equal(worldConfig.biomeCenters.assetName, 'biomeTowerModel')
   assert.equal(worldConfig.biomeCenters.lightMeshName, 'light')
+  assert.equal(worldConfig.biomeCenters.footprintCells, 4)
   assert.equal(worldConfig.biomeCenters.towers.forest.light.color, '#43ff7a')
   assert.equal(worldConfig.biomeCenters.towers.autumnForest.storyAlias, 'badlands')
 })
@@ -137,7 +152,12 @@ test('disposes only cloned tower light materials and not shared textures', () =>
 
 test('builds one ground-aligned tower per biome center', () => {
   const asset = createTowerAsset()
-  const terrainGenerator = createTerrainGenerator(7)
+  const terrainGenerator = createGridTerrainGenerator([
+    [1, 2, 3, 4],
+    [2, 7, 5, 3],
+    [3, 4, 6, 2],
+    [1, 2, 3, 5]
+  ])
   const system = new BiomeCenterSystem({
     config: {
       terrain: {
@@ -154,6 +174,7 @@ test('builds one ground-aligned tower per biome center', () => {
         enabled: true,
         assetName: 'biomeTowerModel',
         triggerRadius: 3,
+        footprintCells: 4,
         lightMeshName: 'light',
         towers: {
           forest: {
@@ -184,7 +205,14 @@ test('builds one ground-aligned tower per biome center', () => {
   assert.equal(system.group.children[1].position.x, -1)
   assert.equal(system.group.children[1].position.z, 1.6)
   assert.equal(terrainGenerator.calls.length, 2)
-  assert.deepEqual(terrainGenerator.calls[0].origin, { x: 10, z: 20 })
+  assert.deepEqual(terrainGenerator.calls[0].origin, { x: 8, z: 18 })
+  assert.equal(terrainGenerator.calls[0].width, 4)
+  assert.equal(terrainGenerator.calls[0].depth, 4)
+  assert.deepEqual(terrainGenerator.calls[0].meta, {
+    origin: { x: 8, z: 18 },
+    visibleSize: 4,
+    halo: 0
+  })
 })
 
 test('logs each biome center trigger once', () => {

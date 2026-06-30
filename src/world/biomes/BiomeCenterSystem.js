@@ -122,19 +122,40 @@ export default class BiomeCenterSystem {
       return 0
     }
 
+    const footprintCells = this.resolveFootprintCells()
+    const sampleOrigin = {
+      x: centerX - Math.floor(footprintCells / 2),
+      z: centerZ - Math.floor(footprintCells / 2)
+    }
     const terrainMap = this.terrainGenerator.generateForBounds(
-      { x: centerX, z: centerZ },
-      1,
-      1,
+      sampleOrigin,
+      footprintCells,
+      footprintCells,
       {
-        origin: { x: centerX, z: centerZ },
-        visibleSize: 1,
+        origin: sampleOrigin,
+        visibleSize: footprintCells,
         halo: 0
       }
     )
 
-    const height = terrainMap?.getHeight?.(0, 0)
-    return Number.isFinite(height) ? height : 0
+    let maxHeight = 0
+    for (let z = 0; z < footprintCells; z++) {
+      for (let x = 0; x < footprintCells; x++) {
+        const height = terrainMap?.getHeight?.(x, z)
+        if (Number.isFinite(height)) {
+          maxHeight = Math.max(maxHeight, height)
+        }
+      }
+    }
+
+    return maxHeight
+  }
+
+  resolveFootprintCells() {
+    const footprintCells = this.config.biomeCenters?.footprintCells
+    return Number.isInteger(footprintCells) && footprintCells > 0
+      ? footprintCells
+      : 4
   }
 
   update(playerPosition = null) {

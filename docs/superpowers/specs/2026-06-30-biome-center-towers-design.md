@@ -54,10 +54,10 @@ Use the completed tower asset:
 - Asset: `public/model/tower/tower.glb`
 - Source name: `biomeTowerModel`
 - Source path: `model/tower/tower.glb`
-- Brick footprint meaning: `2 x 2`
+- Brick footprint meaning: `4 x 4`
 - Origin behavior: the asset origin is already at the tower base.
 
-Because the GLB origin is at the base, the runtime should place the cloned scene directly on the sampled terrain surface:
+Because the GLB origin is at the base, the runtime should place the cloned scene directly on the highest sampled terrain surface inside the tower footprint:
 
 ```js
 {
@@ -69,7 +69,7 @@ Because the GLB origin is at the base, the runtime should place the cloned scene
 
 Do not add a half-height offset. That rule only applied to centered box geometry and would make the GLB float.
 
-The tower system should sample the same terrain generator used by chunk terrain so the tower sits on the generated surface. A simple implementation can generate a small terrain sample around the center block and read its height, then convert that height with `terrain.layerHeight`.
+The tower system should sample the same terrain generator used by chunk terrain so the tower sits on the generated surface. Since the tower occupies `4 x 4` cells, sample that footprint around the biome center and use the highest cell height, then convert that height with `terrain.layerHeight`.
 
 ## Light Material Rule
 
@@ -107,6 +107,7 @@ biomeCenters: {
   enabled: true,
   assetName: 'biomeTowerModel',
   triggerRadius: 3,
+  footprintCells: 4,
   lightMeshName: 'light',
   towers: {
     forest: {
@@ -224,7 +225,7 @@ Implementation validation should include:
 - Confirm `tower.glb` is registered as `biomeTowerModel`.
 - Fly to each center and confirm one tower GLB is visible.
 - Confirm each tower appears at the matching `WorldConfig.biomes.regions` center.
-- Confirm each tower base appears ground-aligned.
+- Confirm each tower base is placed at the highest Y value across its `4 x 4` footprint.
 - Confirm each tower's `light` mesh uses the biome-specific color and emission.
 - Confirm non-light tower meshes keep their Blender-authored materials.
 - Confirm each tower logs once when the player enters the trigger radius.
