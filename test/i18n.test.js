@@ -21,7 +21,7 @@ test('translates control guide strings for English and Chinese', () => {
 test('returns localized story content by locale', () => {
   initI18n()
   setLocale('en')
-  assert.equal(getLocalizedStoryContent('en').openingStory.title, 'Incoming Tower Signal')
+  assert.equal(getLocalizedStoryContent('en').openingStory.title, 'Mysterious Signal Received')
 
   setLocale('zh')
   const zh = getLocalizedStoryContent('zh')
@@ -31,8 +31,8 @@ test('returns localized story content by locale', () => {
   assert.equal(zh.openingStory.pages[0].text.includes('信号连接成功'), true)
   assert.equal(zh.openingStory.pages[0].text.includes('外星来客'), true)
   assert.equal(zh.openingStory.pages[2].text.includes('四座生态中心'), true)
-  assert.equal(zh.towerRecords.forest.objectiveLabel, '前往森林归生塔')
-  assert.equal(zh.towerRecords.forest.activationLabel, '按 E 激活森林归生塔')
-  assert.equal(zh.towerRecords.badlands.pages.some((page) => page.text?.includes('采矿废料')), true)
-  assert.equal(zh.finalReveal.pages.at(-1).text.includes('需要授权'), true)
+  assert.equal(zh.towerRecords.forest.objectiveLabel, '前往森林意识塔')
+  assert.equal(zh.towerRecords.forest.activationLabel, '按 E 激活森林意识塔')
+  assert.equal(zh.towerRecords.badlands.pages.some((page) => page.text?.includes('矿物废料')), true)
+  assert.equal(zh.finalReveal.pages.at(-1).text.includes('决策等待中'), true)
 })
