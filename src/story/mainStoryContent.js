@@ -17,22 +17,17 @@ export const mainStoryContent = {
       {
         type: 'signal',
         speaker: 'TOWER SIGNAL',
-        text: 'Alien visitor, thank you for answering our signal.'
+        text: 'Signal link established.\nAlien visitor, thank you for answering our signal.'
       },
       {
         type: 'signal',
         speaker: 'TOWER SIGNAL',
-        text: 'We were once the civilization of this planet. When we understood that nature should not belong to us forever, we uploaded our consciousness and left the surface.'
+        text: 'We were once the civilization of this planet. Long ago, we chose to leave the surface, uploading our consciousness into consciousness towers and letting nature recover.\nThe consciousness towers preserve our memories, and also preserve the life revival system.\nBut over a long time, some facilities have been damaged. We cannot start the system from within the towers ourselves.'
       },
       {
         type: 'signal',
         speaker: 'TOWER SIGNAL',
-        text: 'Now the ecology has recovered. Some of us wish to feel wind, water, sunlight, and soil again.'
-      },
-      {
-        type: 'signal',
-        speaker: 'TOWER SIGNAL',
-        text: 'Please help us activate the four ecological consciousness towers.'
+        text: 'Now, it seems the ecology has recovered. We hope to return to this world and feel wind, water, sunlight, and soil again.\nPlease go to the four ecological centers and activate the consciousness towers there.\nYour verification will determine whether we can reconnect with this planet.'
       }
     ]
   },
@@ -46,8 +41,16 @@ export const mainStoryContent = {
       objectiveLabel: 'Proceed to the Forest Consciousness Tower',
       activationLabel: 'Press E to activate the Forest Consciousness Tower',
       pages: [
-        { type: 'towerSignal', speaker: 'TOWER SIGNAL', text: 'Forest ecological center restored. Please begin ecological validation.' },
-        { type: 'shipScanner', speaker: 'SHIP SCANNER', text: 'Hidden archive layer detected. Data state: partially deleted. Rebuilding visual record.' },
+        {
+          type: 'towerSignal',
+          speaker: 'TOWER SIGNAL',
+          text: 'This region was one of the first forest reserves where we chose to withdraw.\nAfter we left, the forest regained room to grow.\nPlease confirm ecological status.'
+        },
+        {
+          type: 'shipScanner',
+          speaker: 'SHIP SCANNER',
+          text: 'Non-public data layer detected.\nTags: deleted / not fully erased / access restricted.\nAttempt recovery?'
+        },
         { type: 'comic', image: '/story/forest-evidence.png', alt: 'Four-stage record of forest biomass extraction.' },
         { type: 'archiveLog', source: 'HIDDEN ARCHIVE 01', text: 'Biomass output efficiency increased to 312%. Forest self-repair continued to decline. Management conclusion: continue extraction.' },
         { type: 'towerResponse', speaker: 'TOWER SIGNAL', text: 'This record is incomplete. Please do not judge us from damaged fragments.' }

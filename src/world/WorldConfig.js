@@ -39,6 +39,12 @@ export const worldConfig = {
         desert: '#E8D45A',
         volcano: '#FF513D'
       }
+    },
+    storyRecord: {
+      enabled: true
+    },
+    storyObjective: {
+      enabled: true
     }
   },
   terrain: {

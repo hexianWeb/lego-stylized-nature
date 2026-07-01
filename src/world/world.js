@@ -18,6 +18,14 @@ import PlayerAircraft from './player/PlayerAircraft.js'
 import ChunkManager from './chunks/ChunkManager.js'
 import BiomeRadarHUD, { BIOME_RADAR_HUD_UPDATE_EVENT } from '../ui/BiomeRadarHUD.js'
 import ControlGuideHUD from '../ui/ControlGuideHUD.js'
+import StoryRecordManager, {
+    CONTROLS_LOCK_EVENT,
+    CONTROLS_UNLOCK_EVENT
+} from '../story/StoryRecordManager.js'
+import StoryRecordModalHUD from '../ui/StoryRecordModalHUD.js'
+import StoryObjectiveHUD from '../ui/StoryObjectiveHUD.js'
+import { getLocalizedStoryContent } from '../i18n/getLocalizedStoryContent.js'
+import { LOCALE_CHANGED_EVENT } from '../i18n/i18n.js'
 import { eventBus } from '../utils/event-bus.js'
 import { createTerrainPanel } from '../debug/panels/TerrainPanel.js'
 import { createAOPanel } from '../debug/panels/AOPanel.js'
@@ -60,6 +68,22 @@ export default class World {
         this.biomeRadarHUD = null
         this._lastBiomeRadarHUDUpdate = null
         this.controlGuideHUD = null
+        this.storyRecordManager = null
+        this.storyRecordModalHUD = null
+        this.storyObjectiveHUD = null
+        this.controlsLocked = false
+        this._onControlsLock = () => {
+            this.controlsLocked = true
+            this.playerAircraft?.input?.clear?.()
+        }
+        this._onControlsUnlock = () => {
+            this.controlsLocked = false
+        }
+        this._onLocaleChanged = ({ locale }) => {
+            if (this.storyRecordManager) {
+                this.storyRecordManager.setContent(getLocalizedStoryContent(locale))
+            }
+        }
     }
 
     addSystem(system) {
@@ -175,6 +199,25 @@ export default class World {
             if (!this.controlGuideHUD && this.config.ui?.controlGuide?.enabled !== false) {
                 this.controlGuideHUD = new ControlGuideHUD({ config: this.config })
             }
+
+            if (!this.storyRecordModalHUD && this.config.ui?.storyRecord?.enabled !== false) {
+                this.storyRecordModalHUD = new StoryRecordModalHUD({ config: this.config })
+            }
+
+            if (!this.storyObjectiveHUD && this.config.ui?.storyObjective?.enabled !== false) {
+                this.storyObjectiveHUD = new StoryObjectiveHUD({ config: this.config })
+            }
+
+            if (!this.storyRecordManager && this.config.ui?.storyRecord?.enabled !== false) {
+                this.storyRecordManager = new StoryRecordManager({
+                    content: getLocalizedStoryContent()
+                })
+                this.storyRecordManager.start()
+            }
+
+            eventBus.on(CONTROLS_LOCK_EVENT, this._onControlsLock)
+            eventBus.on(CONTROLS_UNLOCK_EVENT, this._onControlsUnlock)
+            eventBus.on(LOCALE_CHANGED_EVENT, this._onLocaleChanged)
         }
 
         this.regenerate()
@@ -290,6 +333,9 @@ export default class World {
 
     update() {
         for (const child of this.children) {
+            if (child === this.playerAircraft && this.controlsLocked) {
+                continue
+            }
             child.update?.()
         }
 
@@ -364,16 +410,26 @@ export default class World {
     }
 
     dispose() {
+        eventBus.off(CONTROLS_LOCK_EVENT, this._onControlsLock)
+        eventBus.off(CONTROLS_UNLOCK_EVENT, this._onControlsUnlock)
+        eventBus.off(LOCALE_CHANGED_EVENT, this._onLocaleChanged)
         for (const child of this.children) {
             child.dispose?.()
         }
         this.terrainChunkManager?.dispose()
         this.biomeRadarHUD?.dispose()
         this.controlGuideHUD?.dispose()
+        this.storyRecordManager?.dispose()
+        this.storyRecordModalHUD?.dispose()
+        this.storyObjectiveHUD?.dispose()
         this.terrainChunkManager = null
         this.biomeCenterSystem = null
         this.biomeRadarHUD = null
         this.controlGuideHUD = null
+        this.storyRecordManager = null
+        this.storyRecordModalHUD = null
+        this.storyObjectiveHUD = null
+        this.controlsLocked = false
         this.children.length = 0
         this.scene.remove(this.group)
     }

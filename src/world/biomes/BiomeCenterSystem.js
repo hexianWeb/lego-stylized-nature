@@ -1,4 +1,9 @@
 import * as THREE from 'three/webgpu'
+import { eventBus as defaultEventBus } from '../../utils/event-bus.js'
+
+export const BIOME_CENTER_ENTERED_EVENT = 'biome-center:entered'
+export const BIOME_CENTER_EXITED_EVENT = 'biome-center:exited'
+export const BIOME_CENTER_ACTIVATE_EVENT = 'biome-center:activate'
 
 const TOWER_LIGHT_CLONE_FLAG = 'isBiomeTowerLightClone'
 
@@ -40,18 +45,24 @@ export default class BiomeCenterSystem {
     config,
     resources,
     terrainGenerator,
-    logger = (message) => console.log(message)
+    logger = (message) => console.log(message),
+    eventBus = defaultEventBus,
+    inputTarget = globalThis.window ?? null
   }) {
     this.config = config
     this.resources = resources
     this.terrainGenerator = terrainGenerator
     this.logger = logger
+    this.eventBus = eventBus
+    this.inputTarget = inputTarget
     this.group = new THREE.Group()
     this.group.name = 'BiomeCenterSystem'
     this.towers = []
-    this.triggeredIds = new Set()
+    this.nearbyTowerId = null
     this.lightMaterials = []
     this._missingAssetWarned = false
+    this._onKeyDown = (event) => this.handleKeyDown(event)
+    this.inputTarget?.addEventListener?.('keydown', this._onKeyDown)
   }
 
   build() {
@@ -94,6 +105,8 @@ export default class BiomeCenterSystem {
       this.group.add(model)
       this.towers.push({
         id: region.id,
+        towerId: region.id,
+        storyId: towerConfig.storyAlias ?? region.id,
         model,
         position,
         log: towerConfig.log ?? `${region.id} validation reached`,
@@ -163,21 +176,60 @@ export default class BiomeCenterSystem {
       return
     }
 
-    for (const tower of this.towers) {
-      if (this.triggeredIds.has(tower.id)) {
-        continue
+    const nearestTower = this.findNearestTowerInRange(playerPosition)
+    const nextTowerId = nearestTower?.towerId ?? null
+
+    if (nextTowerId !== this.nearbyTowerId) {
+      if (this.nearbyTowerId) {
+        const previous = this.towers.find((tower) => tower.towerId === this.nearbyTowerId)
+        if (previous) {
+          this.emitTowerEvent(BIOME_CENTER_EXITED_EVENT, previous)
+        }
       }
 
+      if (nearestTower) {
+        this.emitTowerEvent(BIOME_CENTER_ENTERED_EVENT, nearestTower)
+        this.logger(`[BiomeCenter] ${nearestTower.id} entered: ${nearestTower.log}`)
+      }
+
+      this.nearbyTowerId = nextTowerId
+    }
+  }
+
+  findNearestTowerInRange(playerPosition) {
+    let nearest = null
+    let nearestDistanceSq = Infinity
+
+    for (const tower of this.towers) {
       const dx = playerPosition.x - tower.position.x
       const dz = playerPosition.z - tower.position.z
       const distanceSq = dx * dx + dz * dz
-      if (distanceSq > tower.triggerRadius * tower.triggerRadius) {
-        continue
+      if (distanceSq <= tower.triggerRadius * tower.triggerRadius && distanceSq < nearestDistanceSq) {
+        nearest = tower
+        nearestDistanceSq = distanceSq
       }
-
-      this.triggeredIds.add(tower.id)
-      this.logger(`[BiomeCenter] ${tower.id} reached: ${tower.log}`)
     }
+
+    return nearest
+  }
+
+  handleKeyDown(event) {
+    if (event.repeat === true || event.code !== 'KeyE' || !this.nearbyTowerId) {
+      return
+    }
+
+    const tower = this.towers.find((entry) => entry.towerId === this.nearbyTowerId)
+    if (tower) {
+      this.emitTowerEvent(BIOME_CENTER_ACTIVATE_EVENT, tower)
+    }
+  }
+
+  emitTowerEvent(type, tower) {
+    this.eventBus.emit(type, {
+      biomeId: tower.id,
+      towerId: tower.towerId,
+      storyId: tower.storyId
+    })
   }
 
   clear() {
@@ -186,7 +238,7 @@ export default class BiomeCenterSystem {
     }
     this.lightMaterials.length = 0
     this.towers.length = 0
-    this.triggeredIds.clear()
+    this.nearbyTowerId = null
     this.group.clear()
   }
 
@@ -200,6 +252,7 @@ export default class BiomeCenterSystem {
   }
 
   dispose() {
+    this.inputTarget?.removeEventListener?.('keydown', this._onKeyDown)
     this.clear()
   }
 }

@@ -215,7 +215,7 @@ test('builds one ground-aligned tower per biome center', () => {
   })
 })
 
-test('logs each biome center trigger once', () => {
+test('logs tower entry once per approach', () => {
   const asset = createTowerAsset()
   const logs = []
   const system = new BiomeCenterSystem({
@@ -257,6 +257,62 @@ test('logs each biome center trigger once', () => {
   system.update(new THREE.Vector3(10, 0, 0))
 
   assert.deepEqual(logs, [
-    '[BiomeCenter] forest reached: Forest validation reached'
+    '[BiomeCenter] forest entered: Forest validation reached'
   ])
+})
+
+test('emits entered exited and activate events for tower interaction', () => {
+  const asset = createTowerAsset()
+  const events = []
+  const listeners = new Map()
+  const inputTarget = {
+    addEventListener(type, listener) {
+      listeners.set(type, listener)
+    },
+    removeEventListener(type, listener) {
+      if (listeners.get(type) === listener) {
+        listeners.delete(type)
+      }
+    }
+  }
+  const system = new BiomeCenterSystem({
+    config: {
+      terrain: { cellSize: 1, layerHeight: 1 },
+      biomes: { regions: [{ id: 'forest', center: [0, 0] }] },
+      biomeCenters: {
+        enabled: true,
+        assetName: 'biomeTowerModel',
+        triggerRadius: 3,
+        lightMeshName: 'light',
+        towers: {
+          forest: {
+            storyAlias: 'forest',
+            light: { color: '#43ff7a', emissiveIntensity: 1.8 },
+            log: 'Forest validation reached'
+          }
+        }
+      }
+    },
+    resources: { items: { biomeTowerModel: asset } },
+    terrainGenerator: createTerrainGenerator(0),
+    inputTarget,
+    eventBus: {
+      emit: (type, payload) => events.push({ type, payload })
+    },
+    logger: () => {}
+  })
+
+  system.build()
+  system.update(new THREE.Vector3(10, 0, 0))
+  system.update(new THREE.Vector3(2, 0, 0))
+  listeners.get('keydown')?.({ code: 'KeyE', repeat: false })
+  system.update(new THREE.Vector3(10, 0, 0))
+
+  assert.deepEqual(events.map((event) => event.type), [
+    'biome-center:entered',
+    'biome-center:activate',
+    'biome-center:exited'
+  ])
+  assert.equal(events[0].payload.towerId, 'forest')
+  assert.equal(events[0].payload.storyId, 'forest')
 })

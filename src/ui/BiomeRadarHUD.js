@@ -1,4 +1,5 @@
 import { eventBus } from '../utils/event-bus.js'
+import { STORY_OBJECTIVE_UPDATE_EVENT } from '../story/StoryRecordManager.js'
 
 export const BIOME_RADAR_HUD_UPDATE_EVENT = 'hud:biome-radar:update'
 
@@ -28,12 +29,17 @@ export default class BiomeRadarHUD {
     this._onPlayerStateUpdate = (payload) => {
       this.setPlayerState(payload)
     }
+    this.currentObjectiveId = null
+    this._onObjectiveUpdate = (payload) => {
+      this.currentObjectiveId = payload?.towerId ?? payload?.objectiveId ?? null
+    }
 
     if (!this.enabled || typeof document === 'undefined' || !this.parent) {
       return
     }
 
     eventBus.on(BIOME_RADAR_HUD_UPDATE_EVENT, this._onPlayerStateUpdate)
+    eventBus.on(STORY_OBJECTIVE_UPDATE_EVENT, this._onObjectiveUpdate)
 
     this.element = document.createElement('div')
     this.element.className = 'biome-radar-hud'
@@ -228,6 +234,20 @@ export default class BiomeRadarHUD {
       const dotRadius = point.clamped ? 4.5 : 5.5
       const phaseOffset = index * 0.38
       const pulsePhase = this.pulseTime * pulseSpeed + phaseOffset
+      const isObjective = target.id === this.currentObjectiveId
+      const objectiveRadius = isObjective ? dotRadius + 10 + Math.sin(this.pulseTime * Math.PI * 4) * 3 : 0
+
+      if (isObjective) {
+        ctx.save()
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.92)'
+        ctx.lineWidth = 2
+        ctx.shadowColor = target.color
+        ctx.shadowBlur = 18
+        ctx.beginPath()
+        ctx.arc(point.x, point.y, objectiveRadius, 0, Math.PI * 2)
+        ctx.stroke()
+        ctx.restore()
+      }
 
       for (let ring = 0; ring < pulseRingCount; ring++) {
         const ringT = (pulsePhase + ring / pulseRingCount) % 1
@@ -290,6 +310,9 @@ export default class BiomeRadarHUD {
   dispose() {
     if (this._onPlayerStateUpdate) {
       eventBus.off(BIOME_RADAR_HUD_UPDATE_EVENT, this._onPlayerStateUpdate)
+    }
+    if (this._onObjectiveUpdate) {
+      eventBus.off(STORY_OBJECTIVE_UPDATE_EVENT, this._onObjectiveUpdate)
     }
     this.element?.remove()
     this.context = null
