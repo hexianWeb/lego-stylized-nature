@@ -18,7 +18,9 @@ export default {
   storyRecord: {
     close: 'Close',
     continue: 'Continue',
-    recover: 'Attempt Recovery'
+    recover: 'Attempt Recovery',
+    initiateRevival: 'Initiate Revival',
+    terminateCycle: 'Terminate Cycle'
   },
   fallbackFinalReveal: {
     title: 'REVIVAL PROTOCOL',

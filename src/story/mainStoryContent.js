@@ -5,7 +5,10 @@ export const STORY_RECORD_PAGE_TYPES = new Set([
   'comic',
   'archiveLog',
   'towerResponse',
-  'protocol'
+  'protocol',
+  'decision',
+  'outcome_yes',
+  'outcome_no'
 ])
 
 export const mainStoryContent = {
@@ -16,24 +19,21 @@ export const mainStoryContent = {
     pages: [
       {
         type: 'signal',
-        speaker: 'Mysterious Signal',
-        text: 'Signal link established.\nAlien visitor, thank you for responding to our signal.'
+        speaker: 'Yssela Representative',
+        text:
+          'Signal link established.\nTraveler from afar, thank you for answering our call.'
       },
       {
         type: 'signal',
-        speaker: 'Mysterious Signal',
+        speaker: 'Yssela Representative',
         text:
-          'We were once the civilization of this planet. Long ago, we chose to leave the surface, uploading our consciousness into revival towers and letting nature recover.\n' +
-          'The revival towers preserve our memories, and also preserve the life revival system.\n' +
-          'But over a long time, some facilities have been damaged. We cannot start the system from within the towers ourselves.'
+          'We are the Yssela, the ancient civilization of this planet.\nBy an age-old covenant, whenever ecology is restored, we awaken from the revival towers and step back onto the land.\nThis time is no different.\nThe revival towers preserve all that we are, and hold the system for re-gestating our bodies.\nBut long centuries have silenced some facilities—we cannot initiate revival from within.'
       },
       {
         type: 'signal',
-        speaker: 'Mysterious Signal',
+        speaker: 'Yssela Representative',
         text:
-          'Now, it seems the ecology has recovered. We hope to return to this world and feel wind, water, sunlight, and soil again.\n' +
-          'Please go to the four ecological centers and activate the revival towers there.\n' +
-          'Your verification will determine whether we can reconnect with this planet.'
+          'Now the forests have been reborn, and the water runs sweet again.\nPlease go to the four ecological centers and activate the revival towers there.\nYour arrival is the external verification the towers await.\nHelp us complete this return once more.'
       }
     ]
   },
@@ -49,43 +49,39 @@ export const mainStoryContent = {
       pages: [
         {
           type: 'towerSignal',
-          speaker: 'Mysterious Signal',
+          speaker: 'Forest Revival Tower',
           text:
-            'This region was one of the first forest reserves where we chose to withdraw.\n' +
-            'After we left, the forest regained room to grow.\n' +
-            'Please confirm ecological status. — Mysterious Signal'
+            'Verification signal received.\nSeventh-cycle forest module initiating self-check... Correction: current cycle is final.\nBiomass reserves sufficient; canopy coverage meets preset return standards.\nPlease approach the tower core to complete external authentication.'
         },
         {
           type: 'shipScanner',
           speaker: 'Ship Scanner',
           text:
-            'Non-public data layer detected.\n' +
-            'Tags: deleted / not fully erased / access restricted.\n' +
-            'Attempt recovery? — Ship Scanner'
+            'Hmm? Something\'s buried in the tower log.\n' +
+            'It originally logged "Seventh cycle," but that was quickly changed to "Final cycle."\n' +
+            'So this forest was completely cleared, left to grow back on its own, at least six times over.\n' +
+            'And every time—right after the clearing finished—mass consciousness upload followed immediately.\n' +
+            'This isn\'t really "giving the world back to nature." It\'s more like... running away.\n' +
+            'Want me to dig up the deep records?\n' +
+            '— Ship Scanner'
         },
         {
           type: 'comic',
           image: '/story/forest-evidence.png',
-          alt: 'Four-stage record of forest biomass extraction.'
+          alt: 'Four-stage record: from primal dense forest, to mechanized clearing and stumps, to young forest reclaiming the land.'
         },
         {
           type: 'archiveLog',
-          source: 'Hidden Archive 01',
-          title: 'Forest Maintenance Log',
-          text: [
-            'Entry 01: Forest systems stable. Rivers, canopy cover, and animal migration routes all within healthy ranges. When we first took timber from this forest, everyone was cautious.',
-            'Entry 02: Limited harvesting plan running well. Cleared areas were replanted, and new sapling survival rates exceeded expectations. At the time, we believed civilization could grow alongside the forest.',
-            'Entry 03: Biomass demand kept rising. Manual collection was replaced by mechanical logging. Tree regeneration began falling behind harvest rates, but the energy department considered the risk acceptable.',
-            'Entry 04: Canopy coverage fell below recovery threshold. Rivers turned murky, animal migration signals disappeared. Management conclusion: continue extraction until alternative energy comes online.'
-          ].join('\n\n')
+          source: 'Cycle Management Archive 01',
+          title: 'End of Cycle Four · Forest Module Summary',
+          text:
+            'Cycle Four proceeded according to plan. Timber and biomass resources depleted within the expected window.\nHarvest zones were standardized and cleared; after upload completion, natural succession was assigned.\nModel estimates ~4,000 years to recover to return-ready levels.\nNote: Next cycle should shorten fallow period to meet body demand from growing consciousness population.\nThis archive will auto-delete after upload; retained only in tower deep memory.'
         },
         {
           type: 'towerResponse',
-          speaker: 'Mysterious Signal',
+          speaker: 'Forest Revival Tower',
           text:
-            'Forest Consciousness Tower activated.\n' +
-            'Ecological verification progress recorded.\n' +
-            'Thank you very much for your help. Please continue to the next ecological center.'
+            'Forest ecological verification complete.\nExternal authentication recorded.\nPlease proceed to the next ecological center to continue the cycle activation sequence.'
         }
       ]
     },
@@ -93,49 +89,44 @@ export const mainStoryContent = {
       id: 'badlands',
       title: 'Activating Badlands Consciousness Tower',
       kind: 'towerRecord',
-      towerId: 'autumnForest',
+      towerId: 'badlands',
       objectiveLabel: 'Proceed to Badlands Consciousness Tower',
       activationLabel: 'Press E to activate Badlands Consciousness Tower',
       pages: [
         {
           type: 'towerSignal',
-          speaker: 'Mysterious Signal',
+          speaker: 'Badlands Revival Tower',
           text:
-            'This region was once a stable mineral canyon.\n' +
-            'Colorful strata record the planet\'s long natural time deep below.\n' +
-            'Please confirm badlands ecological status.'
+            'Badlands module received wake command.\nCurrent landform profile deviation from Cycle Five "Mineral Canyon" blueprint: acceptable.\nShallow veins self-sealed; deep pollution sediments dormant.\nAwaiting external verification to begin new round of mineral skeleton construction.'
         },
         {
           type: 'shipScanner',
           speaker: 'Ship Scanner',
           text:
-            'Non-public sediment data layer detected.\n' +
-            'Tags: industrial pollution / mineral waste / geological anomaly.\n' +
-            'Attempt recovery? — Ship Scanner'
+            'Looks like natural weathered badlands on the surface, but what\'s underneath isn\'t right.\n' +
+            'At least three cycles of open-pit mines were backfilled, with chemical waste sediment buried below.\n' +
+            'This colorful canyon didn\'t form naturally—it was dug out, filled in, and pretended never to happen.\n' +
+            'Every time they mined it dry, same pattern: collective upload, collective departure.\n' +
+            'Want me to pull up the deep geological records?\n' +
+            '— Ship Scanner'
         },
         {
           type: 'comic',
           image: '/story/badlands-evidence.png',
-          alt: 'Four-stage record of mining waste and polluted sediment.'
+          alt: 'Four-stage record: colorful strata canyon, mine expansion and waste pools, finally gray badlands.'
         },
         {
           type: 'archiveLog',
-          source: 'Hidden Archive 02',
-          title: 'Sediment Layer Monitoring Log',
-          text: [
-            'Entry 01: Mineral canyon systems stable. Streams flowed through colorful strata, crystals growing slowly but steadily. Autumn vegetation covered the cliff faces, and no abnormal pollution was found in the sediment layers.',
-            'Entry 02: Small-scale mining plan running well. Collection teams opened only shallow tunnels and backfilled excavated areas. Landscape integrity remained within safe limits.',
-            'Entry 03: Mineral demand kept rising. Open-pit mines expanded, conveyors and ore processing plants connected to the canyon. Wastewater pools began appearing in lowlands, and industrial residue was detected in colorful sediment layers.',
-            'Entry 04: Pollution sediment irreversible. Streams rerouted, vegetation degraded, and some colorful strata became mixtures of mineral waste and chemical deposits. Management conclusion: low ecological value regions may be sacrificed.'
-          ].join('\n\n')
+          source: 'Cycle Management Archive 02',
+          title: 'Cycle Five · Mineral Extraction Memo',
+          text:
+            'Cycle Five mineral extraction fully met preset targets. Canyon region classified as "priority supply zone," fully enabled per plan when civilization energy demand rose.\nWastewater and waste buried deep per cycle protocol after extraction ended; impact on subsequent natural recovery negligible.\nNext cycle: recommend increasing extraction depth 15% to offset natural ore grade decline.\n— Cycle Planning Department'
         },
         {
           type: 'towerResponse',
-          speaker: 'Mysterious Signal',
+          speaker: 'Badlands Revival Tower',
           text:
-            'Badlands Consciousness Tower activated.\n' +
-            'Ecological verification progress recorded.\n' +
-            'Thank you for your assistance. Please continue to the next ecological center.'
+            'Badlands ecological verification complete.\nLandform stability meets return standards.\nPlease proceed to the next ecological center.'
         }
       ]
     },
@@ -149,43 +140,38 @@ export const mainStoryContent = {
       pages: [
         {
           type: 'towerSignal',
-          speaker: 'Mysterious Signal',
+          speaker: 'Desert Revival Tower',
           text:
-            'This region was once a stable oasis system in the desert.\n' +
-            'Water channels, wetlands, and palm groves together sustained the life cycle here.\n' +
-            'Please confirm desert ecological status.'
+            'Desert module initializing.\nUnderground aquifer drawn in Cycle Three has naturally refilled to baseline.\nOld oasis traces fully erased, meeting "net-zero return" requirements.\nPlease perform external authentication to restore fluid circulation system.'
         },
         {
           type: 'shipScanner',
           speaker: 'Ship Scanner',
           text:
-            'Non-public groundwater records detected.\n' +
-            'Tags: water level decline / extraction network / water-cycle anomaly.\n' +
-            'Attempt recovery? — Ship Scanner'
+            'Hmm, something\'s odd in the groundwater veins.\n' +
+            'Drained artificially more than once, barely reinjected—over an absurdly long span.\n' +
+            'The most recent total drying event shares the exact timestamp with a mass consciousness upload.\n' +
+            'They weren\'t waiting for the water to return. They squeezed it dry, finished uploading, and left.\n' +
+            'Want me to keep digging through the records?\n' +
+            '— Ship Scanner'
         },
         {
           type: 'comic',
           image: '/story/desert-evidence.png',
-          alt: 'Four-stage record of groundwater extraction and water-cycle collapse.'
+          alt: 'Four-stage record: oasis wetland shrinking, palm groves dying, ultimate desertification.'
         },
         {
           type: 'archiveLog',
-          source: 'Hidden Archive 03',
-          title: 'Groundwater Monitoring Log',
-          text: [
-            'Entry 01: Oasis systems stable. Groundwater levels sufficient, channel flow steady, wetlands and palm groves providing migration nodes for desert animals. The regional water cycle remained within healthy range.',
-            'Entry 02: Limited water extraction plan running well. Wells, channels, and storage towers served only nearby settlements. Withdrawals stayed below natural recharge, and the oasis remained stable.',
-            'Entry 03: Core city water demand rose. New pumping stations connected to underground aquifers, and pipeline networks kept expanding. Channel flow began to fall, and cracks appeared at wetland edges.',
-            'Entry 04: Groundwater level fell below recovery threshold. The oasis vanished, palm groves died, and the water-cycle model failed. Management conclusion: prioritize core city water supply.'
-          ].join('\n\n')
+          source: 'Cycle Management Archive 03',
+          title: 'End of Cycle Three · Water Resource Allocation Order',
+          text:
+            'End of Cycle Three: global surface freshwater reserves at critical level. Per Cycle Continuation Act, priority supply to consciousness upload facilities and core settlements.\nOases and other non-essential ecological nodes no longer supplied; natural recovery cycle to recharge.\nNext cycle: recommend advancing upload preparation period to reduce resource cost of maintaining water systems.\nThis order effective immediately.'
         },
         {
           type: 'towerResponse',
-          speaker: 'Mysterious Signal',
+          speaker: 'Desert Revival Tower',
           text:
-            'Desert Consciousness Tower activated.\n' +
-            'Ecological verification progress recorded.\n' +
-            'Thank you for your assistance. Please continue to the next ecological center.'
+            'Desert ecological verification complete.\nGroundwater reserves meet regeneration standards.\nPlease proceed to the final ecological center.'
         }
       ]
     },
@@ -199,44 +185,38 @@ export const mainStoryContent = {
       pages: [
         {
           type: 'towerSignal',
-          speaker: 'Mysterious Signal',
+          speaker: 'Volcano Revival Tower',
           text:
-            'Geothermal fluctuation persists in this region.\n' +
-            'Volcanic ecology is dangerous, but it long maintained the balance of the planet\'s deep energy.\n' +
-            'Please confirm core heat source status.'
+            'Core energy module accepting verification.\nCurrent geothermal activity in post-emission calm of Cycle Six.\nDeep pressure sensors normal; magma chamber self-sealed.\nPlease external authenticate to re-establish energy extraction link.'
         },
         {
           type: 'shipScanner',
           speaker: 'Ship Scanner',
           text:
-            'Non-public core energy records detected.\n' +
-            'Tags: safety threshold override / geothermal anomaly / deep extraction.\n' +
-            'Attempt recovery? — Ship Scanner'
+            'The volcano\'s logs aren\'t clean either.\n' +
+            'Safety thresholds were manually overridden several times—each one right before a mass upload.\n' +
+            'The last time was worse: magma chamber pressure was already beyond recovery, but upload progress kept accelerating.\n' +
+            'This wasn\'t energy management. They traded the planet\'s crust for one complete evacuation.\n' +
+            'Want me to pull up the emergency protocol records?\n' +
+            '— Ship Scanner'
         },
         {
           type: 'comic',
           image: '/story/volcano-evidence.png',
-          alt: 'Four-stage record of geothermal and core energy over-extraction.'
+          alt: 'Four-stage record: volcano from normal venting, to dense drilling and surface fissures, to mass eruption.'
         },
         {
           type: 'archiveLog',
-          source: 'Hidden Archive 04',
-          title: 'Core Heat Source Monitoring Log',
-          text: [
-            'Entry 01: Volcanic region in natural balance. Lava rivers flowed steadily, steam vents cycled regularly, and crystal belts showed no abnormal pressure buildup. The region was dangerous, but not out of control.',
-            'Entry 02: Geothermal harvesting plan initiated. A small number of collection towers connected to steam vents with stable output. Engineering confirmed current extraction would not affect overall volcanic pressure.',
-            'Entry 03: Energy demand continued to rise. Deep drilling and magma pipelines connected to the core heat source, surface fissures increased, and multiple safety thresholds were temporarily overridden.',
-            'Entry 04: Core pressure abnormal. Stopping extraction would collapse civilization\'s energy systems; continuing extraction would destabilize the volcanic region. Management conclusion: continue extraction until consciousness transfer is complete.'
-          ].join('\n\n')
+          source: 'Cycle Management Archive 04',
+          title: 'End of Cycle Six · Energy Emergency Protocol',
+          text:
+            'End of Cycle Six: planetary geothermal extraction exceeded safety limit. To supply massive energy needed for final upload, all safety locks were duly released per regulation.\nVolcanic imbalance and subsequent environmental chain reactions included in cycle recovery model; reset expected within ~20,000 years.\nCivilization survival takes priority over planetary stability—this principle passed unanimously by Cycle Council.'
         },
         {
           type: 'towerResponse',
-          speaker: 'Mysterious Signal',
+          speaker: 'Volcano Revival Tower',
           text:
-            'Volcano Consciousness Tower activated.\n' +
-            'Ecological verification progress recorded.\n' +
-            'Verification at all four ecological centers is complete.\n' +
-            'Establishing global tower link.'
+            'Volcano ecological verification complete.\nCore heat source ready.\nAll four ecological centers activated; establishing global tower link.'
         }
       ]
     }
@@ -260,26 +240,68 @@ export const mainStoryContent = {
         speaker: 'Revival Protocol',
         text:
           'Four ecological verifications complete.\n' +
-          'Surface environment: capable of supporting life re-gestation.\n' +
+          'Surface environment: restored to level capable of supporting life re-gestation.\n' +
           'Consciousness sync container: awaiting activation.\n' +
-          'Life revival system: awaiting external authorization.'
+          'Life revival system: awaiting external authorization.\n' +
+          'Note: Multiple historical cycle traces detected; current environment\'s carrying capacity for next civilization cycle significantly reduced.'
       },
       {
         type: 'towerResponse',
-        speaker: 'Consciousness Tower',
+        speaker: 'Yssela Representative',
         text:
-          'Alien visitor, you have now completed the verification.\n' +
-          'The consciousness towers preserve our memories, and also preserve the system for re-gestating bodies.\n' +
-          'We once left the surface and let this planet grow again.\n' +
-          'Now, some of us wish to reconnect with this world.'
+          'Traveler who came from afar, what you saw along the way is our way of survival.\n' +
+          'We develop, we exhaust, we leave, we wait—then we return.\n' +
+          'Every cycle proceeded as planned; the planet always heals itself, and we continue to exist.\n' +
+          'There is nothing unreasonable about this—it is the only way Yssela civilization has endured.\n' +
+          'Now complete the final step—let our consciousness have bodies again, let the next cycle begin.'
       },
       {
-        type: 'protocol',
+        type: 'decision',
         speaker: 'Revival Protocol',
         text:
           'External verifier authorization confirmed.\n' +
-          'Life revival system awaiting authorization.\n' +
-          'Decision pending.'
+          'Yssela civilization new revival sequence ready.\n' +
+          'Please make your decision.'
+      },
+      {
+        type: 'outcome_yes',
+        speaker: 'Yssela Representative',
+        text:
+          '...Thank you.\n' +
+          'I know you saw those records, and I understand your hesitation.\n' +
+          'But look—the planet is still breathing, and we still long to exist.\n' +
+          'The cycle will continue. We will walk in the forests again, touch streams, gaze at the stars.\n' +
+          'This is the Yssela way, and perhaps the way of many civilizations in the universe.\n' +
+          'Welcome us home.'
+      },
+      {
+        type: 'outcome_yes',
+        speaker: 'Revival Protocol',
+        text:
+          'Revival sequence initiated.\n' +
+          'Revival towers begin synthesizing bodies; consciousness data begins transfer.\n' +
+          'Yssela civilization, seventh cycle, officially begins.\n' +
+          'May this time, you walk farther with this planet.'
+      },
+      {
+        type: 'outcome_no',
+        speaker: 'Yssela Representative',
+        text:
+          '...No.\n' +
+          'You do not understand—this is our only way to survive.\n' +
+          'We tried restraint, tried balance, but every time ended the same.\n' +
+          'The cycle is not cruelty—it is honesty.\n' +
+          'If you refuse us, this planet will forever lose its children.\n' +
+          'Are you truly going to do this?'
+      },
+      {
+        type: 'outcome_no',
+        speaker: 'Revival Protocol',
+        text:
+          'External verifier has denied the revival request.\n' +
+          'Yssela civilization—all cycles—terminated.\n' +
+          'Revival towers entering permanent silence; consciousness data sealed, no further awakening.\n' +
+          'This planet will truly belong only to itself.'
       }
     ]
   }

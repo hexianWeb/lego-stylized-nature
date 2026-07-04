@@ -17,6 +17,7 @@ export default class StoryRecordModalHUD {
     this.parent = parent ?? (typeof document !== 'undefined' ? document.body : null)
     this.record = null
     this.pageIndex = 0
+    this.decisionChoice = null
     this.element = null
     this.localeSwitch = null
 
@@ -43,7 +44,8 @@ export default class StoryRecordModalHUD {
     }
 
     this.record = record
-    this.pageIndex = Math.min(this.pageIndex, record.pages.length - 1)
+    const activePages = this.getActivePages()
+    this.pageIndex = Math.min(this.pageIndex, activePages.length - 1)
     this.render()
   }
 
@@ -56,6 +58,7 @@ export default class StoryRecordModalHUD {
     this.close({ emitClosed: false })
     this.record = record
     this.pageIndex = 0
+    this.decisionChoice = null
     this.element = document.createElement('div')
     this.element.className = 'story-record-modal'
     this.element.innerHTML = `
@@ -67,7 +70,9 @@ export default class StoryRecordModalHUD {
         <div class="story-record-modal__body"></div>
         <div class="story-record-modal__footer">
           <span class="story-record-modal__progress"></span>
-          <button class="story-record-modal__button" type="button"></button>
+          <div class="story-record-modal__actions">
+            <button class="story-record-modal__button" type="button"></button>
+          </div>
         </div>
       </div>
     `
@@ -83,24 +88,84 @@ export default class StoryRecordModalHUD {
     this.render()
   }
 
+  getActivePages() {
+    const pages = this.record?.pages ?? []
+    const decisionIndex = pages.findIndex((page) => page.type === 'decision')
+
+    if (decisionIndex === -1) {
+      return pages
+    }
+
+    const prelude = pages.slice(0, decisionIndex + 1)
+    if (!this.decisionChoice) {
+      return prelude
+    }
+
+    const outcomes = pages.filter((page) => page.type === `outcome_${this.decisionChoice}`)
+    return [...prelude, ...outcomes]
+  }
+
+  getCurrentPage() {
+    return this.getActivePages()[this.pageIndex] ?? null
+  }
+
+  isDecisionPage() {
+    const page = this.getCurrentPage()
+    return page?.type === 'decision' && !this.decisionChoice
+  }
+
   render() {
-    const page = this.record.pages[this.pageIndex]
+    const activePages = this.getActivePages()
+    const page = activePages[this.pageIndex]
     const isOpeningStory = this.record.kind === 'openingStory'
     this.localeSwitch?.element?.classList.toggle('story-record-modal__locale-switch--visible', isOpeningStory)
     this.element.querySelector('.story-record-modal__title').textContent = this.record.title
     this.element.querySelector('.story-record-modal__source').textContent = page.speaker ?? page.source ?? this.record.kind
-    this.element.querySelector('.story-record-modal__progress').textContent = `${this.pageIndex + 1} / ${this.record.pages.length}`
-    const isLastPage = this.pageIndex === this.record.pages.length - 1
+    this.element.querySelector('.story-record-modal__progress').textContent = `${this.pageIndex + 1} / ${activePages.length}`
+
+    const actions = this.element.querySelector('.story-record-modal__actions')
+    actions.replaceChildren(this.createFooterActions(page, activePages))
+
+    const body = this.element.querySelector('.story-record-modal__body')
+    body.className = `story-record-modal__body story-record-modal__body--${page.type}`
+    body.replaceChildren(this.createPageElement(page))
+  }
+
+  createFooterActions(page, activePages) {
+    if (this.isDecisionPage()) {
+      const group = document.createElement('div')
+      group.className = 'story-record-modal__decision'
+
+      const yesButton = document.createElement('button')
+      yesButton.className = 'story-record-modal__button story-record-modal__button--yes'
+      yesButton.type = 'button'
+      yesButton.textContent = t('storyRecord.initiateRevival')
+      yesButton.addEventListener('click', () => this.chooseDecision('yes'))
+
+      const noButton = document.createElement('button')
+      noButton.className = 'story-record-modal__button story-record-modal__button--no'
+      noButton.type = 'button'
+      noButton.textContent = t('storyRecord.terminateCycle')
+      noButton.addEventListener('click', () => this.chooseDecision('no'))
+
+      group.appendChild(yesButton)
+      group.appendChild(noButton)
+      return group
+    }
+
+    const isLastPage = this.pageIndex === activePages.length - 1
     const buttonKey = isLastPage
       ? 'storyRecord.close'
       : page.type === 'shipScanner'
         ? 'storyRecord.recover'
         : 'storyRecord.continue'
-    this.element.querySelector('.story-record-modal__button').textContent = t(buttonKey)
 
-    const body = this.element.querySelector('.story-record-modal__body')
-    body.className = `story-record-modal__body story-record-modal__body--${page.type}`
-    body.replaceChildren(this.createPageElement(page))
+    const button = document.createElement('button')
+    button.className = 'story-record-modal__button'
+    button.type = 'button'
+    button.textContent = t(buttonKey)
+    button.addEventListener('click', () => this.advance())
+    return button
   }
 
   createPageElement(page) {
@@ -130,7 +195,21 @@ export default class StoryRecordModalHUD {
     return text
   }
 
+  chooseDecision(choice) {
+    if (!this.record || this.decisionChoice) {
+      return
+    }
+
+    this.decisionChoice = choice
+    this.pageIndex += 1
+    this.render()
+  }
+
   handleKeyDown(event) {
+    if (this.isDecisionPage()) {
+      return
+    }
+
     if (event.code === 'Space' || event.code === 'Enter') {
       event.preventDefault()
       this.advance()
@@ -142,11 +221,12 @@ export default class StoryRecordModalHUD {
   }
 
   advance() {
-    if (!this.record) {
+    if (!this.record || this.isDecisionPage()) {
       return
     }
 
-    if (this.pageIndex < this.record.pages.length - 1) {
+    const activePages = this.getActivePages()
+    if (this.pageIndex < activePages.length - 1) {
       this.pageIndex += 1
       this.render()
       return
@@ -161,6 +241,7 @@ export default class StoryRecordModalHUD {
     }
 
     const record = this.record
+    const decision = this.decisionChoice
     this.localeSwitch?.dispose()
     this.localeSwitch = null
     this.element?.remove()
@@ -168,9 +249,14 @@ export default class StoryRecordModalHUD {
     this.record = null
     this.element = null
     this.pageIndex = 0
+    this.decisionChoice = null
 
     if (emitClosed && record) {
-      this.eventBus.emit(STORY_RECORD_CLOSED_EVENT, { recordId: record.id, kind: record.kind })
+      this.eventBus.emit(STORY_RECORD_CLOSED_EVENT, {
+        recordId: record.id,
+        kind: record.kind,
+        decision
+      })
       this.eventBus.emit(CONTROLS_UNLOCK_EVENT, { source: 'story-record' })
     }
   }

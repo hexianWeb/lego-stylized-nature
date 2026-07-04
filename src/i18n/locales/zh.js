@@ -18,7 +18,9 @@ export default {
   storyRecord: {
     close: '关闭',
     continue: '继续',
-    recover: '尝试恢复'
+    recover: '尝试恢复',
+    initiateRevival: '启动复苏',
+    terminateCycle: '终止循环'
   },
   fallbackFinalReveal: {
     title: '复生协议',

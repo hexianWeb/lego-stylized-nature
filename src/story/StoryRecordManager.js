@@ -43,7 +43,7 @@ export default class StoryRecordManager {
       finalRevealPlayed: false,
       currentObjectiveId: null,
       nearbyTower: null,
-      decisionPending: false
+      finalDecision: null
     }
 
     this._onTowerEntered = (payload) => this.handleTowerEntered(payload)
@@ -137,7 +137,7 @@ export default class StoryRecordManager {
     this.showRecord(record)
   }
 
-  handleRecordClosed({ recordId, kind } = {}) {
+  handleRecordClosed({ recordId, kind, decision } = {}) {
     this.state.activeRecordId = null
     this.eventBus.emit(CHATTER_RESUME_EVENT, { source: 'story-record' })
 
@@ -155,7 +155,7 @@ export default class StoryRecordManager {
 
     if (kind === 'finalReveal' || recordId === 'finalReveal') {
       this.state.finalRevealPlayed = true
-      this.state.decisionPending = true
+      this.state.finalDecision = decision ?? null
       this.state.currentObjectiveId = null
       this.emitObjective({ canActivate: false })
     }

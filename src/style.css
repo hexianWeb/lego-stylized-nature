@@ -326,6 +326,21 @@ body
     gap: 16px;
 }
 
+.story-record-modal__actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 12px;
+}
+
+.story-record-modal__decision {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
 .story-record-modal__button {
     min-width: 120px;
     height: 38px;
@@ -335,6 +350,16 @@ body
     background: rgba(53, 196, 212, 0.18);
     font-family: "Orbitron", sans-serif;
     cursor: pointer;
+}
+
+.story-record-modal__button--yes {
+    border-color: rgba(116, 255, 176, 0.84);
+    background: rgba(53, 212, 132, 0.18);
+}
+
+.story-record-modal__button--no {
+    border-color: rgba(255, 116, 116, 0.84);
+    background: rgba(212, 53, 53, 0.18);
 }
 
 .story-objective-hud {

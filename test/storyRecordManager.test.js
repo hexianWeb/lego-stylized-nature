@@ -66,8 +66,8 @@ function createHarness(customContent = content) {
   return { bus, manager, shown, objectives, blocked, pauses, resumes, warnings }
 }
 
-function closeRecord(bus, record) {
-  bus.emit(STORY_RECORD_CLOSED_EVENT, { recordId: record.id, kind: record.kind })
+function closeRecord(bus, record, extra = {}) {
+  bus.emit(STORY_RECORD_CLOSED_EVENT, { recordId: record.id, kind: record.kind, ...extra })
 }
 
 test('manager.start() emits story-record:show for opening', () => {
@@ -166,7 +166,7 @@ test('after all tower records close, finalReveal is shown', () => {
   assert.equal(shown.at(-1).record.id, 'finalReveal')
 })
 
-test('closing finalReveal sets manager.state.decisionPending true', () => {
+test('closing finalReveal records the player decision', () => {
   const { bus, manager } = createHarness()
 
   manager.start()
@@ -175,9 +175,10 @@ test('closing finalReveal sets manager.state.decisionPending true', () => {
   closeRecord(bus, content.towerRecords.forest)
   bus.emit('biome-center:activate', { towerId: 'autumnForest', storyId: 'badlands' })
   closeRecord(bus, content.towerRecords.badlands)
-  closeRecord(bus, content.finalReveal)
+  closeRecord(bus, content.finalReveal, { decision: 'yes' })
 
-  assert.equal(manager.state.decisionPending, true)
+  assert.equal(manager.state.finalRevealPlayed, true)
+  assert.equal(manager.state.finalDecision, 'yes')
 })
 
 test('missing finalReveal uses a decision pending fallback record', () => {
