@@ -1,6 +1,8 @@
 import * as THREE from 'three/webgpu'
 
 const TINT_CLONE_FLAG = 'isBiomeTintClone'
+const tintMaterialCache = new WeakMap()
+const tintCloneCacheKeys = new WeakMap()
 
 export function resolvePrefabMaterial(sourceMaterial, tint) {
   if (!tint) {
@@ -26,6 +28,11 @@ export function disposeBiomeTintMaterial(material) {
   }
 
   if (material?.userData?.[TINT_CLONE_FLAG] === true) {
+    const cacheKey = tintCloneCacheKeys.get(material)
+    if (cacheKey) {
+      tintMaterialCache.get(cacheKey.sourceMaterial)?.delete(cacheKey.cacheKey)
+      tintCloneCacheKeys.delete(material)
+    }
     material.dispose()
   }
 }
@@ -33,6 +40,16 @@ export function disposeBiomeTintMaterial(material) {
 function resolveSinglePrefabMaterial(sourceMaterial, normalizedTint) {
   if (!sourceMaterial || !normalizedTint) {
     return sourceMaterial
+  }
+
+  const cacheKey = getTintCacheKey(normalizedTint)
+  let sourceCache = tintMaterialCache.get(sourceMaterial)
+  if (!sourceCache) {
+    sourceCache = new Map()
+    tintMaterialCache.set(sourceMaterial, sourceCache)
+  }
+  if (sourceCache.has(cacheKey)) {
+    return sourceCache.get(cacheKey)
   }
 
   const clone = sourceMaterial.clone()
@@ -46,7 +63,14 @@ function resolveSinglePrefabMaterial(sourceMaterial, normalizedTint) {
   }
   clone.needsUpdate = true
 
+  sourceCache.set(cacheKey, clone)
+  tintCloneCacheKeys.set(clone, { sourceMaterial, cacheKey })
+
   return clone
+}
+
+function getTintCacheKey(normalizedTint) {
+  return `${normalizedTint.color.getHexString()}:${normalizedTint.strength}`
 }
 
 function normalizeTint(tint) {

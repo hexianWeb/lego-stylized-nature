@@ -2,6 +2,8 @@ import * as THREE from 'three/webgpu'
 import { random01, hashString } from '../../utils/random.js'
 
 const INSTANCE_COLOR_CLONE_FLAG = 'isInstanceColorClone'
+const instanceColorMaterialCache = new WeakMap()
+const instanceColorCloneSources = new WeakMap()
 
 export function normalizeInstanceColors(config, warn = console.warn) {
   if (!config || typeof config.meshNameSuffix !== 'string' || config.meshNameSuffix.length === 0) {
@@ -69,6 +71,11 @@ export function disposeInstanceColorMaterial(material) {
   }
 
   if (material?.userData?.[INSTANCE_COLOR_CLONE_FLAG] === true) {
+    const sourceMaterial = instanceColorCloneSources.get(material)
+    if (sourceMaterial) {
+      instanceColorMaterialCache.delete(sourceMaterial)
+      instanceColorCloneSources.delete(material)
+    }
     material.dispose()
   }
 }
@@ -78,6 +85,10 @@ function resolveSingleInstanceColorMaterial(sourceMaterial) {
     return sourceMaterial
   }
 
+  if (instanceColorMaterialCache.has(sourceMaterial)) {
+    return instanceColorMaterialCache.get(sourceMaterial)
+  }
+
   const clone = sourceMaterial.clone()
   clone.color?.set?.(0xffffff)
   clone.userData = {
@@ -85,6 +96,9 @@ function resolveSingleInstanceColorMaterial(sourceMaterial) {
     [INSTANCE_COLOR_CLONE_FLAG]: true
   }
   clone.needsUpdate = true
+
+  instanceColorMaterialCache.set(sourceMaterial, clone)
+  instanceColorCloneSources.set(clone, sourceMaterial)
 
   return clone
 }

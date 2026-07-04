@@ -117,6 +117,23 @@ function assertManagerInvariants(manager) {
   )
 }
 
+function updateUntilTerrainLoaded(manager, worldX, worldZ) {
+  while (manager.pendingQueue.length > 0) {
+    manager.update(worldX, worldZ)
+  }
+}
+
+function updateUntilPrefabQueueDrained(manager, worldX, worldZ) {
+  while (manager.pendingPrefabBuildQueue.length > 0) {
+    manager.update(worldX, worldZ)
+  }
+}
+
+function settleChunkAndPrefabQueues(manager, worldX, worldZ) {
+  updateUntilTerrainLoaded(manager, worldX, worldZ)
+  updateUntilPrefabQueueDrained(manager, worldX, worldZ)
+}
+
 test('bootstrap creates fixed slot pool, loads center, and queues outer window', () => {
   const calls = []
   const manager = createManager({ calls })
@@ -274,9 +291,7 @@ test('player position builds prefabs only for the nearest 2x2 loaded slots', () 
   const manager = createManager()
 
   manager.bootstrap(6.4, 6.4)
-  while (manager.pendingQueue.length > 0) {
-    manager.update(6.4, 6.4)
-  }
+  settleChunkAndPrefabQueues(manager, 6.4, 6.4)
 
   const prefabActiveSlots = [...manager.activeSlots.entries()]
     .filter(([, slot]) => slot.prefabsVisible)
@@ -292,9 +307,7 @@ test('player 2x2 prefab window shifts by local chunk half', () => {
   const manager = createManager()
 
   manager.bootstrap(9.6, 9.6)
-  while (manager.pendingQueue.length > 0) {
-    manager.update(9.6, 9.6)
-  }
+  settleChunkAndPrefabQueues(manager, 9.6, 9.6)
 
   const prefabActiveSlots = [...manager.activeSlots.entries()]
     .filter(([, slot]) => slot.prefabsVisible)
@@ -308,9 +321,7 @@ test('player active 2x2 loaded slots build prefabs once per chunk key', () => {
   const manager = createManager()
 
   manager.bootstrap(6.4, 6.4)
-  while (manager.pendingQueue.length > 0) {
-    manager.update(6.4, 6.4)
-  }
+  settleChunkAndPrefabQueues(manager, 6.4, 6.4)
 
   const visibleSlots = [...manager.activeSlots.values()].filter((slot) => slot.prefabsVisible)
   manager.update(6.4, 6.4)
@@ -324,9 +335,7 @@ test('player prefab window shift builds at most one newly active prefab chunk pe
   const manager = createManager()
 
   manager.bootstrap(6.4, 6.4)
-  while (manager.pendingQueue.length > 0) {
-    manager.update(6.4, 6.4)
-  }
+  settleChunkAndPrefabQueues(manager, 6.4, 6.4)
 
   const buildsBeforeMove = new Map(
     [...manager.activeSlots.entries()].map(([key, slot]) => [key, slot.prefabBuilds])
@@ -339,6 +348,28 @@ test('player prefab window shift builds at most one newly active prefab chunk pe
     .map(([key]) => key)
 
   assert.equal(newBuilds.length, 1)
+})
+
+test('update skips prefab builds on frames that build pending terrain chunks', () => {
+  const manager = createManager()
+
+  manager.bootstrap(6.4, 6.4)
+  const buildCountAfterBootstrap = [...manager.activeSlots.values()]
+    .reduce((sum, slot) => sum + slot.prefabBuilds, 0)
+  manager.pendingQueue = [manager.pendingQueue[0]]
+  manager.pendingKeys = new Set(manager.pendingQueue.map((coord) => `${coord.x}:${coord.z}`))
+
+  manager.update(6.4, 6.4)
+
+  const prefabBuildsAfterTerrainFrame = [...manager.activeSlots.values()]
+    .reduce((sum, slot) => sum + slot.prefabBuilds, 0)
+
+  manager.update(6.4, 6.4)
+  const prefabBuildsAfterNextFrame = [...manager.activeSlots.values()]
+    .reduce((sum, slot) => sum + slot.prefabBuilds, 0)
+
+  assert.equal(prefabBuildsAfterTerrainFrame, buildCountAfterBootstrap)
+  assert.equal(prefabBuildsAfterNextFrame, buildCountAfterBootstrap + 1)
 })
 
 test('ao preview updates all slots and only shows overlays on visible slots', () => {

@@ -56,6 +56,10 @@ export default class Experience {
 
         this.renderer.instance.setClearColor(this.environment.fogColor.value)
         this.resize()
+        await this.world.warmupPrefabPipelines(
+            this.renderer.instance,
+            this.worldCamera.instance
+        )
 
         if (this.debug.active) {
             this.environment.debuggerInit(this.debug)

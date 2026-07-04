@@ -167,8 +167,8 @@ export default class ChunkManager {
       this.reconcileRequiredWindow(nextCenterCoord)
     }
 
-    this.buildPendingChunks()
-    this.updateVisibility(worldBlock)
+    const builtChunks = this.buildPendingChunks()
+    this.updateVisibility(worldBlock, { buildPrefabs: builtChunks === 0 })
   }
 
   coordsEqual(a, b) {
@@ -248,6 +248,8 @@ export default class ChunkManager {
         built++
       }
     }
+
+    return built
   }
 
   buildPendingPrefabs(desiredPrefabKeys) {
@@ -325,7 +327,7 @@ export default class ChunkManager {
     }
   }
 
-  updateVisibility(worldBlock) {
+  updateVisibility(worldBlock, { buildPrefabs = true } = {}) {
     const prefabActiveKeys = new Set(
       getPlayerPrefabWindowCoords(worldBlock, this.chunkSize).map((coord) => getRenderChunkKey(coord))
     )
@@ -348,7 +350,9 @@ export default class ChunkManager {
       this.removePendingPrefabBuild(key)
     }
 
-    this.buildPendingPrefabs(prefabActiveKeys)
+    if (buildPrefabs) {
+      this.buildPendingPrefabs(prefabActiveKeys)
+    }
   }
 
   refreshAOPreview(showOverlays = true) {

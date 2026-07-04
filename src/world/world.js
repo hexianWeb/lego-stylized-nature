@@ -14,6 +14,7 @@ import WaterBrickRenderer from './bricks/WaterBrickRenderer.js'
 import LavaBrickRenderer from './bricks/LavaBrickRenderer.js'
 import PrefabRegistry from './prefabs/PrefabRegistry.js'
 import PrefabPlacer from './prefabs/PrefabPlacer.js'
+import { warmupPrefabPipelines } from './prefabs/PrefabPipelineWarmup.js'
 import PlayerAircraft from './player/PlayerAircraft.js'
 import ChunkManager from './chunks/ChunkManager.js'
 import BiomeRadarHUD, { BIOME_RADAR_HUD_UPDATE_EVENT } from '../ui/BiomeRadarHUD.js'
@@ -62,6 +63,7 @@ export default class World {
         this.waterBrickRenderer = null
         this.lavaBrickRenderer = null
         this.prefabPlacer = null
+        this.prefabRegistry = null
         this.playerAircraft = null
         this.biomeCenterSystem = null
         this.terrainChunkManager = null
@@ -131,6 +133,7 @@ export default class World {
             })
 
             const prefabRegistry = new PrefabRegistry(resources)
+            this.prefabRegistry = prefabRegistry
 
             if (useChunkTerrain) {
                 this.terrainChunkManager = new ChunkManager({
@@ -364,6 +367,15 @@ export default class World {
         }
     }
 
+    async warmupPrefabPipelines(renderer, camera) {
+        return warmupPrefabPipelines({
+            renderer,
+            scene: this.scene,
+            camera,
+            prefabRegistry: this.prefabRegistry
+        })
+    }
+
     emitBiomeRadarHUDUpdateIfNeeded() {
         const state = this.playerAircraft?.state
 
@@ -423,6 +435,7 @@ export default class World {
         this.storyRecordModalHUD?.dispose()
         this.storyObjectiveHUD?.dispose()
         this.terrainChunkManager = null
+        this.prefabRegistry = null
         this.biomeCenterSystem = null
         this.biomeRadarHUD = null
         this.controlGuideHUD = null
