@@ -76,7 +76,7 @@ export const zhStoryContent = {
       id: 'badlands',
       title: '正在激活荒原意识塔',
       kind: 'towerRecord',
-      towerId: 'badlands',
+      towerId: 'autumnForest',
       objectiveLabel: '前往荒原意识塔',
       activationLabel: '按 E 激活荒原意识塔',
       pages: [

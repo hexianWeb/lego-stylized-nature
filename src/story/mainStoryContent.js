@@ -89,7 +89,7 @@ export const mainStoryContent = {
       id: 'badlands',
       title: 'Activating Badlands Consciousness Tower',
       kind: 'towerRecord',
-      towerId: 'badlands',
+      towerId: 'autumnForest',
       objectiveLabel: 'Proceed to Badlands Consciousness Tower',
       activationLabel: 'Press E to activate Badlands Consciousness Tower',
       pages: [

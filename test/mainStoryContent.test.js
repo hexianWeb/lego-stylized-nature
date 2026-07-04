@@ -1,6 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { mainStoryContent, STORY_RECORD_PAGE_TYPES } from '../src/story/mainStoryContent.js'
+import { zhStoryContent } from '../src/i18n/locales/zh/storyContent.js'
 
 function assertNonEmptyString(value, label) {
   assert.equal(typeof value, 'string', label)
@@ -9,6 +10,11 @@ function assertNonEmptyString(value, label) {
 
 test('defines fixed mainline tower order', () => {
   assert.deepEqual(mainStoryContent.towerOrder, ['forest', 'badlands', 'desert', 'volcano'])
+})
+
+test('badlands story record maps to the autumn forest world tower', () => {
+  assert.equal(mainStoryContent.towerRecords.badlands.towerId, 'autumnForest')
+  assert.equal(zhStoryContent.towerRecords.badlands.towerId, 'autumnForest')
 })
 
 test('defines opening story, four tower records, and final reveal', () => {
