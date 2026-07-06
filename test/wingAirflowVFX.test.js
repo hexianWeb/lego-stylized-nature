@@ -46,6 +46,18 @@ test('normalizes wing airflow config with safe defaults and clamps sample count'
   })
 })
 
+test('normalizes invalid wing airflow ratios to defaults', () => {
+  const config = normalizeWingAirflowConfig({
+    minSpeedRatio: 'bad',
+    tipWidthRatio: Number.NaN,
+    opacity: 'bad'
+  })
+
+  assert.equal(config.minSpeedRatio, DEFAULT_WING_AIRFLOW_CONFIG.minSpeedRatio)
+  assert.equal(config.tipWidthRatio, DEFAULT_WING_AIRFLOW_CONFIG.tipWidthRatio)
+  assert.equal(config.opacity, DEFAULT_WING_AIRFLOW_CONFIG.opacity)
+})
+
 test('computes speed ratio from velocity length and max speed', () => {
   const state = { velocity: new THREE.Vector3(3, 0, 4) }
 

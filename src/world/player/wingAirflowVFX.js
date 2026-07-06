@@ -44,6 +44,10 @@ function clamp01(value) {
   return THREE.MathUtils.clamp(Number.isFinite(value) ? value : 0, 0, 1)
 }
 
+function clampedNumber(value, fallback) {
+  return THREE.MathUtils.clamp(Number.isFinite(value) ? value : fallback, 0, 1)
+}
+
 function roundStable(value) {
   return Math.round(value * 1e12) / 1e12
 }
@@ -73,13 +77,13 @@ export function normalizeWingAirflowConfig(config = {}) {
     minEmitDistance: nonNegativeNumber(config.minEmitDistance, defaults.minEmitDistance),
     capacity,
     maxSamples: Math.min(maxSamples, capacity),
-    minSpeedRatio: clamp01(config.minSpeedRatio ?? defaults.minSpeedRatio),
+    minSpeedRatio: clampedNumber(config.minSpeedRatio, defaults.minSpeedRatio),
     breakAngleDeg: positiveNumber(config.breakAngleDeg, defaults.breakAngleDeg),
     width: positiveNumber(config.width, defaults.width),
-    tipWidthRatio: clamp01(config.tipWidthRatio ?? defaults.tipWidthRatio),
+    tipWidthRatio: clampedNumber(config.tipWidthRatio, defaults.tipWidthRatio),
     bellPower: positiveNumber(config.bellPower, defaults.bellPower),
     verticalOffset: Number.isFinite(config.verticalOffset) ? config.verticalOffset : defaults.verticalOffset,
-    opacity: clamp01(config.opacity ?? defaults.opacity),
+    opacity: clampedNumber(config.opacity, defaults.opacity),
     speedOpacity: nonNegativeNumber(config.speedOpacity, defaults.speedOpacity),
     accelerationBoost: nonNegativeNumber(config.accelerationBoost, defaults.accelerationBoost),
     pulseStrength: nonNegativeNumber(config.pulseStrength, defaults.pulseStrength),
