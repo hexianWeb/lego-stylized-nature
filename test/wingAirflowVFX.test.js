@@ -140,19 +140,30 @@ test('wing airflow side emits only after interval and distance gates', () => {
     speedRatio: 0.5,
     delta: 0.05
   })
-  side.maybeEmit({
-    position: new THREE.Vector3(0.02, 0, 0),
-    tangent: new THREE.Vector3(1, 0, 0),
-    speedRatio: 0.5,
-    delta: 0.05
-  })
+  assert.equal(side.count, 1)
+
   side.maybeEmit({
     position: new THREE.Vector3(0.2, 0, 0),
     tangent: new THREE.Vector3(1, 0, 0),
     speedRatio: 0.5,
+    delta: 0.01
+  })
+  assert.equal(side.count, 1)
+
+  side.maybeEmit({
+    position: new THREE.Vector3(0.2, 0, 0),
+    tangent: new THREE.Vector3(1, 0, 0),
+    speedRatio: 0.5,
+    delta: 0.04
+  })
+  assert.equal(side.count, 2)
+
+  side.maybeEmit({
+    position: new THREE.Vector3(0.22, 0, 0),
+    tangent: new THREE.Vector3(1, 0, 0),
+    speedRatio: 0.5,
     delta: 0.05
   })
-
   assert.equal(side.count, 2)
 })
 
