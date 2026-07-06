@@ -118,3 +118,108 @@ export function computeAirflowHalfWidth(config, { age = 0, speedRatio = 0 } = {}
   const widthScale = THREE.MathUtils.lerp(config.tipWidthRatio, 1, bell)
   return config.width * widthScale * (0.72 + clamp01(speedRatio) * 0.28) * 0.5
 }
+
+export class WingAirflowSide {
+  constructor({ name, config }) {
+    this.name = name
+    this.config = config
+    this.capacity = config.capacity
+    this.head = 0
+    this.count = 0
+    this.timeSinceEmit = 0
+    this.hasLastEmit = false
+    this.lastEmit = new THREE.Vector3()
+    this.position = new Float32Array(this.capacity * 3)
+    this.tangent = new Float32Array(this.capacity * 3)
+    this.age = new Float32Array(this.capacity)
+    this.speed = new Float32Array(this.capacity)
+  }
+
+  clear() {
+    this.head = 0
+    this.count = 0
+    this.timeSinceEmit = 0
+    this.hasLastEmit = false
+    this.lastEmit.set(0, 0, 0)
+    this.position.fill(0)
+    this.tangent.fill(0)
+    this.age.fill(0)
+    this.speed.fill(0)
+  }
+
+  logicalIndex(offset) {
+    return (this.head + offset) % this.capacity
+  }
+
+  tailIndex() {
+    return this.logicalIndex(this.count - 1)
+  }
+
+  clampCount() {
+    this.count = Math.min(this.count, this.config.maxSamples)
+  }
+
+  advanceAges(delta) {
+    const ageDelta = nonNegativeNumber(delta, 0)
+
+    for (let offset = 0; offset < this.count; offset++) {
+      this.age[this.logicalIndex(offset)] += ageDelta
+    }
+
+    while (this.count > 0 && this.age[this.tailIndex()] >= this.config.sampleLife) {
+      this.count--
+    }
+  }
+
+  emit(position, tangent, speedRatio) {
+    const nextHead = (this.head - 1 + this.capacity) % this.capacity
+    const base = nextHead * 3
+    const normal = tangent.lengthSq() > 0
+      ? tangent.clone().normalize()
+      : new THREE.Vector3(1, 0, 0)
+
+    this.head = nextHead
+    this.position[base] = position.x
+    this.position[base + 1] = position.y
+    this.position[base + 2] = position.z
+    this.tangent[base] = normal.x
+    this.tangent[base + 1] = normal.y
+    this.tangent[base + 2] = normal.z
+    this.age[nextHead] = 0
+    this.speed[nextHead] = clamp01(speedRatio)
+    this.count = Math.min(this.count + 1, this.capacity)
+    this.clampCount()
+    this.lastEmit.copy(position)
+    this.hasLastEmit = true
+  }
+
+  maybeEmit({ position, tangent, speedRatio, delta }) {
+    this.advanceAges(delta)
+    this.timeSinceEmit += nonNegativeNumber(delta, 0)
+
+    if (speedRatio <= this.config.minSpeedRatio) {
+      return
+    }
+
+    if (this.timeSinceEmit < this.config.emitInterval) {
+      return
+    }
+
+    if (this.hasLastEmit && position.distanceTo(this.lastEmit) < this.config.minEmitDistance) {
+      return
+    }
+
+    this.emit(position, tangent, speedRatio)
+    this.timeSinceEmit = 0
+  }
+
+  getPosition(index, target) {
+    const base = this.logicalIndex(index) * 3
+    return target.set(this.position[base], this.position[base + 1], this.position[base + 2])
+  }
+
+  getTangent(index, target) {
+    const base = this.logicalIndex(index) * 3
+    return target.set(this.tangent[base], this.tangent[base + 1], this.tangent[base + 2])
+  }
+}

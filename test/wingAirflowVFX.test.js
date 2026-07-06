@@ -7,7 +7,8 @@ import {
   computeAirflowSpeedRatio,
   resolveAirflowOpacity,
   canConnectAirflowSamples,
-  computeAirflowHalfWidth
+  computeAirflowHalfWidth,
+  WingAirflowSide
 } from '../src/world/player/wingAirflowVFX.js'
 
 test('normalizes wing airflow config with safe defaults and clamps sample count', () => {
@@ -109,4 +110,76 @@ test('airflow width follows a lifetime bell curve', () => {
   assert.equal(computeAirflowHalfWidth(config, { age: 0, speedRatio: 1 }), 0)
   assert.equal(computeAirflowHalfWidth(config, { age: 0.5, speedRatio: 1 }) > 0.049, true)
   assert.equal(computeAirflowHalfWidth(config, { age: 1, speedRatio: 1 }) < 1e-6, true)
+})
+
+test('wing airflow side does not emit below speed threshold', () => {
+  const config = normalizeWingAirflowConfig({ minSpeedRatio: 0.2, emitInterval: 0.01 })
+  const side = new WingAirflowSide({ name: 'left', config })
+
+  side.maybeEmit({
+    position: new THREE.Vector3(0, 0, 0),
+    tangent: new THREE.Vector3(1, 0, 0),
+    speedRatio: 0.1,
+    delta: 0.1
+  })
+
+  assert.equal(side.count, 0)
+})
+
+test('wing airflow side emits only after interval and distance gates', () => {
+  const config = normalizeWingAirflowConfig({
+    emitInterval: 0.05,
+    minEmitDistance: 0.1,
+    minSpeedRatio: 0.01
+  })
+  const side = new WingAirflowSide({ name: 'left', config })
+
+  side.maybeEmit({
+    position: new THREE.Vector3(0, 0, 0),
+    tangent: new THREE.Vector3(1, 0, 0),
+    speedRatio: 0.5,
+    delta: 0.05
+  })
+  side.maybeEmit({
+    position: new THREE.Vector3(0.02, 0, 0),
+    tangent: new THREE.Vector3(1, 0, 0),
+    speedRatio: 0.5,
+    delta: 0.05
+  })
+  side.maybeEmit({
+    position: new THREE.Vector3(0.2, 0, 0),
+    tangent: new THREE.Vector3(1, 0, 0),
+    speedRatio: 0.5,
+    delta: 0.05
+  })
+
+  assert.equal(side.count, 2)
+})
+
+test('wing airflow side expires samples by lifetime', () => {
+  const config = normalizeWingAirflowConfig({ sampleLife: 0.1, minSpeedRatio: 0.01 })
+  const side = new WingAirflowSide({ name: 'left', config })
+
+  side.emit(new THREE.Vector3(0, 0, 0), new THREE.Vector3(1, 0, 0), 0.5)
+  side.advanceAges(0.2)
+
+  assert.equal(side.count, 0)
+})
+
+test('wing airflow side clamps visible count to max samples', () => {
+  const config = normalizeWingAirflowConfig({
+    capacity: 5,
+    maxSamples: 3,
+    emitInterval: 0,
+    minEmitDistance: 0,
+    minSpeedRatio: 0.01
+  })
+  const side = new WingAirflowSide({ name: 'left', config })
+
+  for (let i = 0; i < 5; i++) {
+    side.emit(new THREE.Vector3(i, 0, 0), new THREE.Vector3(1, 0, 0), 0.5)
+    side.clampCount()
+  }
+
+  assert.equal(side.count, 3)
 })
