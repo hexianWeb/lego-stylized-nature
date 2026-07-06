@@ -74,6 +74,34 @@ function createAsset() {
   return { scene }
 }
 
+function createDebugFolder(title = 'root') {
+  return {
+    title,
+    folders: [],
+    bindings: [],
+    addFolder(options) {
+      const folder = createDebugFolder(options.title)
+      folder.options = options
+      this.folders.push(folder)
+      return folder
+    },
+    addBinding(target, key, options) {
+      const binding = {
+        target,
+        key,
+        options,
+        handlers: new Map(),
+        on(event, handler) {
+          this.handlers.set(event, handler)
+          return this
+        }
+      }
+      this.bindings.push(binding)
+      return binding
+    }
+  }
+}
+
 test('clones the configured aircraft asset into its group', () => {
   const experience = createExperience()
   const player = new PlayerAircraft(experience)
@@ -155,6 +183,54 @@ test('creates and disposes wing airflow when configured', () => {
   player.dispose()
 
   assert.equal(player.wingAirflow, null)
+})
+
+test('debugger exposes wing airflow tuning bindings', () => {
+  const player = new PlayerAircraft(createExperience({
+    config: {
+      wingAirflow: {
+        enabled: true,
+        capacity: 6,
+        maxSamples: 4
+      }
+    }
+  }), { inputTarget: null })
+  const debug = createDebugFolder()
+
+  player.debuggerInit(debug)
+
+  const playerFolder = debug.folders.find((folder) => folder.title === 'Player Aircraft')
+  const airflowFolder = playerFolder.folders.find((folder) => folder.title === 'Wing Airflow')
+  const bindingKeys = airflowFolder.bindings.map((binding) => binding.key)
+
+  assert.equal(airflowFolder.options.expanded, false)
+  assert.deepEqual(bindingKeys, [
+    'enabled',
+    'outwardOffset',
+    'backOffset',
+    'upOffset',
+    'sampleLife',
+    'emitInterval',
+    'minEmitDistance',
+    'maxSamples',
+    'breakAngleDeg',
+    'width',
+    'opacity',
+    'speedOpacity',
+    'accelerationBoost',
+    'color',
+    'additive'
+  ])
+  assert.equal(
+    airflowFolder.bindings.find((binding) => binding.key === 'maxSamples').options.max,
+    player.wingAirflowConfig.capacity
+  )
+
+  airflowFolder.bindings[0].handlers.get('change')({ value: false })
+  assert.equal(player.wingAirflow.root.visible, false)
+
+  airflowFolder.bindings[0].handlers.get('change')({ value: true })
+  assert.equal(player.wingAirflow.root.visible, true)
 })
 
 test('dispose removes input listeners and scene children', () => {
