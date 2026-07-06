@@ -38,6 +38,14 @@ import {
 
 } from './engineFlameVFX.js'
 
+import {
+
+  createWingAirflowVFX,
+
+  normalizeWingAirflowConfig
+
+} from './wingAirflowVFX.js'
+
 
 
 function resolveInitialPosition(config) {
@@ -83,6 +91,10 @@ export default class PlayerAircraft {
     this.visualConfig = normalizeVisualAttitudeConfig(playerConfig.visualAttitude)
 
     this.flameConfig = normalizeEngineFlameConfig(playerConfig.engineFlame)
+
+    this.wingAirflowConfig = normalizeWingAirflowConfig(playerConfig.wingAirflow)
+
+    this.wingAirflow = null
 
     this.attitudeState = createVisualAttitudeState()
 
@@ -190,6 +202,7 @@ export default class PlayerAircraft {
 
     this._resolveEngineNodes(model)
     this._attachEngineFlames()
+    this._attachWingAirflow()
     this._enableModelShadows(model)
 
     this.enabled = true
@@ -345,6 +358,20 @@ export default class PlayerAircraft {
 
   }
 
+  _attachWingAirflow() {
+
+    if (!this.wingAirflowConfig.enabled) {
+
+      return
+
+    }
+
+
+
+    this.wingAirflow = createWingAirflowVFX(this.group, this.wingAirflowConfig)
+
+  }
+
 
 
   _resolveFlameValues(thrusterIntensity) {
@@ -397,6 +424,34 @@ export default class PlayerAircraft {
 
   }
 
+  _updateWingAirflow(input, delta) {
+
+    if (!this.wingAirflow) {
+
+      return
+
+    }
+
+
+
+    this.wingAirflow.update({
+
+      delta,
+
+      elapsed: this.experience.time.getElapsed(),
+
+      camera: this.experience.worldCamera?.instance,
+
+      state: this.state,
+
+      maxSpeed: this.motionConfig.maxSpeed,
+
+      input
+
+    })
+
+  }
+
 
 
   update() {
@@ -434,6 +489,8 @@ export default class PlayerAircraft {
     this._applyThrusterVisuals()
 
     this._applyTransform()
+
+    this._updateWingAirflow(input, delta)
 
     this._updateEngineFlames(this.experience.time.getElapsed())
 
@@ -580,6 +637,10 @@ export default class PlayerAircraft {
     }
 
     this.engineFlames = { left: null, right: null }
+
+    this.wingAirflow?.dispose()
+
+    this.wingAirflow = null
 
     this.group.clear()
 

@@ -55,6 +55,9 @@ function createExperience({ asset = createAsset(), config = {} } = {}) {
             enabled: true,
             smoothing: 6
           },
+          wingAirflow: {
+            enabled: false
+          },
           ...config
         }
       }
@@ -133,6 +136,25 @@ test('camera follow can be disabled', () => {
   player.update()
 
   assert.equal(experience.worldCamera.followCall, null)
+})
+
+test('creates and disposes wing airflow when configured', () => {
+  const player = new PlayerAircraft(createExperience({
+    config: {
+      wingAirflow: {
+        enabled: true,
+        capacity: 4,
+        maxSamples: 4
+      }
+    }
+  }), { inputTarget: null })
+
+  assert.equal(player.wingAirflow?.root?.name, 'WingAirflowVFX')
+  assert.equal(player.group.children.includes(player.wingAirflow.root), true)
+
+  player.dispose()
+
+  assert.equal(player.wingAirflow, null)
 })
 
 test('dispose removes input listeners and scene children', () => {
