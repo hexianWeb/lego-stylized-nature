@@ -101,6 +101,7 @@ export default class PlayerAircraft {
     this.speedLineOpacity = 0
 
     this.visualRoot = null
+    this.modelRoot = null
 
     this.engineNodes = { left: null, right: null }
 
@@ -185,6 +186,7 @@ export default class PlayerAircraft {
     const model = sourceScene.clone(true)
 
     model.rotation.y = Math.PI / 2
+    this.modelRoot = model
 
 
 
@@ -368,7 +370,8 @@ export default class PlayerAircraft {
 
 
 
-    this.wingAirflow = createWingAirflowVFX(this.group, this.wingAirflowConfig)
+    this.wingAirflow = createWingAirflowVFX(this.modelRoot ?? this.group, this.wingAirflowConfig)
+    this.wingAirflowConfig = this.wingAirflow.config
 
   }
 
@@ -623,17 +626,27 @@ export default class PlayerAircraft {
     flameFolder.addBinding(this.flameConfig, 'minIntensity', { min: 0, max: 1, step: 0.01, label: 'Min Scale' })
 
     const airflowFolder = folder.addFolder({ title: 'Wing Airflow', expanded: false })
+    const clearWingAirflow = () => {
+      this.wingAirflow?.clear()
+    }
+
     airflowFolder.addBinding(this.wingAirflowConfig, 'enabled', { label: 'Enabled' })
       .on('change', ({ value }) => {
         this.wingAirflow?.setVisible(value)
       })
     airflowFolder.addBinding(this.wingAirflowConfig.anchors, 'outwardOffset', { min: 0, max: 0.8, step: 0.01, label: 'Outward' })
+      .on('change', clearWingAirflow)
     airflowFolder.addBinding(this.wingAirflowConfig.anchors, 'backOffset', { min: -0.4, max: 0.2, step: 0.01, label: 'Back' })
+      .on('change', clearWingAirflow)
     airflowFolder.addBinding(this.wingAirflowConfig.anchors, 'upOffset', { min: -0.1, max: 0.4, step: 0.01, label: 'Up' })
+      .on('change', clearWingAirflow)
     airflowFolder.addBinding(this.wingAirflowConfig, 'sampleLife', { min: 0.16, max: 1.4, step: 0.02, label: 'Life' })
     airflowFolder.addBinding(this.wingAirflowConfig, 'emitInterval', { min: 0.012, max: 0.12, step: 0.002, label: 'Interval' })
     airflowFolder.addBinding(this.wingAirflowConfig, 'minEmitDistance', { min: 0, max: 0.18, step: 0.005, label: 'Min Dist' })
     airflowFolder.addBinding(this.wingAirflowConfig, 'maxSamples', { min: 4, max: this.wingAirflowConfig.capacity, step: 1, label: 'Samples' })
+      .on('change', () => {
+        this.wingAirflow?.clampSamples()
+      })
     airflowFolder.addBinding(this.wingAirflowConfig, 'breakAngleDeg', { min: 20, max: 180, step: 1, label: 'Break Angle' })
     airflowFolder.addBinding(this.wingAirflowConfig, 'width', { min: 0.03, max: 0.28, step: 0.005, label: 'Width' })
     airflowFolder.addBinding(this.wingAirflowConfig, 'opacity', { min: 0.02, max: 1, step: 0.01, label: 'Opacity' })
@@ -641,6 +654,7 @@ export default class PlayerAircraft {
     airflowFolder.addBinding(this.wingAirflowConfig, 'accelerationBoost', { min: 0, max: 1, step: 0.01, label: 'Accel Boost' })
     airflowFolder.addBinding(this.wingAirflowConfig, 'color', { label: 'Color' })
     airflowFolder.addBinding(this.wingAirflowConfig, 'additive', { label: 'Additive' })
+    airflowFolder.addBinding(this.wingAirflowConfig, 'showAnchors', { label: 'Show Anchors' })
 
   }
 
@@ -661,6 +675,7 @@ export default class PlayerAircraft {
     this.wingAirflow?.dispose()
 
     this.wingAirflow = null
+    this.modelRoot = null
 
     this.group.clear()
 

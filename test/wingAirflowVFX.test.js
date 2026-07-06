@@ -289,6 +289,83 @@ test('createWingAirflowVFX emits samples from two anchors when moving', () => {
   assert.equal(vfx.leftMesh.visible, false)
 })
 
+test('createWingAirflowVFX clamps live samples after maxSamples is lowered', () => {
+  const parent = new THREE.Group()
+  const camera = new THREE.PerspectiveCamera()
+  const vfx = createWingAirflowVFX(parent, {
+    enabled: true,
+    capacity: 8,
+    maxSamples: 6,
+    minSpeedRatio: 0.01,
+    emitInterval: 0,
+    minEmitDistance: 0
+  })
+
+  for (let i = 0; i < 6; i++) {
+    parent.position.x = i
+    vfx.update({
+      delta: 0.1,
+      elapsed: i,
+      camera,
+      state: { velocity: new THREE.Vector3(4, 0, 0) },
+      maxSpeed: 8,
+      input: { thrustInput: 1 }
+    })
+  }
+
+  assert.equal(vfx.left.count, 6)
+
+  vfx.config.maxSamples = 2
+  vfx.update({
+    delta: 0.1,
+    elapsed: 7,
+    camera,
+    state: { velocity: new THREE.Vector3(0, 0, 0) },
+    maxSpeed: 8,
+    input: { thrustInput: 0 }
+  })
+
+  assert.equal(vfx.left.count, 2)
+  assert.equal(vfx.right.count, 2)
+})
+
+test('createWingAirflowVFX shows anchor markers when enabled', () => {
+  const parent = new THREE.Group()
+  const camera = new THREE.PerspectiveCamera()
+  const vfx = createWingAirflowVFX(parent, {
+    enabled: true,
+    showAnchors: true,
+    minSpeedRatio: 0.01,
+    emitInterval: 0,
+    minEmitDistance: 0
+  })
+
+  vfx.update({
+    delta: 0.1,
+    elapsed: 0,
+    camera,
+    state: { velocity: new THREE.Vector3(4, 0, 0) },
+    maxSpeed: 8,
+    input: { thrustInput: 1 }
+  })
+
+  assert.equal(vfx.leftAnchorMarker.visible, true)
+  assert.equal(vfx.rightAnchorMarker.visible, true)
+
+  vfx.config.showAnchors = false
+  vfx.update({
+    delta: 0.1,
+    elapsed: 0.1,
+    camera,
+    state: { velocity: new THREE.Vector3(4, 0, 0) },
+    maxSpeed: 8,
+    input: { thrustInput: 1 }
+  })
+
+  assert.equal(vfx.leftAnchorMarker.visible, false)
+  assert.equal(vfx.rightAnchorMarker.visible, false)
+})
+
 test('createWingAirflowVFX does not recompile materials when blending is unchanged', () => {
   const parent = new THREE.Group()
   const camera = new THREE.PerspectiveCamera()

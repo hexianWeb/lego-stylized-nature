@@ -306,6 +306,22 @@ function createRibbonMesh(name, config, texture) {
   return mesh
 }
 
+function createAnchorMarker(name, config) {
+  const geometry = new THREE.SphereGeometry(0.045, 8, 4)
+  const material = new THREE.MeshBasicMaterial({
+    color: config.color,
+    transparent: true,
+    opacity: 0.75,
+    depthWrite: false
+  })
+  const marker = new THREE.Mesh(geometry, material)
+  marker.name = name
+  marker.renderOrder = 11
+  marker.frustumCulled = false
+  marker.visible = false
+  return marker
+}
+
 function writePosition(array, vertexIndex, position, tangent, camera, halfWidth) {
   tmpV5.copy(camera.position).sub(position)
 
@@ -387,7 +403,7 @@ function rebuildRibbon(side, runtime, camera, config) {
   }
 
   let quadCount = 0
-  const maxSegments = Math.min(side.count - 1, config.capacity - 1)
+  const maxSegments = Math.min(side.count - 1, config.maxSamples - 1, config.capacity - 1)
 
   for (let i = 0; i < maxSegments; i++) {
     const idx0 = side.logicalIndex(i)
@@ -443,6 +459,12 @@ function updateRibbonMaterial(mesh, config, opacity) {
   }
 }
 
+function updateAnchorMarker(marker, position, config) {
+  marker.position.copy(position)
+  marker.material.color.set(config.color)
+  marker.visible = config.showAnchors === true
+}
+
 export function createWingAirflowVFX(parent, rawConfig = {}) {
   const config = normalizeWingAirflowConfig(rawConfig)
   const root = new THREE.Group()
@@ -454,10 +476,12 @@ export function createWingAirflowVFX(parent, rawConfig = {}) {
   const right = new WingAirflowSide({ name: 'right', config })
   const leftMesh = createRibbonMesh('WingAirflowVFXLeft', config, texture)
   const rightMesh = createRibbonMesh('WingAirflowVFXRight', config, texture)
+  const leftAnchorMarker = createAnchorMarker('WingAirflowVFXLeftAnchor', config)
+  const rightAnchorMarker = createAnchorMarker('WingAirflowVFXRightAnchor', config)
   const leftRuntime = { mesh: leftMesh, ...getRibbonRuntime(leftMesh) }
   const rightRuntime = { mesh: rightMesh, ...getRibbonRuntime(rightMesh) }
 
-  root.add(leftMesh, rightMesh)
+  root.add(leftMesh, rightMesh, leftAnchorMarker, rightAnchorMarker)
   parent.add(root)
   updateRootWorldIsolation(root, parent)
   root.visible = config.enabled
@@ -469,7 +493,13 @@ export function createWingAirflowVFX(parent, rawConfig = {}) {
     right,
     leftMesh,
     rightMesh,
+    leftAnchorMarker,
+    rightAnchorMarker,
     disposed: false,
+    clampSamples() {
+      left.clampCount()
+      right.clampCount()
+    },
     update({ delta = 0, elapsed = 0, camera, state, maxSpeed = 1, input = {} } = {}) {
       if (api.disposed) {
         return
@@ -482,24 +512,31 @@ export function createWingAirflowVFX(parent, rawConfig = {}) {
         right.clear()
         leftMesh.visible = false
         rightMesh.visible = false
+        leftAnchorMarker.visible = false
+        rightAnchorMarker.visible = false
         return
       }
 
       const speedRatio = computeAirflowSpeedRatio(state, maxSpeed)
       resolveAirflowTangent(parent, state, tmpV4)
+      const leftAnchor = resolveAnchor(parent, config, -1, tmpV0)
+      const rightAnchor = resolveAnchor(parent, config, 1, tmpV1)
+      updateAnchorMarker(leftAnchorMarker, leftAnchor, config)
+      updateAnchorMarker(rightAnchorMarker, rightAnchor, config)
 
       left.maybeEmit({
-        position: resolveAnchor(parent, config, -1, tmpV0),
+        position: leftAnchor,
         tangent: tmpV4,
         speedRatio,
         delta
       })
       right.maybeEmit({
-        position: resolveAnchor(parent, config, 1, tmpV1),
+        position: rightAnchor,
         tangent: tmpV4,
         speedRatio,
         delta
       })
+      api.clampSamples()
 
       const opacity = resolveAirflowOpacity(config, {
         speedRatio,
@@ -518,6 +555,8 @@ export function createWingAirflowVFX(parent, rawConfig = {}) {
       rightMesh.geometry.setDrawRange(0, 0)
       leftMesh.visible = false
       rightMesh.visible = false
+      leftAnchorMarker.visible = false
+      rightAnchorMarker.visible = false
     },
     setVisible(visible) {
       root.visible = visible === true
@@ -534,8 +573,12 @@ export function createWingAirflowVFX(parent, rawConfig = {}) {
       parent.remove(root)
       leftMesh.geometry.dispose()
       rightMesh.geometry.dispose()
+      leftAnchorMarker.geometry.dispose()
+      rightAnchorMarker.geometry.dispose()
       leftMesh.material.dispose()
       rightMesh.material.dispose()
+      leftAnchorMarker.material.dispose()
+      rightAnchorMarker.material.dispose()
       texture?.dispose()
       root.clear()
       api.disposed = true

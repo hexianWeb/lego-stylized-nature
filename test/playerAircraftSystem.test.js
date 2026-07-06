@@ -178,7 +178,9 @@ test('creates and disposes wing airflow when configured', () => {
   }), { inputTarget: null })
 
   assert.equal(player.wingAirflow?.root?.name, 'WingAirflowVFX')
-  assert.equal(player.group.children.includes(player.wingAirflow.root), true)
+  assert.equal(player.wingAirflow.root.parent, player.modelRoot)
+  assert.equal(player.modelRoot.parent, player.visualRoot)
+  assert.equal(player.modelRoot.rotation.y, Math.PI / 2)
 
   player.dispose()
 
@@ -219,7 +221,8 @@ test('debugger exposes wing airflow tuning bindings', () => {
     'speedOpacity',
     'accelerationBoost',
     'color',
-    'additive'
+    'additive',
+    'showAnchors'
   ])
   assert.equal(
     airflowFolder.bindings.find((binding) => binding.key === 'maxSamples').options.max,
@@ -231,6 +234,19 @@ test('debugger exposes wing airflow tuning bindings', () => {
 
   airflowFolder.bindings[0].handlers.get('change')({ value: true })
   assert.equal(player.wingAirflow.root.visible, true)
+
+  player.wingAirflow.left.count = 6
+  player.wingAirflow.right.count = 6
+  player.wingAirflowConfig.maxSamples = 2
+  airflowFolder.bindings.find((binding) => binding.key === 'maxSamples')
+    .handlers.get('change')({ value: 2 })
+  assert.equal(player.wingAirflow.left.count, 2)
+  assert.equal(player.wingAirflow.right.count, 2)
+
+  player.wingAirflow.left.count = 2
+  airflowFolder.bindings.find((binding) => binding.key === 'outwardOffset')
+    .handlers.get('change')({ value: 0.24 })
+  assert.equal(player.wingAirflow.left.count, 0)
 })
 
 test('dispose removes input listeners and scene children', () => {
