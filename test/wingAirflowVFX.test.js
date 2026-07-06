@@ -288,3 +288,35 @@ test('createWingAirflowVFX emits samples from two anchors when moving', () => {
   assert.equal(vfx.right.count, 1)
   assert.equal(vfx.leftMesh.visible, false)
 })
+
+test('createWingAirflowVFX does not recompile materials when blending is unchanged', () => {
+  const parent = new THREE.Group()
+  const camera = new THREE.PerspectiveCamera()
+  const vfx = createWingAirflowVFX(parent, {
+    enabled: true,
+    additive: false,
+    minSpeedRatio: 0.01,
+    emitInterval: 0,
+    minEmitDistance: 0
+  })
+
+  const updateOptions = {
+    delta: 0.1,
+    elapsed: 0,
+    camera,
+    state: {
+      velocity: new THREE.Vector3(4, 0, 0)
+    },
+    maxSpeed: 8,
+    input: { thrustInput: 1 }
+  }
+
+  vfx.update(updateOptions)
+  const leftVersion = vfx.leftMesh.material.version
+  const rightVersion = vfx.rightMesh.material.version
+
+  vfx.update(updateOptions)
+
+  assert.equal(vfx.leftMesh.material.version, leftVersion)
+  assert.equal(vfx.rightMesh.material.version, rightVersion)
+})

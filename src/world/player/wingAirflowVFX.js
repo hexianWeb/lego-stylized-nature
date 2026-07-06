@@ -185,17 +185,16 @@ export class WingAirflowSide {
   emit(position, tangent, speedRatio) {
     const nextHead = (this.head - 1 + this.capacity) % this.capacity
     const base = nextHead * 3
-    const normal = tangent.lengthSq() > 0
-      ? tangent.clone().normalize()
-      : new THREE.Vector3(1, 0, 0)
+    const tangentLengthSq = tangent.lengthSq()
+    const tangentScale = tangentLengthSq > 0 ? 1 / Math.sqrt(tangentLengthSq) : 0
 
     this.head = nextHead
     this.position[base] = position.x
     this.position[base + 1] = position.y
     this.position[base + 2] = position.z
-    this.tangent[base] = normal.x
-    this.tangent[base + 1] = normal.y
-    this.tangent[base + 2] = normal.z
+    this.tangent[base] = tangentLengthSq > 0 ? tangent.x * tangentScale : 1
+    this.tangent[base + 1] = tangentLengthSq > 0 ? tangent.y * tangentScale : 0
+    this.tangent[base + 2] = tangentLengthSq > 0 ? tangent.z * tangentScale : 0
     this.age[nextHead] = 0
     this.speed[nextHead] = clamp01(speedRatio)
     this.count = Math.min(this.count + 1, this.capacity)
@@ -433,10 +432,15 @@ function resolveAnchor(parent, config, sideSign, target) {
 }
 
 function updateRibbonMaterial(mesh, config, opacity) {
+  const nextBlending = config.additive ? THREE.AdditiveBlending : THREE.NormalBlending
+
   mesh.material.color.set(config.color)
   mesh.material.opacity = opacity
-  mesh.material.blending = config.additive ? THREE.AdditiveBlending : THREE.NormalBlending
-  mesh.material.needsUpdate = true
+
+  if (mesh.material.blending !== nextBlending) {
+    mesh.material.blending = nextBlending
+    mesh.material.needsUpdate = true
+  }
 }
 
 export function createWingAirflowVFX(parent, rawConfig = {}) {
