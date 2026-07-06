@@ -8,7 +8,8 @@ import {
   resolveAirflowOpacity,
   canConnectAirflowSamples,
   computeAirflowHalfWidth,
-  WingAirflowSide
+  WingAirflowSide,
+  createWingAirflowVFX
 } from '../src/world/player/wingAirflowVFX.js'
 
 test('normalizes wing airflow config with safe defaults and clamps sample count', () => {
@@ -245,4 +246,45 @@ test('wing airflow side accessors do not remap physical sample slots', () => {
     side.getTangent(side.logicalIndex(0), tangent).toArray().map((value) => Number(value.toFixed(6))),
     [0.8, 0, 0.6]
   )
+})
+
+test('createWingAirflowVFX adds a root and disposes owned objects', () => {
+  const parent = new THREE.Group()
+  const vfx = createWingAirflowVFX(parent, { enabled: true, capacity: 4, maxSamples: 4 })
+
+  assert.equal(parent.children.includes(vfx.root), true)
+  assert.equal(vfx.root.children.length >= 2, true)
+
+  vfx.dispose()
+
+  assert.equal(parent.children.includes(vfx.root), false)
+  assert.equal(vfx.disposed, true)
+})
+
+test('createWingAirflowVFX emits samples from two anchors when moving', () => {
+  const parent = new THREE.Group()
+  const camera = new THREE.PerspectiveCamera()
+  camera.position.set(0, 5, 5)
+  parent.position.set(10, 3, 20)
+  const vfx = createWingAirflowVFX(parent, {
+    enabled: true,
+    minSpeedRatio: 0.01,
+    emitInterval: 0,
+    minEmitDistance: 0
+  })
+
+  vfx.update({
+    delta: 0.1,
+    elapsed: 0,
+    camera,
+    state: {
+      velocity: new THREE.Vector3(4, 0, 0)
+    },
+    maxSpeed: 8,
+    input: { thrustInput: 1 }
+  })
+
+  assert.equal(vfx.left.count, 1)
+  assert.equal(vfx.right.count, 1)
+  assert.equal(vfx.leftMesh.visible, false)
 })
