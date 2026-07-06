@@ -207,6 +207,33 @@ export const worldConfig = {
         speed: 1.05,
         respondToThrusters: true,
         minIntensity: 0.15
+      },
+      wingAirflow: {
+        enabled: true,
+        anchors: {
+          wingHalfWidth: 0.78,
+          outwardOffset: 0.12,
+          backOffset: -0.10,
+          upOffset: 0.03
+        },
+        sampleLife: 0.56,
+        emitInterval: 0.034,
+        minEmitDistance: 0.045,
+        capacity: 32,
+        maxSamples: 18,
+        minSpeedRatio: 0.04,
+        breakAngleDeg: 68,
+        width: 0.09,
+        tipWidthRatio: 0,
+        bellPower: 1.35,
+        verticalOffset: 0.045,
+        opacity: 0.54,
+        speedOpacity: 0.48,
+        accelerationBoost: 0.35,
+        pulseStrength: 0.01,
+        color: '#f7fbff',
+        additive: false,
+        showAnchors: false
       }
     }
   },

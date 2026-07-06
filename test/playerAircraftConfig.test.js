@@ -43,3 +43,21 @@ test('player aircraft visualAttitude config has expected defaults', () => {
   assert.equal(attitude.hover.frequency > 0, true)
   assert.equal(attitude.thrusters.enabled, true)
 })
+
+test('player aircraft wing airflow config has expected defaults', () => {
+  const airflow = worldConfig.player.aircraft.wingAirflow
+
+  assert.equal(airflow.enabled, true)
+  assert.equal(airflow.anchors.wingHalfWidth > 0, true)
+  assert.equal(airflow.anchors.outwardOffset >= 0, true)
+  assert.equal(airflow.sampleLife > 0, true)
+  assert.equal(airflow.emitInterval > 0, true)
+  assert.equal(airflow.minEmitDistance >= 0, true)
+  assert.equal(airflow.capacity >= airflow.maxSamples, true)
+  assert.equal(airflow.maxSamples > 1, true)
+  assert.equal(airflow.minSpeedRatio >= 0, true)
+  assert.equal(airflow.breakAngleDeg > 0, true)
+  assert.equal(airflow.width > 0, true)
+  assert.equal(airflow.opacity > 0, true)
+  assert.equal(airflow.color, '#f7fbff')
+})
