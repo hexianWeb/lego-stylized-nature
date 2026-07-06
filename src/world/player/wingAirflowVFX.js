@@ -214,12 +214,13 @@ export class WingAirflowSide {
   }
 
   getPosition(index, target) {
-    const base = this.logicalIndex(index) * 3
+    // Accessors accept physical ring-buffer slots; callers resolve logical offsets first.
+    const base = index * 3
     return target.set(this.position[base], this.position[base + 1], this.position[base + 2])
   }
 
   getTangent(index, target) {
-    const base = this.logicalIndex(index) * 3
+    const base = index * 3
     return target.set(this.tangent[base], this.tangent[base + 1], this.tangent[base + 2])
   }
 }

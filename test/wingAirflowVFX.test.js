@@ -194,3 +194,55 @@ test('wing airflow side clamps visible count to max samples', () => {
 
   assert.equal(side.count, 3)
 })
+
+test('wing airflow side reads clamped visible samples from physical slots newest first', () => {
+  const config = normalizeWingAirflowConfig({
+    capacity: 5,
+    maxSamples: 3,
+    emitInterval: 0,
+    minEmitDistance: 0,
+    minSpeedRatio: 0.01
+  })
+  const side = new WingAirflowSide({ name: 'left', config })
+  const target = new THREE.Vector3()
+
+  for (let i = 0; i < 5; i++) {
+    side.emit(new THREE.Vector3(i, i + 10, i + 20), new THREE.Vector3(i + 1, 0, 0), 0.5)
+  }
+
+  const visibleX = []
+  for (let i = 0; i < side.count; i++) {
+    visibleX.push(side.getPosition(side.logicalIndex(i), target).x)
+  }
+
+  assert.deepEqual(visibleX, [4, 3, 2])
+  assert.deepEqual(side.getTangent(side.logicalIndex(0), target).toArray(), [1, 0, 0])
+})
+
+test('wing airflow side accessors do not remap physical sample slots', () => {
+  const config = normalizeWingAirflowConfig({
+    capacity: 5,
+    maxSamples: 3,
+    emitInterval: 0,
+    minEmitDistance: 0,
+    minSpeedRatio: 0.01
+  })
+  const side = new WingAirflowSide({ name: 'left', config })
+  const position = new THREE.Vector3()
+  const tangent = new THREE.Vector3()
+
+  for (let i = 0; i < 4; i++) {
+    side.emit(new THREE.Vector3(i, i + 10, i + 20), new THREE.Vector3(i + 1, 0, i), 0.5)
+  }
+
+  const visibleX = []
+  for (let i = 0; i < side.count; i++) {
+    visibleX.push(side.getPosition(side.logicalIndex(i), position).x)
+  }
+
+  assert.deepEqual(visibleX, [3, 2, 1])
+  assert.deepEqual(
+    side.getTangent(side.logicalIndex(0), tangent).toArray().map((value) => Number(value.toFixed(6))),
+    [0.8, 0, 0.6]
+  )
+})
