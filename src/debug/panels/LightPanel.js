@@ -24,8 +24,6 @@ export function createLightPanel(debug, environment) {
     dirFolder.addBinding(dirPos, 'y', { min: 0, max: 40, step: 0.5, label: 'y' })
     dirFolder.addBinding(dirPos, 'z', { min: -40, max: 40, step: 0.5, label: 'z' })
 
-    folder.addBinding(environment, 'autoTargetToTerrain', { label: 'autoTargetToTerrain' })
-
     const targetFolder = folder.addFolder({ title: 'directionalTarget', expanded: true })
     targetFolder.addBinding(environment.directionalTarget, 'x', { min: -40, max: 40, step: 0.1, label: 'x' })
         .on('change', () => environment.syncDirectionalTarget())

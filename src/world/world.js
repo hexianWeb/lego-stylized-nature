@@ -244,8 +244,6 @@ export default class World {
 
         this.experience.worldCamera.lookAt(new THREE.Vector3(centerX, 0, centerZ))
         this.experience.environment.configureShadows({
-            centerX,
-            centerZ,
             halfExtent,
             maxHeight: maxHeight * layerHeight + 8
         })
@@ -354,14 +352,9 @@ export default class World {
         if (this.terrainChunkManager && this.playerAircraft?.enabled) {
             const { x, z } = this.playerAircraft.state.position
             const chunkWorldSize = this.config.chunks.size * this.config.terrain.cellSize
-            const maxHeight = this.config.terrain.maxHeight * this.config.terrain.layerHeight + 8
-
             this.experience.environment.followPlayerShadow?.(
                 this.playerAircraft.state.position,
-                {
-                    halfExtent: chunkWorldSize,
-                    maxHeight
-                }
+                { halfExtent: chunkWorldSize }
             )
             this.terrainChunkManager.update(x, z, this.experience.worldCamera.instance)
         }

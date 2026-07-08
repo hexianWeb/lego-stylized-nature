@@ -6,9 +6,9 @@ import { createLightPanel } from '../debug/panels/LightPanel.js'
 import { createShadowPanel } from '../debug/panels/ShadowPanel.js'
 
 const PLAYER_SHADOW_LIGHT_OFFSET = new THREE.Vector3(
-    14.48,
+    -14.48,
     20.78,
-    8.48
+    -8.48
 )
 const PLAYER_SHADOW_TARGET_OFFSET = new THREE.Vector3(
     -1.63,
@@ -34,16 +34,15 @@ export default class Environment {
             halfExtent: 14,
             maxHeight: 10
         }
-        this.directionalTarget = { x: 12, y: 12, z: 12}
-        this.autoTargetToTerrain = true
+        this.directionalTarget = { x: 12, y: 12, z: 12 }
 
         this.ambientLight = new THREE.AmbientLight(0xffffff, 0.08)
         this.scene.add(this.ambientLight)
 
         this.directionalLight = new THREE.DirectionalLight(0xffffff, 1.85)
-        this.directionalLight.position.set(8, 23, 10)
+        this.directionalLight.position.set(-8, 23, -10)
         this.directionalLight.castShadow = true
-        this.directionalLight.shadow.mapSize.set(1024, 1024)
+        this.directionalLight.shadow.mapSize.set(1024*2, 1024*2)
         this.directionalLight.shadow.bias = -0.0011
         this.directionalLight.shadow.normalBias = 0.035
         this.directionalLight.shadow.radius = 0
@@ -113,26 +112,19 @@ export default class Environment {
     }
 
     /**
-     * @param {{ centerX: number, centerZ: number, halfExtent: number, maxHeight: number }} bounds
+     * @param {{ halfExtent: number, maxHeight: number }} bounds
      */
-    configureShadows({ centerX, centerZ, halfExtent, maxHeight }) {
+    configureShadows({ halfExtent, maxHeight }) {
         this.shadowBounds.halfExtent = halfExtent
         this.shadowBounds.maxHeight = maxHeight
-
-        if (this.autoTargetToTerrain) {
-            this.directionalTarget.x = centerX
-            this.directionalTarget.y = 12
-            this.directionalTarget.z = centerZ
-        }
-
         this.applyShadowBounds()
     }
 
     /**
      * @param {THREE.Vector3 | { x: number, y: number, z: number }} playerPosition
-     * @param {{ halfExtent: number, maxHeight: number }} shadowConfig
+     * @param {{ halfExtent: number }} shadowConfig
      */
-    followPlayerShadow(playerPosition, { halfExtent, maxHeight }) {
+    followPlayerShadow(playerPosition, { halfExtent }) {
         this.shadowBounds.halfExtent = halfExtent
         this.directionalTarget.x = playerPosition.x + PLAYER_SHADOW_TARGET_OFFSET.x
         this.directionalTarget.y = playerPosition.y + PLAYER_SHADOW_TARGET_OFFSET.y
@@ -144,7 +136,10 @@ export default class Environment {
             playerPosition.z + PLAYER_SHADOW_LIGHT_OFFSET.z
         )
 
-        this.shadowBounds.maxHeight = Math.max(maxHeight, PLAYER_SHADOW_MIN_CAMERA_DEPTH)
+        this.shadowBounds.maxHeight = Math.max(
+            this.shadowBounds.maxHeight,
+            PLAYER_SHADOW_MIN_CAMERA_DEPTH
+        )
 
         this.applyShadowBounds()
     }
