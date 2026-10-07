@@ -54,7 +54,7 @@ export default class Experience {
             this.resize()
         })
 
-        this.renderer.instance.setClearColor(this.environment.fogColor.value)
+        this.renderer.instance.setClearColor(this.environment.clearColor)
         this.resize()
         await this.world.warmupPrefabPipelines(
             this.renderer.instance,
@@ -65,11 +65,13 @@ export default class Experience {
             this.environment.debuggerInit(this.debug)
             this.worldCamera.debuggerInit(this.debug)
             this.world.debuggerInit(this.debug)
-            createPostProcessingPanel(
-                this.debug,
-                worldConfig,
-                this.renderer.postProcessingController
-            )
+            if (this.renderer.postProcessingEnabled) {
+                createPostProcessingPanel(
+                    this.debug,
+                    worldConfig,
+                    this.renderer.postProcessingController
+                )
+            }
         }
     }
 

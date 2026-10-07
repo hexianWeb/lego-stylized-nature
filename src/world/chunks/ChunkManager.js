@@ -89,8 +89,7 @@ export default class ChunkManager {
       return this.createSlotOverride(index)
     }
 
-    const prefabsEnabled = this.config.placement?.enablePrefabs !== false
-    const prefabPlacer = prefabsEnabled && this.prefabRegistry && this.biomeRegistry
+    const prefabPlacer = this.prefabRegistry && this.biomeRegistry
       ? new PrefabPlacer({
         config: this.config,
         biomeRegistry: this.biomeRegistry,
@@ -327,13 +326,32 @@ export default class ChunkManager {
     }
   }
 
+  setPrefabsEnabled(enabled) {
+    this.config.placement.enablePrefabs = enabled
+    if (enabled) {
+      return
+    }
+
+    for (const slot of this.slots) {
+      slot.setPrefabsVisible?.(false)
+    }
+    this.pendingPrefabBuildQueue.length = 0
+    this.pendingPrefabBuildKeys.clear()
+  }
+
   updateVisibility(worldBlock, { buildPrefabs = true } = {}) {
+    const prefabsEnabled = this.config.placement?.enablePrefabs !== false
     const prefabActiveKeys = new Set(
       getPlayerPrefabWindowCoords(worldBlock, this.chunkSize).map((coord) => getRenderChunkKey(coord))
     )
 
     for (const [key, slot] of this.activeSlots) {
       slot.show()
+
+      if (!prefabsEnabled) {
+        slot.setPrefabsVisible?.(false)
+        continue
+      }
 
       if (prefabActiveKeys.has(key)) {
         if (slot.prefabsBuiltForKey === key) {
@@ -350,7 +368,7 @@ export default class ChunkManager {
       this.removePendingPrefabBuild(key)
     }
 
-    if (buildPrefabs) {
+    if (prefabsEnabled && buildPrefabs) {
       this.buildPendingPrefabs(prefabActiveKeys)
     }
   }

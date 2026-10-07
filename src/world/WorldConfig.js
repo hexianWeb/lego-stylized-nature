@@ -4,47 +4,11 @@ import { SPEED_LINES_DEFAULTS } from '../renderer/postprocessing/speedLinesConfi
 export const worldConfig = {
   seed: 20260608,
   postProcessing: {
+    enabled: false,
     tiltShift: { ...TILT_SHIFT_DEFAULTS },
     speedLines: {
       ...SPEED_LINES_DEFAULTS,
       color: { ...SPEED_LINES_DEFAULTS.color }
-    }
-  },
-  ui: {
-    controlGuide: {
-      enabled: true,
-      screenOffset: {
-        right: 40,
-        verticalAlign: 'center'
-      },
-      opacity: 1
-    },
-    biomeRadar: {
-      enabled: true,
-      size: 300,
-      screenOffset: {
-        left: 75,
-        top: 75
-      },
-      range: 360,
-      scanSpeed: 0.9,
-      updateThreshold: {
-        position: 0.02,
-        yaw: 0.01
-      },
-      opacity: 0.9,
-      colors: {
-        forest: '#53D86A',
-        autumnForest: '#F4A13D',
-        desert: '#E8D45A',
-        volcano: '#FF513D'
-      }
-    },
-    storyRecord: {
-      enabled: true
-    },
-    storyObjective: {
-      enabled: true
     }
   },
   terrain: {
@@ -84,7 +48,6 @@ export const worldConfig = {
   biomeCenters: {
     enabled: true,
     assetName: 'biomeTowerModel',
-    triggerRadius: 3,
     footprintCells: 4,
     lightMeshName: 'light',
     towers: {
@@ -92,30 +55,25 @@ export const worldConfig = {
         light: {
           color: '#43ff7a',
           emissiveIntensity: 1.8
-        },
-        log: 'Forest validation reached: biomass exploitation record unlocked.'
+        }
       },
       autumnForest: {
-        storyAlias: 'badlands',
         light: {
           color: '#b24cff',
           emissiveIntensity: 1.6
-        },
-        log: 'Badlands validation reached: mining waste record unlocked.'
+        }
       },
       desert: {
         light: {
           color: '#ffd34a',
           emissiveIntensity: 1.5
-        },
-        log: 'Desert validation reached: groundwater collapse record unlocked.'
+        }
       },
       volcano: {
         light: {
           color: '#ff4a1f',
           emissiveIntensity: 2.2
-        },
-        log: 'Volcano validation reached: geothermal extraction record unlocked.'
+        }
       }
     }
   },
@@ -141,7 +99,7 @@ export const worldConfig = {
     windowRadius: 1,
     maxPendingBuildsPerFrame: 1,
     visibilityPadding: 1,
-    /** World-unit gap between adjacent chunks; use in #debug to inspect chunk boundaries. */
+    /** World-unit gap between adjacent chunks. */
     debugSpacing: 0
   },
   player: {

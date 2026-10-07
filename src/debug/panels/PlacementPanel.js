@@ -1,10 +1,10 @@
-export function createPlacementPanel(debug, config, onRegenerate) {
+export function createPlacementPanel(debug, config, onRegenerate, onPrefabsChange = onRegenerate) {
     const folder = debug.addFolder({ title: 'Placement', expanded: false })
     if (!folder) {
         return
     }
 
-    folder.addBinding(config.placement, 'enablePrefabs', { label: 'Prefabs' }).on('change', onRegenerate)
+    folder.addBinding(config.placement, 'enablePrefabs', { label: 'Prefabs' }).on('change', onPrefabsChange)
     folder.addBinding(config.placement, 'enableTrees', { label: 'Trees' }).on('change', onRegenerate)
     folder.addBinding(config.placement, 'rotationStep', { min: Math.PI / 8, max: Math.PI, step: Math.PI / 8 }).on('change', onRegenerate)
 }

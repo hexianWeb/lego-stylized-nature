@@ -47,22 +47,6 @@ function findMesh(root, name) {
   return found
 }
 
-function createTerrainGenerator(height = 7) {
-  return {
-    calls: [],
-    generateForBounds(origin, width, depth, meta) {
-      this.calls.push({ origin, width, depth, meta })
-      return {
-        getHeight(x, z) {
-          assert.equal(x >= 0 && x < width, true)
-          assert.equal(z >= 0 && z < depth, true)
-          return height
-        }
-      }
-    }
-  }
-}
-
 function createGridTerrainGenerator(heights) {
   return {
     calls: [],
@@ -89,7 +73,6 @@ test('registers the biome tower model source and config', () => {
   assert.equal(worldConfig.biomeCenters.lightMeshName, 'light')
   assert.equal(worldConfig.biomeCenters.footprintCells, 4)
   assert.equal(worldConfig.biomeCenters.towers.forest.light.color, '#43ff7a')
-  assert.equal(worldConfig.biomeCenters.towers.autumnForest.storyAlias, 'badlands')
 })
 
 test('matches the tower light mesh name including Blender numeric suffixes', () => {
@@ -173,17 +156,14 @@ test('builds one ground-aligned tower per biome center', () => {
       biomeCenters: {
         enabled: true,
         assetName: 'biomeTowerModel',
-        triggerRadius: 3,
         footprintCells: 4,
         lightMeshName: 'light',
         towers: {
           forest: {
-            light: { color: '#43ff7a', emissiveIntensity: 1.8 },
-            log: 'forest reached'
+            light: { color: '#43ff7a', emissiveIntensity: 1.8 }
           },
           desert: {
-            light: { color: '#ffd34a', emissiveIntensity: 1.5 },
-            log: 'desert reached'
+            light: { color: '#ffd34a', emissiveIntensity: 1.5 }
           }
         }
       }
@@ -213,106 +193,4 @@ test('builds one ground-aligned tower per biome center', () => {
     visibleSize: 4,
     halo: 0
   })
-})
-
-test('logs tower entry once per approach', () => {
-  const asset = createTowerAsset()
-  const logs = []
-  const system = new BiomeCenterSystem({
-    config: {
-      terrain: {
-        cellSize: 1,
-        layerHeight: 1
-      },
-      biomes: {
-        regions: [
-          { id: 'forest', center: [0, 0] }
-        ]
-      },
-      biomeCenters: {
-        enabled: true,
-        assetName: 'biomeTowerModel',
-        triggerRadius: 3,
-        lightMeshName: 'light',
-        towers: {
-          forest: {
-            light: { color: '#43ff7a', emissiveIntensity: 1.8 },
-            log: 'Forest validation reached'
-          }
-        }
-      }
-    },
-    resources: {
-      items: {
-        biomeTowerModel: asset
-      }
-    },
-    terrainGenerator: createTerrainGenerator(0),
-    logger: (message) => logs.push(message)
-  })
-
-  system.build()
-  system.update(new THREE.Vector3(2, 0, 0))
-  system.update(new THREE.Vector3(1, 0, 0))
-  system.update(new THREE.Vector3(10, 0, 0))
-
-  assert.deepEqual(logs, [
-    '[BiomeCenter] forest entered: Forest validation reached'
-  ])
-})
-
-test('emits entered exited and activate events for tower interaction', () => {
-  const asset = createTowerAsset()
-  const events = []
-  const listeners = new Map()
-  const inputTarget = {
-    addEventListener(type, listener) {
-      listeners.set(type, listener)
-    },
-    removeEventListener(type, listener) {
-      if (listeners.get(type) === listener) {
-        listeners.delete(type)
-      }
-    }
-  }
-  const system = new BiomeCenterSystem({
-    config: {
-      terrain: { cellSize: 1, layerHeight: 1 },
-      biomes: { regions: [{ id: 'forest', center: [0, 0] }] },
-      biomeCenters: {
-        enabled: true,
-        assetName: 'biomeTowerModel',
-        triggerRadius: 3,
-        lightMeshName: 'light',
-        towers: {
-          forest: {
-            storyAlias: 'forest',
-            light: { color: '#43ff7a', emissiveIntensity: 1.8 },
-            log: 'Forest validation reached'
-          }
-        }
-      }
-    },
-    resources: { items: { biomeTowerModel: asset } },
-    terrainGenerator: createTerrainGenerator(0),
-    inputTarget,
-    eventBus: {
-      emit: (type, payload) => events.push({ type, payload })
-    },
-    logger: () => {}
-  })
-
-  system.build()
-  system.update(new THREE.Vector3(10, 0, 0))
-  system.update(new THREE.Vector3(2, 0, 0))
-  listeners.get('keydown')?.({ code: 'KeyE', repeat: false })
-  system.update(new THREE.Vector3(10, 0, 0))
-
-  assert.deepEqual(events.map((event) => event.type), [
-    'biome-center:entered',
-    'biome-center:activate',
-    'biome-center:exited'
-  ])
-  assert.equal(events[0].payload.towerId, 'forest')
-  assert.equal(events[0].payload.storyId, 'forest')
 })

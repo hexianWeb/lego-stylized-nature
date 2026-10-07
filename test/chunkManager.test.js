@@ -19,7 +19,7 @@ const config = {
     seaClip: 0.35,
     ao: { enabled: false, previewGrayscale: false }
   },
-  placement: { enablePrefabs: false },
+  placement: { enablePrefabs: true },
   water: { enableWater: false },
   chunks: {
     size: 32,
@@ -82,7 +82,11 @@ function createSlotFactory(calls = []) {
 
 function createManager({ calls = [], overrides = {} } = {}) {
   return new ChunkManager({
-    config: { ...config, chunks: { ...config.chunks, ...overrides } },
+    config: {
+      ...config,
+      placement: { ...config.placement },
+      chunks: { ...config.chunks, ...overrides }
+    },
     terrainGenerator: {
       generateChunk({ origin, size, halo }) {
         return { origin, visibleSize: size, halo }
@@ -370,6 +374,52 @@ test('update skips prefab builds on frames that build pending terrain chunks', (
 
   assert.equal(prefabBuildsAfterTerrainFrame, buildCountAfterBootstrap)
   assert.equal(prefabBuildsAfterNextFrame, buildCountAfterBootstrap + 1)
+})
+
+test('disabling prefabs hides built slots and restoring them reuses existing prefab instances', () => {
+  const terrainBuilds = []
+  const manager = createManager({ calls: terrainBuilds })
+
+  manager.bootstrap(6.4, 6.4)
+  settleChunkAndPrefabQueues(manager, 6.4, 6.4)
+  const builtCount = terrainBuilds.length
+  const prefabBuilds = manager.slots.reduce((total, slot) => total + slot.prefabBuilds, 0)
+  assert.equal([...manager.activeSlots.values()].filter((slot) => slot.prefabsVisible).length, 4)
+
+  manager.setPrefabsEnabled(false)
+  assert.ok(manager.slots.every((slot) => !slot.prefabsVisible))
+  manager.update(6.4, 6.4)
+  assert.ok(manager.slots.every((slot) => !slot.prefabsVisible))
+  assert.equal(terrainBuilds.length, builtCount)
+  assert.equal(manager.slots.reduce((total, slot) => total + slot.prefabBuilds, 0), prefabBuilds)
+
+  manager.setPrefabsEnabled(true)
+  manager.update(6.4, 6.4)
+  assert.equal([...manager.activeSlots.values()].filter((slot) => slot.prefabsVisible).length, 4)
+  assert.equal(terrainBuilds.length, builtCount)
+  assert.equal(manager.slots.reduce((total, slot) => total + slot.prefabBuilds, 0), prefabBuilds)
+})
+
+test('disabling prefabs clears queued builds until they are enabled again', () => {
+  const manager = createManager()
+
+  manager.bootstrap(6.4, 6.4)
+  manager.update(6.4, 6.4)
+  assert.ok(manager.pendingPrefabBuildQueue.length > 0)
+  const prefabBuilds = manager.slots.reduce((total, slot) => total + slot.prefabBuilds, 0)
+
+  manager.setPrefabsEnabled(false)
+  assert.equal(manager.pendingPrefabBuildQueue.length, 0)
+  assert.equal(manager.pendingPrefabBuildKeys.size, 0)
+  updateUntilTerrainLoaded(manager, 6.4, 6.4)
+  manager.update(6.4, 6.4)
+  assert.ok(manager.slots.every((slot) => !slot.prefabsVisible))
+  assert.equal(manager.slots.reduce((total, slot) => total + slot.prefabBuilds, 0), prefabBuilds)
+
+  manager.setPrefabsEnabled(true)
+  manager.update(6.4, 6.4)
+  settleChunkAndPrefabQueues(manager, 6.4, 6.4)
+  assert.equal([...manager.activeSlots.values()].filter((slot) => slot.prefabsVisible).length, 4)
 })
 
 test('ao preview updates all slots and only shows overlays on visible slots', () => {

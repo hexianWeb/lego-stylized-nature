@@ -29,10 +29,11 @@ const applyVignette = Fn(() => {
 
 export default class Renderer {
   /**
-   * @param {{
-   *   canvas: HTMLCanvasElement,
-   *   postProcessing?: {
-   *     tiltShift?: {
+    * @param {{
+    *   canvas: HTMLCanvasElement,
+    *   postProcessing?: {
+    *     enabled?: boolean,
+    *     tiltShift?: {
    *       enabled?: boolean,
    *       focusCenter?: number,
    *       focusWidth?: number,
@@ -64,6 +65,7 @@ export default class Renderer {
     this.instance.shadowMap.enabled = true
     this.instance.shadowMap.type = THREE.BasicShadowMap
 
+    this.postProcessingEnabled = postProcessing.enabled !== false
     this.tiltShiftConfig =
       postProcessing.tiltShift ?? { ...TILT_SHIFT_DEFAULTS }
     this.speedLinesConfig = normalizeSpeedLinesConfig(
@@ -75,6 +77,8 @@ export default class Renderer {
     this.tiltShiftEffect = null
     this.speedLinesEffect = null
     this.outputNodes = null
+    this.scene = null
+    this.camera = null
 
     this.postProcessingController = Object.freeze({
       setTiltShiftEnabled: (enabled) => {
@@ -102,6 +106,16 @@ export default class Renderer {
   attachPipeline(scene, camera) {
     this.tiltShiftEffect?.dispose()
     this.renderPipeline?.dispose()
+    this.tiltShiftEffect = null
+    this.renderPipeline = null
+    this.speedLinesEffect = null
+    this.outputNodes = null
+    this.scene = scene
+    this.camera = camera
+
+    if (!this.postProcessingEnabled) {
+      return
+    }
 
     const scenePass = pass(scene, camera)
     const sceneColor = scenePass.getTextureNode('output')
@@ -196,7 +210,11 @@ export default class Renderer {
   }
 
   render() {
-    this.renderPipeline.render()
+    if (this.postProcessingEnabled) {
+      this.renderPipeline.render()
+    } else {
+      this.instance.render(this.scene, this.camera)
+    }
   }
 
   dispose() {
