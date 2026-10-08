@@ -119,6 +119,61 @@ test('build hides stale instances by lowering mesh count', () => {
   assert.equal(mesh.count, 1)
 })
 
+test('tree and non-tree prefab visibility is independent, including after a rebuild', () => {
+  const manifest = {
+    tree: {
+      category: 'tree',
+      placement: { surface: 'land' },
+      variants: [{ source: 'treeModel', weight: 1 }],
+      randomRotation: false
+    },
+    rock: {
+      category: 'rock',
+      placement: { surface: 'land' },
+      variants: [{ source: 'rockModel', weight: 1 }],
+      randomRotation: false
+    }
+  }
+  const biomes = {
+    forest: { prefabs: [{ id: 'tree', density: 1 }] },
+    desert: { prefabs: [{ id: 'rock', density: 1 }] }
+  }
+  const placer = createPlacer({ manifest, biomes })
+  placer.config.placement.enablePrefabs = false
+  placer.build(createTerrainMap([['forest', 'desert']]))
+
+  const treeGroup = [...placer.variantGroups.values()].find((group) => group.userData.category === 'tree')
+  const rockGroup = [...placer.variantGroups.values()].find((group) => group.userData.category === 'rock')
+  assert.ok(treeGroup)
+  assert.ok(rockGroup)
+  assert.equal(treeGroup.visible, true)
+  assert.equal(rockGroup.visible, false)
+
+  placer.config.placement.enableTrees = false
+  placer.syncVariantGroupVisibility()
+  assert.equal(treeGroup.visible, false)
+  assert.equal(rockGroup.visible, false)
+
+  placer.config.placement.enablePrefabs = true
+  placer.syncVariantGroupVisibility()
+  assert.equal(treeGroup.visible, false)
+  assert.equal(rockGroup.visible, true)
+
+  placer.config.placement.enableTrees = true
+  placer.syncVariantGroupVisibility()
+  assert.equal(treeGroup.visible, true)
+  assert.equal(rockGroup.visible, true)
+
+  placer.build(createTerrainMap([['desert', 'desert']]))
+  assert.equal(treeGroup.visible, false)
+  assert.equal(rockGroup.visible, true)
+  placer.config.placement.enableTrees = false
+  placer.syncVariantGroupVisibility()
+  placer.config.placement.enableTrees = true
+  placer.syncVariantGroupVisibility()
+  assert.equal(treeGroup.visible, false)
+})
+
 test('build clamps instance count to configured prefab capacity', () => {
   const manifest = {
     testGrass: {

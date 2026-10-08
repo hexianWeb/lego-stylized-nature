@@ -19,7 +19,7 @@ const config = {
     seaClip: 0.35,
     ao: { enabled: false, previewGrayscale: false }
   },
-  placement: { enablePrefabs: true },
+  placement: { enablePrefabs: true, enableTrees: false },
   water: { enableWater: false },
   chunks: {
     size: 32,
@@ -419,6 +419,27 @@ test('disabling prefabs clears queued builds until they are enabled again', () =
   manager.setPrefabsEnabled(true)
   manager.update(6.4, 6.4)
   settleChunkAndPrefabQueues(manager, 6.4, 6.4)
+  assert.equal([...manager.activeSlots.values()].filter((slot) => slot.prefabsVisible).length, 4)
+})
+
+test('tree-only placement remains active when regular prefabs are hidden', () => {
+  const manager = createManager()
+  manager.config.placement.enableTrees = true
+
+  manager.bootstrap(6.4, 6.4)
+  settleChunkAndPrefabQueues(manager, 6.4, 6.4)
+  manager.setPrefabsEnabled(false)
+  manager.update(6.4, 6.4)
+  assert.equal([...manager.activeSlots.values()].filter((slot) => slot.prefabsVisible).length, 4)
+
+  manager.config.placement.enableTrees = false
+  manager.syncPlacementVisibility()
+  manager.update(6.4, 6.4)
+  assert.ok(manager.slots.every((slot) => !slot.prefabsVisible))
+
+  manager.config.placement.enableTrees = true
+  manager.syncPlacementVisibility()
+  manager.update(6.4, 6.4)
   assert.equal([...manager.activeSlots.values()].filter((slot) => slot.prefabsVisible).length, 4)
 })
 

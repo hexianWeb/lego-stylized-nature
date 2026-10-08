@@ -26,6 +26,7 @@ export default class PrefabPlacer {
         this.overflowWarnings = new Set()
         this.meshBuckets = new Map()
         this.variantGroups = new Map()
+        this.activeTransformKeys = new Set()
         this._instanceMatrix = new THREE.Matrix4()
         this._composed = new THREE.Matrix4()
         this._position = new THREE.Vector3()
@@ -83,10 +84,6 @@ export default class PrefabPlacer {
                 for (const rule of biome.prefabs) {
                     const prefab = this.prefabRegistry.get(rule.id)
                     if (!prefab) {
-                        continue
-                    }
-
-                    if (this.config.placement.enableTrees === false && prefab.entry.category === 'tree') {
                         continue
                     }
 
@@ -208,16 +205,20 @@ export default class PrefabPlacer {
         }
     }
 
-    syncVariantGroupVisibility(activeTransformKeys) {
+    syncVariantGroupVisibility(activeTransformKeys = this.activeTransformKeys) {
+        this.activeTransformKeys = activeTransformKeys
         for (const [key, group] of this.variantGroups.entries()) {
-            group.visible = activeTransformKeys.has(key)
+            const enabled = group.userData.category === 'tree'
+                ? this.config.placement?.enableTrees !== false
+                : this.config.placement?.enablePrefabs !== false
+            group.visible = activeTransformKeys.has(key) && enabled
         }
     }
 
     fillTransformBucket(transformKey, sourceScene, transforms, prefabEntry, tint, prefabId, biomeId) {
         sourceScene.updateMatrixWorld(true)
 
-        const variantGroup = this.getOrCreateVariantGroup(transformKey)
+        const variantGroup = this.getOrCreateVariantGroup(transformKey, prefabEntry.category)
         const instanceColors = this.getInstanceColors(prefabEntry)
         let matchedInstanceColorMesh = false
         const capacity = this.getPrefabCapacity(prefabEntry)
@@ -270,7 +271,7 @@ export default class PrefabPlacer {
         this.warnMissingInstanceColorMesh(instanceColors, matchedInstanceColorMesh, prefabId)
     }
 
-    getOrCreateVariantGroup(transformKey) {
+    getOrCreateVariantGroup(transformKey, category) {
         if (!this.variantGroups.has(transformKey)) {
             const group = new THREE.Group()
             group.name = `PrefabVariant:${transformKey}`
@@ -279,6 +280,7 @@ export default class PrefabPlacer {
         }
 
         const group = this.variantGroups.get(transformKey)
+        group.userData.category = category
         group.visible = true
         return group
     }
@@ -404,6 +406,7 @@ export default class PrefabPlacer {
         }
         this.meshBuckets.clear()
         this.variantGroups.clear()
+        this.activeTransformKeys.clear()
         this.overflowWarnings.clear()
 
         const children = [...this.group.children]

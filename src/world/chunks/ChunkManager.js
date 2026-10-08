@@ -328,19 +328,27 @@ export default class ChunkManager {
 
   setPrefabsEnabled(enabled) {
     this.config.placement.enablePrefabs = enabled
-    if (enabled) {
-      return
-    }
+    this.syncPlacementVisibility()
+  }
 
+  syncPlacementVisibility() {
+    const placementEnabled = this.config.placement?.enablePrefabs !== false
+      || this.config.placement?.enableTrees !== false
     for (const slot of this.slots) {
-      slot.setPrefabsVisible?.(false)
+      slot.prefabPlacer?.syncVariantGroupVisibility()
+      if (!placementEnabled) {
+        slot.setPrefabsVisible?.(false)
+      }
     }
-    this.pendingPrefabBuildQueue.length = 0
-    this.pendingPrefabBuildKeys.clear()
+    if (!placementEnabled) {
+      this.pendingPrefabBuildQueue.length = 0
+      this.pendingPrefabBuildKeys.clear()
+    }
   }
 
   updateVisibility(worldBlock, { buildPrefabs = true } = {}) {
-    const prefabsEnabled = this.config.placement?.enablePrefabs !== false
+    const placementEnabled = this.config.placement?.enablePrefabs !== false
+      || this.config.placement?.enableTrees !== false
     const prefabActiveKeys = new Set(
       getPlayerPrefabWindowCoords(worldBlock, this.chunkSize).map((coord) => getRenderChunkKey(coord))
     )
@@ -348,7 +356,7 @@ export default class ChunkManager {
     for (const [key, slot] of this.activeSlots) {
       slot.show()
 
-      if (!prefabsEnabled) {
+      if (!placementEnabled) {
         slot.setPrefabsVisible?.(false)
         continue
       }
@@ -368,7 +376,7 @@ export default class ChunkManager {
       this.removePendingPrefabBuild(key)
     }
 
-    if (prefabsEnabled && buildPrefabs) {
+    if (placementEnabled && buildPrefabs) {
       this.buildPendingPrefabs(prefabActiveKeys)
     }
   }

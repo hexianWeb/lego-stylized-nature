@@ -212,9 +212,7 @@ export default class World {
         )
         this.waterBrickRenderer?.build(this.terrainMap)
         this.lavaBrickRenderer.build(this.terrainMap)
-        if (this.config.placement?.enablePrefabs !== false) {
-            this.prefabPlacer?.build(this.terrainMap)
-        }
+        this.prefabPlacer?.build(this.terrainMap)
 
         this.refreshAOPreview()
     }
@@ -238,7 +236,8 @@ export default class World {
         }
         if (this.prefabPlacer?.group) {
             this.prefabPlacer.group.visible = !preview && !useChunkTerrain
-                && this.config.placement?.enablePrefabs !== false
+                && (this.config.placement?.enablePrefabs !== false
+                    || this.config.placement?.enableTrees !== false)
         }
         if (this.playerAircraft?.group) {
             this.playerAircraft.group.visible = !preview
@@ -255,14 +254,13 @@ export default class World {
 
         const onRegenerate = () => this.regenerate()
         const onAOPreviewChange = () => this.refreshAOPreview()
-        const onPrefabsChange = () => {
-            const enabled = this.config.placement.enablePrefabs
+        const onPlacementVisibilityChange = () => {
+            const enabled = this.config.placement.enablePrefabs !== false
+                || this.config.placement.enableTrees !== false
             if (this.terrainChunkManager) {
-                this.terrainChunkManager.setPrefabsEnabled(enabled)
+                this.terrainChunkManager.syncPlacementVisibility()
             } else if (this.prefabPlacer) {
-                if (enabled && this.terrainMap) {
-                    this.prefabPlacer.build(this.terrainMap)
-                }
+                this.prefabPlacer.syncVariantGroupVisibility()
                 this.prefabPlacer.group.visible = enabled
                     && this.config.terrain.ao?.previewGrayscale !== true
             }
@@ -271,7 +269,7 @@ export default class World {
         createTerrainPanel(debug, this.config, onRegenerate)
         createAOPanel(debug, this.config, onRegenerate, onAOPreviewChange)
         createBiomePanel(debug, this.config, onRegenerate)
-        createPlacementPanel(debug, this.config, onRegenerate, onPrefabsChange)
+        createPlacementPanel(debug, this.config, onRegenerate, onPlacementVisibilityChange)
         createMaterialPanel(debug, this.config, {
             legoMaterial: this.terrainChunkManager?.getDebugMaterials().legoMaterial
                 ?? this.terrainBrickRenderer?.material,
