@@ -4,11 +4,13 @@ import {
   renderOutput,
   Fn,
   float,
+  vec4,
   screenUV,
   smoothstep
 } from 'three/tsl'
 import { smaa } from 'three/addons/tsl/display/SMAANode.js'
 import { createTiltShiftEffect } from './postprocessing/createTiltShiftEffect.js'
+import { installObjectResourceCleanup } from './installObjectResourceCleanup.js'
 import { TILT_SHIFT_DEFAULTS } from './postprocessing/tiltShiftConfig.js'
 import { createSpeedLinesEffect } from './postprocessing/createSpeedLinesEffect.js'
 import {
@@ -19,7 +21,8 @@ import {
 // dist is scaled so screen corners sit near 1.0 (~sqrt(2)/2 * 1.42)
 const VIGNETTE_INNER = 0.22
 const VIGNETTE_OUTER = 0.92
-const VIGNETTE_AMOUNT = 0.2
+// Linear 0.6 converts to about sRGB 0.8, matching the previous corner darkening.
+const VIGNETTE_AMOUNT = 0.4
 
 const applyVignette = Fn(() => {
   const dist = screenUV.sub(0.5).length().mul(1.42)
@@ -31,6 +34,7 @@ export default class Renderer {
   /**
     * @param {{
     *   canvas: HTMLCanvasElement,
+    *   trackTimestamp?: boolean,
     *   postProcessing?: {
     *     enabled?: boolean,
     *     tiltShift?: {
@@ -54,16 +58,19 @@ export default class Renderer {
    *   }
    * }} options
    */
-  constructor({ canvas, postProcessing = {} }) {
+  constructor({ canvas, postProcessing = {}, trackTimestamp = false }) {
     this.instance = new THREE.WebGPURenderer({
       canvas,
-      forceWebGL: false
+      forceWebGL: false,
+      trackTimestamp
     })
     this.instance.outputColorSpace = THREE.SRGBColorSpace
     this.instance.toneMapping = THREE.ACESFilmicToneMapping
     this.instance.toneMappingExposure = 0.9
     this.instance.shadowMap.enabled = true
     this.instance.shadowMap.type = THREE.BasicShadowMap
+    // Count all scene, shadow and postprocessing passes in one game frame.
+    this.instance.info.autoReset = false
 
     this.postProcessingEnabled = postProcessing.enabled !== false
     this.tiltShiftConfig =
@@ -79,6 +86,9 @@ export default class Renderer {
     this.outputNodes = null
     this.scene = null
     this.camera = null
+    this.pipelineNodes = []
+    this.initialized = false
+    this.disposed = false
 
     this.postProcessingController = Object.freeze({
       setTiltShiftEnabled: (enabled) => {
@@ -104,12 +114,7 @@ export default class Renderer {
    * @param {THREE.Camera} camera
    */
   attachPipeline(scene, camera) {
-    this.tiltShiftEffect?.dispose()
-    this.renderPipeline?.dispose()
-    this.tiltShiftEffect = null
-    this.renderPipeline = null
-    this.speedLinesEffect = null
-    this.outputNodes = null
+    this.disposePipeline()
     this.scene = scene
     this.camera = camera
 
@@ -118,6 +123,7 @@ export default class Renderer {
     }
 
     const scenePass = pass(scene, camera)
+    this.pipelineNodes.push(scenePass)
     const sceneColor = scenePass.getTextureNode('output')
     this.speedLinesEffect = createSpeedLinesEffect(
       sceneColor,
@@ -127,6 +133,7 @@ export default class Renderer {
       this.speedLinesEffect.outputNode,
       this.tiltShiftConfig
     )
+    this.pipelineNodes.push(this.tiltShiftEffect)
 
     this.outputNodes = {
       tiltShiftEnabled: this.createFinalOutput(
@@ -143,9 +150,11 @@ export default class Renderer {
   }
 
   createFinalOutput(sceneColor) {
-    const color = renderOutput(sceneColor)
-    const vignetted = color.mul(applyVignette())
-    return smaa(vignetted)
+    const color = renderOutput(sceneColor, this.instance.toneMapping, THREE.LinearSRGBColorSpace)
+    const vignetted = vec4(color.rgb.mul(applyVignette()), color.a)
+    const aa = smaa(vignetted)
+    this.pipelineNodes.push(aa.textureNode, aa)
+    return renderOutput(aa, THREE.NoToneMapping, THREE.SRGBColorSpace)
   }
 
   setTiltShiftEnabled(enabled) {
@@ -156,9 +165,13 @@ export default class Renderer {
       return
     }
 
-    this.renderPipeline.outputNode = nextEnabled
+    const nextOutput = nextEnabled
       ? this.outputNodes.tiltShiftEnabled
       : this.outputNodes.tiltShiftDisabled
+    if (this.renderPipeline.outputNode !== nextOutput) {
+      this.renderPipeline.outputNode = nextOutput
+      this.renderPipeline.needsUpdate = true
+    }
   }
 
   syncTiltShift(config = {}) {
@@ -199,6 +212,16 @@ export default class Renderer {
 
   async init() {
     await this.instance.init()
+    this.initialized = true
+    if (this.disposed) {
+      this.instance.dispose()
+      throw new Error('[Renderer] Disposed during initialization')
+    }
+    this.objectResourceCleanup = installObjectResourceCleanup(this.instance)
+  }
+
+  releaseSceneObjects(group) {
+    this.objectResourceCleanup?.releaseGroup(group)
   }
 
   /**
@@ -210,6 +233,7 @@ export default class Renderer {
   }
 
   render() {
+    this.instance.info?.reset()
     if (this.postProcessingEnabled) {
       this.renderPipeline.render()
     } else {
@@ -217,12 +241,39 @@ export default class Renderer {
     }
   }
 
-  dispose() {
-    this.tiltShiftEffect?.dispose()
+  disposePipeline() {
     this.renderPipeline?.dispose()
+    const nodes = new Set(this.pipelineNodes ?? [])
+    if (this.tiltShiftEffect) {
+      nodes.add(this.tiltShiftEffect)
+    }
+    for (const node of nodes) {
+      // r185's RTTNode inherits Node.dispose() without releasing these allocations.
+      if (node.isRTTNode) {
+        node.renderTarget.dispose()
+        node._quadMesh.material.dispose()
+      }
+      node.dispose()
+    }
+    this.pipelineNodes = []
     this.tiltShiftEffect = null
     this.speedLinesEffect = null
     this.renderPipeline = null
     this.outputNodes = null
+  }
+
+  dispose() {
+    if (this.disposed) {
+      return
+    }
+    this.disposed = true
+    this.disposePipeline()
+    // r185's dispose() calls setAnimationLoop(), which initializes an unready renderer.
+    if (this.initialized) {
+      this.instance.dispose()
+    }
+    this.scene = null
+    this.camera = null
+    this.objectResourceCleanup = null
   }
 }

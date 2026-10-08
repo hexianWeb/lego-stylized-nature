@@ -58,7 +58,6 @@ test('chunk mode regenerate skips full terrain generation', () => {
     }
   }
   world.brickColorResolver = {}
-  world.terrainBrickRenderer = { updateInstanceColors() {} }
   world.playerAircraft = {
     enabled: true,
     state: { position: { x: 12.8, z: 12.8 } },
@@ -81,9 +80,50 @@ test('chunk mode regenerate skips full terrain generation', () => {
   world.regenerate()
 
   assert.equal(generatedFullMap, false)
+  assert.equal(world.terrainBrickRenderer, null)
   assert.deepEqual(
     { x: world.terrainChunkManager.bootstrapped.x, z: world.terrainChunkManager.bootstrapped.z },
     { x: 12.8, z: 12.8 }
   )
   assert.ok(world.experience.environment.shadowConfig)
 })
+
+for (const chunkMode of [true, false]) {
+  test(`World.build uses one material owner in ${chunkMode ? 'chunk' : 'full map'} mode`, () => {
+    const experience = createExperience()
+    const sourceGeometry = new THREE.BoxGeometry(0.2, 0.095, 0.2)
+    const scene = new THREE.Group()
+    scene.add(new THREE.Mesh(sourceGeometry, new THREE.MeshBasicMaterial()))
+    experience.resources.items.brick2x2Model = { scene }
+    const world = new World(experience)
+    world.config = structuredClone(world.config)
+    Object.assign(world.config.terrain, { width: 8, depth: 8 })
+    Object.assign(world.config.chunks, { enabled: chunkMode, size: 4 })
+    world.config.player.aircraft.enabled = false
+    world.config.biomeCenters.enabled = false
+    world.build()
+    if (chunkMode) {
+      assert.equal(world.terrainBrickRenderer, null)
+      const slots = world.terrainChunkManager.slots
+      assert.equal(new Set(slots.map((slot) => slot.terrainRenderer.material)).size, 1)
+      assert.ok(slots.every((slot) => slot.waterRenderer.material === world.materials.waterMaterial))
+      assert.ok(slots.every((slot) => slot.lavaRenderer.material === world.materials.lavaMaterial))
+    } else {
+      assert.equal(world.terrainChunkManager, null)
+      assert.equal(world.terrainBrickRenderer.material, world.materials.legoMaterial)
+      assert.equal(world.waterBrickRenderer.material, world.materials.waterMaterial)
+    }
+    const childCount = world.children.length
+    world.build()
+    assert.equal(world.children.length, childCount)
+    let clonedDisposed = 0
+    let sourceDisposed = 0
+    world.brickGeometry.addEventListener('dispose', () => clonedDisposed++)
+    sourceGeometry.addEventListener('dispose', () => sourceDisposed++)
+    world.dispose()
+    world.dispose()
+    assert.equal(clonedDisposed, 1)
+    assert.equal(sourceDisposed, 0)
+    sourceGeometry.dispose()
+  })
+}

@@ -14,6 +14,10 @@ export async function bootstrap(canvas) {
         await experience.init()
         experience.start()
     } catch (err) {
+        experience.dispose()
+        if (typeof window !== 'undefined' && window.__experience === experience) {
+            delete window.__experience
+        }
         console.error(err)
     }
 }

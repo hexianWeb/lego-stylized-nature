@@ -1,24 +1,22 @@
 import * as THREE from 'three/webgpu'
 import { placementRandom01 } from '../../utils/random.js'
 import { canPlacePrefab, pickVariantIndex, makePrefabTransform } from './placementRules.js'
-import { resolvePrefabMaterial, disposeBiomeTintMaterial } from './prefabMaterialTint.js'
-import { resolveTreeMaterial, resolveTreeInstanceColor, disposeTreeMaterials } from './treeMaterial.js'
+import { resolveTreeInstanceColor } from './treeMaterial.js'
 import {
     normalizeInstanceColors,
     pickInstanceColorIndex,
-    matchesInstanceColorMesh,
-    resolveInstanceColorMaterial,
-    disposeInstanceColorMaterial
+    matchesInstanceColorMesh
 } from './prefabInstanceColor.js'
 import { getTerrainIterationBounds } from '../terrain/terrainMapBounds.js'
 
 const DEFAULT_PREFAB_CAPACITY = 512
 
 export default class PrefabPlacer {
-    constructor({ config, biomeRegistry, prefabRegistry }) {
+    constructor({ config, biomeRegistry, prefabRegistry, materials }) {
         this.config = config
         this.biomeRegistry = biomeRegistry
         this.prefabRegistry = prefabRegistry
+        this.materials = materials
         this.group = new THREE.Group()
         this.group.name = 'BiomePrefabs'
         this.instanceColorConfigCache = new WeakMap()
@@ -305,12 +303,12 @@ export default class PrefabPlacer {
             : false
         const biome = biomeId ? this.biomeRegistry.get(biomeId) : null
         const isTree = prefabEntry.category === 'tree'
-        const treeMaterial = isTree ? resolveTreeMaterial(child, biomeId) : null
+        const treeMaterial = isTree ? this.materials.resolveTreeMaterial(child, biomeId) : null
         const material = isTree
-            ? treeMaterial ?? resolvePrefabMaterial(child.material, tint)
+            ? treeMaterial ?? this.materials.resolvePrefabMaterial(child.material, tint)
             : usesInstanceColor
-                ? resolveInstanceColorMaterial(child.material)
-                : resolvePrefabMaterial(child.material, tint)
+                ? this.materials.resolveInstanceColorMaterial(child.material)
+                : this.materials.resolvePrefabMaterial(child.material, tint)
 
         let materialMode = 'source'
         if (isTree && treeMaterial) {
@@ -365,6 +363,10 @@ export default class PrefabPlacer {
 
         mesh.count = transforms.length
         mesh.instanceMatrix.needsUpdate = true
+        mesh.computeBoundingSphere()
+        if (mesh.boundingBox) {
+            mesh.computeBoundingBox()
+        }
         if (mesh.instanceColor) {
             mesh.instanceColor.needsUpdate = true
         }
@@ -399,8 +401,6 @@ export default class PrefabPlacer {
         const disposedMeshes = new Set()
 
         for (const { mesh } of this.meshBuckets.values()) {
-            disposeBiomeTintMaterial(mesh.material)
-            disposeInstanceColorMaterial(mesh.material)
             mesh.dispose()
             disposedMeshes.add(mesh)
         }
@@ -413,15 +413,12 @@ export default class PrefabPlacer {
         for (const child of children) {
             child.traverse((node) => {
                 if (node.isInstancedMesh && !disposedMeshes.has(node)) {
-                    disposeBiomeTintMaterial(node.material)
-                    disposeInstanceColorMaterial(node.material)
                     node.dispose()
                 }
             })
             this.group.remove(child)
         }
 
-        disposeTreeMaterials()
     }
 
     dispose() {

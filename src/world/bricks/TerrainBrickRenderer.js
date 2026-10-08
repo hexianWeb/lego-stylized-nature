@@ -1,12 +1,11 @@
 import * as THREE from 'three/webgpu'
-import { createLegoMaterial } from '../../materials/tsl/legoMaterial.js'
 
 export default class TerrainBrickRenderer {
-  constructor({ config, brickGeometry }) {
+  constructor({ config, brickGeometry, materials }) {
     this.config = config
     this.brickGeometry = brickGeometry
-    this.material = createLegoMaterial()
-    this.previewMaterial = new THREE.MeshBasicNodeMaterial()
+    this.material = materials.legoMaterial
+    this.previewMaterial = materials.previewMaterial
     this.group = new THREE.Group()
     this.group.name = 'TerrainBricks'
     this.mesh = null
@@ -49,6 +48,10 @@ export default class TerrainBrickRenderer {
 
     this.mesh.count = placements.length
     this.mesh.instanceMatrix.needsUpdate = true
+    this.mesh.computeBoundingSphere()
+    if (this.mesh.boundingBox) {
+      this.mesh.computeBoundingBox()
+    }
     this.updateInstanceColors()
 
     return this.group
@@ -95,8 +98,6 @@ export default class TerrainBrickRenderer {
 
   dispose() {
     this.mesh?.dispose()
-    this.material.dispose()
-    this.previewMaterial.dispose()
     this.group.parent?.remove(this.group)
     this.group.clear()
     this.mesh = null

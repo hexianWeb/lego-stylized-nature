@@ -74,6 +74,39 @@ function createAsset() {
   return { scene }
 }
 
+test('engine emission clones shared materials and changes intensity without recompilation', () => {
+  const asset = createAsset()
+  const texture = new THREE.Texture()
+  const sourceMaterial = new THREE.MeshStandardMaterial({ emissive: '#ff8000', emissiveMap: texture })
+  for (const name of ['left_engine', 'right_engine']) {
+    const engine = new THREE.Mesh(new THREE.BoxGeometry(), sourceMaterial)
+    engine.name = name
+    asset.scene.add(engine)
+  }
+  const aircraft = new PlayerAircraft(createExperience({ asset, config: { engineFlame: { enabled: false } } }))
+  const left = aircraft.engineNodes.left.material
+  const right = aircraft.engineNodes.right.material
+  assert.notEqual(left, sourceMaterial)
+  assert.notEqual(right, left)
+  const versions = [left.version, right.version]
+  aircraft.attitudeState.leftThruster = 0.2
+  aircraft.attitudeState.rightThruster = 0.8
+  aircraft._applyThrusterVisuals()
+  assert.equal(left.emissiveIntensity, 0.2)
+  assert.equal(right.emissiveIntensity, 0.8)
+  assert.deepEqual(left.emissive, sourceMaterial.emissive)
+  assert.deepEqual([left.version, right.version], versions)
+  assert.equal(sourceMaterial.emissiveIntensity, 1)
+  let disposed = 0
+  left.addEventListener('dispose', () => disposed++)
+  right.addEventListener('dispose', () => disposed++)
+  sourceMaterial.addEventListener('dispose', () => assert.fail('source material is owned by Resources'))
+  texture.addEventListener('dispose', () => assert.fail('shared texture is owned by Resources'))
+  aircraft.dispose()
+  aircraft.dispose()
+  assert.equal(disposed, 2)
+})
+
 function createDebugFolder(title = 'root') {
   return {
     title,

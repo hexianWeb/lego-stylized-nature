@@ -1,0 +1,960 @@
+[
+  {
+    "name": "instanced-matrix-capacity",
+    "firstDrawCount": 1,
+    "nextDrawCount": 800,
+    "compiledCapacity": 900
+  },
+  {
+    "name": "five-world-cycles",
+    "memories": [
+      {
+        "attributes": 198,
+        "attributesSize": 40407848,
+        "geometries": 39,
+        "indexAttributes": 37,
+        "indexAttributesSize": 845124,
+        "indirectStorageAttributes": 0,
+        "indirectStorageAttributesSize": 0,
+        "programs": 384,
+        "programsSize": 1548613,
+        "readbackBuffers": 0,
+        "readbackBuffersSize": 0,
+        "renderTargets": 3,
+        "storageAttributes": 0,
+        "storageAttributesSize": 0,
+        "textures": 15,
+        "texturesSize": 66609080,
+        "uniformBuffers": 783,
+        "uniformBuffersSize": 4351040,
+        "total": 113761705
+      },
+      {
+        "attributes": 202,
+        "attributesSize": 42789672,
+        "geometries": 39,
+        "indexAttributes": 37,
+        "indexAttributesSize": 845124,
+        "indirectStorageAttributes": 0,
+        "indirectStorageAttributesSize": 0,
+        "programs": 481,
+        "programsSize": 1807426,
+        "readbackBuffers": 0,
+        "readbackBuffersSize": 0,
+        "renderTargets": 3,
+        "storageAttributes": 0,
+        "storageAttributesSize": 0,
+        "textures": 15,
+        "texturesSize": 66609080,
+        "uniformBuffers": 1011,
+        "uniformBuffersSize": 4877888,
+        "total": 116929190
+      },
+      {
+        "attributes": 202,
+        "attributesSize": 42789672,
+        "geometries": 39,
+        "indexAttributes": 37,
+        "indexAttributesSize": 845124,
+        "indirectStorageAttributes": 0,
+        "indirectStorageAttributesSize": 0,
+        "programs": 481,
+        "programsSize": 1809708,
+        "readbackBuffers": 0,
+        "readbackBuffersSize": 0,
+        "renderTargets": 3,
+        "storageAttributes": 0,
+        "storageAttributesSize": 0,
+        "textures": 15,
+        "texturesSize": 66609080,
+        "uniformBuffers": 1011,
+        "uniformBuffersSize": 4877888,
+        "total": 116931472
+      },
+      {
+        "attributes": 202,
+        "attributesSize": 42789672,
+        "geometries": 39,
+        "indexAttributes": 37,
+        "indexAttributesSize": 845124,
+        "indirectStorageAttributes": 0,
+        "indirectStorageAttributesSize": 0,
+        "programs": 481,
+        "programsSize": 1810520,
+        "readbackBuffers": 0,
+        "readbackBuffersSize": 0,
+        "renderTargets": 3,
+        "storageAttributes": 0,
+        "storageAttributesSize": 0,
+        "textures": 15,
+        "texturesSize": 66609080,
+        "uniformBuffers": 1011,
+        "uniformBuffersSize": 4877888,
+        "total": 116932284
+      },
+      {
+        "attributes": 202,
+        "attributesSize": 42789672,
+        "geometries": 39,
+        "indexAttributes": 37,
+        "indexAttributesSize": 845124,
+        "indirectStorageAttributes": 0,
+        "indirectStorageAttributesSize": 0,
+        "programs": 481,
+        "programsSize": 1810520,
+        "readbackBuffers": 0,
+        "readbackBuffersSize": 0,
+        "renderTargets": 3,
+        "storageAttributes": 0,
+        "storageAttributesSize": 0,
+        "textures": 15,
+        "texturesSize": 66609080,
+        "uniformBuffers": 1011,
+        "uniformBuffersSize": 4877888,
+        "total": 116932284
+      }
+    ],
+    "snapshots": [
+      {
+        "position": [
+          12.8,
+          3,
+          12.8
+        ],
+        "camera": [
+          40,
+          43,
+          40.00000000000001
+        ],
+        "target": [
+          12.800000000000002,
+          3,
+          12.800000000000002
+        ],
+        "chunkCenter": {
+          "x": 0,
+          "z": 0
+        },
+        "slots": [
+          {
+            "coord": {
+              "x": 0,
+              "z": 0
+            },
+            "terrainCapacity": 9304,
+            "terrainCount": 7753,
+            "water": 962
+          },
+          {
+            "coord": {
+              "x": -1,
+              "z": 0
+            },
+            "terrainCapacity": 9830,
+            "terrainCount": 8191,
+            "water": 886
+          },
+          {
+            "coord": {
+              "x": 0,
+              "z": -1
+            },
+            "terrainCapacity": 9714,
+            "terrainCount": 8095,
+            "water": 1012
+          },
+          {
+            "coord": {
+              "x": 0,
+              "z": 1
+            },
+            "terrainCapacity": 10022,
+            "terrainCount": 8351,
+            "water": 928
+          },
+          {
+            "coord": {
+              "x": 1,
+              "z": 0
+            },
+            "terrainCapacity": 9498,
+            "terrainCount": 7915,
+            "water": 854
+          },
+          {
+            "coord": {
+              "x": -1,
+              "z": -1
+            },
+            "terrainCapacity": 10067,
+            "terrainCount": 8389,
+            "water": 989
+          },
+          {
+            "coord": {
+              "x": -1,
+              "z": 1
+            },
+            "terrainCapacity": 9845,
+            "terrainCount": 8204,
+            "water": 895
+          },
+          {
+            "coord": {
+              "x": 1,
+              "z": -1
+            },
+            "terrainCapacity": 10262,
+            "terrainCount": 8551,
+            "water": 808
+          },
+          {
+            "coord": {
+              "x": 1,
+              "z": 1
+            },
+            "terrainCapacity": 9458,
+            "terrainCount": 7881,
+            "water": 826
+          }
+        ]
+      },
+      {
+        "position": [
+          12.8,
+          3,
+          12.8
+        ],
+        "camera": [
+          40,
+          42.99999999999999,
+          40
+        ],
+        "target": [
+          12.800000000000002,
+          3,
+          12.800000000000002
+        ],
+        "chunkCenter": {
+          "x": 0,
+          "z": 0
+        },
+        "slots": [
+          {
+            "coord": {
+              "x": 0,
+              "z": 0
+            },
+            "terrainCapacity": 9304,
+            "terrainCount": 7753,
+            "water": 962
+          },
+          {
+            "coord": {
+              "x": -1,
+              "z": 0
+            },
+            "terrainCapacity": 9830,
+            "terrainCount": 8191,
+            "water": 886
+          },
+          {
+            "coord": {
+              "x": 0,
+              "z": -1
+            },
+            "terrainCapacity": 9714,
+            "terrainCount": 8095,
+            "water": 1012
+          },
+          {
+            "coord": {
+              "x": 0,
+              "z": 1
+            },
+            "terrainCapacity": 10022,
+            "terrainCount": 8351,
+            "water": 928
+          },
+          {
+            "coord": {
+              "x": 1,
+              "z": 0
+            },
+            "terrainCapacity": 9498,
+            "terrainCount": 7915,
+            "water": 854
+          },
+          {
+            "coord": {
+              "x": -1,
+              "z": -1
+            },
+            "terrainCapacity": 10067,
+            "terrainCount": 8389,
+            "water": 989
+          },
+          {
+            "coord": {
+              "x": -1,
+              "z": 1
+            },
+            "terrainCapacity": 9845,
+            "terrainCount": 8204,
+            "water": 895
+          },
+          {
+            "coord": {
+              "x": 1,
+              "z": -1
+            },
+            "terrainCapacity": 10262,
+            "terrainCount": 8551,
+            "water": 808
+          },
+          {
+            "coord": {
+              "x": 1,
+              "z": 1
+            },
+            "terrainCapacity": 9458,
+            "terrainCount": 7881,
+            "water": 826
+          }
+        ]
+      },
+      {
+        "position": [
+          12.8,
+          3,
+          12.8
+        ],
+        "camera": [
+          40,
+          43,
+          40.00000000000001
+        ],
+        "target": [
+          12.800000000000002,
+          3,
+          12.800000000000002
+        ],
+        "chunkCenter": {
+          "x": 0,
+          "z": 0
+        },
+        "slots": [
+          {
+            "coord": {
+              "x": 0,
+              "z": 0
+            },
+            "terrainCapacity": 9304,
+            "terrainCount": 7753,
+            "water": 962
+          },
+          {
+            "coord": {
+              "x": -1,
+              "z": 0
+            },
+            "terrainCapacity": 9830,
+            "terrainCount": 8191,
+            "water": 886
+          },
+          {
+            "coord": {
+              "x": 0,
+              "z": -1
+            },
+            "terrainCapacity": 9714,
+            "terrainCount": 8095,
+            "water": 1012
+          },
+          {
+            "coord": {
+              "x": 0,
+              "z": 1
+            },
+            "terrainCapacity": 10022,
+            "terrainCount": 8351,
+            "water": 928
+          },
+          {
+            "coord": {
+              "x": 1,
+              "z": 0
+            },
+            "terrainCapacity": 9498,
+            "terrainCount": 7915,
+            "water": 854
+          },
+          {
+            "coord": {
+              "x": -1,
+              "z": -1
+            },
+            "terrainCapacity": 10067,
+            "terrainCount": 8389,
+            "water": 989
+          },
+          {
+            "coord": {
+              "x": -1,
+              "z": 1
+            },
+            "terrainCapacity": 9845,
+            "terrainCount": 8204,
+            "water": 895
+          },
+          {
+            "coord": {
+              "x": 1,
+              "z": -1
+            },
+            "terrainCapacity": 10262,
+            "terrainCount": 8551,
+            "water": 808
+          },
+          {
+            "coord": {
+              "x": 1,
+              "z": 1
+            },
+            "terrainCapacity": 9458,
+            "terrainCount": 7881,
+            "water": 826
+          }
+        ]
+      },
+      {
+        "position": [
+          12.8,
+          3,
+          12.8
+        ],
+        "camera": [
+          40,
+          43.00000000000001,
+          40.000000000000014
+        ],
+        "target": [
+          12.800000000000002,
+          3,
+          12.800000000000002
+        ],
+        "chunkCenter": {
+          "x": 0,
+          "z": 0
+        },
+        "slots": [
+          {
+            "coord": {
+              "x": 0,
+              "z": 0
+            },
+            "terrainCapacity": 9304,
+            "terrainCount": 7753,
+            "water": 962
+          },
+          {
+            "coord": {
+              "x": -1,
+              "z": 0
+            },
+            "terrainCapacity": 9830,
+            "terrainCount": 8191,
+            "water": 886
+          },
+          {
+            "coord": {
+              "x": 0,
+              "z": -1
+            },
+            "terrainCapacity": 9714,
+            "terrainCount": 8095,
+            "water": 1012
+          },
+          {
+            "coord": {
+              "x": 0,
+              "z": 1
+            },
+            "terrainCapacity": 10022,
+            "terrainCount": 8351,
+            "water": 928
+          },
+          {
+            "coord": {
+              "x": 1,
+              "z": 0
+            },
+            "terrainCapacity": 9498,
+            "terrainCount": 7915,
+            "water": 854
+          },
+          {
+            "coord": {
+              "x": -1,
+              "z": -1
+            },
+            "terrainCapacity": 10067,
+            "terrainCount": 8389,
+            "water": 989
+          },
+          {
+            "coord": {
+              "x": -1,
+              "z": 1
+            },
+            "terrainCapacity": 9845,
+            "terrainCount": 8204,
+            "water": 895
+          },
+          {
+            "coord": {
+              "x": 1,
+              "z": -1
+            },
+            "terrainCapacity": 10262,
+            "terrainCount": 8551,
+            "water": 808
+          },
+          {
+            "coord": {
+              "x": 1,
+              "z": 1
+            },
+            "terrainCapacity": 9458,
+            "terrainCount": 7881,
+            "water": 826
+          }
+        ]
+      },
+      {
+        "position": [
+          12.8,
+          3,
+          12.8
+        ],
+        "camera": [
+          40,
+          42.99999999999999,
+          40
+        ],
+        "target": [
+          12.800000000000002,
+          3,
+          12.800000000000002
+        ],
+        "chunkCenter": {
+          "x": 0,
+          "z": 0
+        },
+        "slots": [
+          {
+            "coord": {
+              "x": 0,
+              "z": 0
+            },
+            "terrainCapacity": 9304,
+            "terrainCount": 7753,
+            "water": 962
+          },
+          {
+            "coord": {
+              "x": -1,
+              "z": 0
+            },
+            "terrainCapacity": 9830,
+            "terrainCount": 8191,
+            "water": 886
+          },
+          {
+            "coord": {
+              "x": 0,
+              "z": -1
+            },
+            "terrainCapacity": 9714,
+            "terrainCount": 8095,
+            "water": 1012
+          },
+          {
+            "coord": {
+              "x": 0,
+              "z": 1
+            },
+            "terrainCapacity": 10022,
+            "terrainCount": 8351,
+            "water": 928
+          },
+          {
+            "coord": {
+              "x": 1,
+              "z": 0
+            },
+            "terrainCapacity": 9498,
+            "terrainCount": 7915,
+            "water": 854
+          },
+          {
+            "coord": {
+              "x": -1,
+              "z": -1
+            },
+            "terrainCapacity": 10067,
+            "terrainCount": 8389,
+            "water": 989
+          },
+          {
+            "coord": {
+              "x": -1,
+              "z": 1
+            },
+            "terrainCapacity": 9845,
+            "terrainCount": 8204,
+            "water": 895
+          },
+          {
+            "coord": {
+              "x": 1,
+              "z": -1
+            },
+            "terrainCapacity": 10262,
+            "terrainCount": 8551,
+            "water": 808
+          },
+          {
+            "coord": {
+              "x": 1,
+              "z": 1
+            },
+            "terrainCapacity": 9458,
+            "terrainCount": 7881,
+            "water": 826
+          }
+        ]
+      }
+    ],
+    "retiredWorlds": [
+      {
+        "attributes": 80,
+        "attributesSize": 1930356,
+        "geometries": 38,
+        "indexAttributes": 36,
+        "indexAttributesSize": 843060,
+        "indirectStorageAttributes": 0,
+        "indirectStorageAttributesSize": 0,
+        "programs": 4,
+        "programsSize": 13327,
+        "readbackBuffers": 0,
+        "readbackBuffersSize": 0,
+        "renderTargets": 3,
+        "storageAttributes": 0,
+        "storageAttributesSize": 0,
+        "textures": 15,
+        "texturesSize": 66609080,
+        "uniformBuffers": 4,
+        "uniformBuffersSize": 640,
+        "total": 69396463
+      },
+      {
+        "attributes": 80,
+        "attributesSize": 1930356,
+        "geometries": 38,
+        "indexAttributes": 36,
+        "indexAttributesSize": 843060,
+        "indirectStorageAttributes": 0,
+        "indirectStorageAttributesSize": 0,
+        "programs": 4,
+        "programsSize": 13327,
+        "readbackBuffers": 0,
+        "readbackBuffersSize": 0,
+        "renderTargets": 3,
+        "storageAttributes": 0,
+        "storageAttributesSize": 0,
+        "textures": 15,
+        "texturesSize": 66609080,
+        "uniformBuffers": 4,
+        "uniformBuffersSize": 640,
+        "total": 69396463
+      },
+      {
+        "attributes": 80,
+        "attributesSize": 1930356,
+        "geometries": 38,
+        "indexAttributes": 36,
+        "indexAttributesSize": 843060,
+        "indirectStorageAttributes": 0,
+        "indirectStorageAttributesSize": 0,
+        "programs": 4,
+        "programsSize": 13327,
+        "readbackBuffers": 0,
+        "readbackBuffersSize": 0,
+        "renderTargets": 3,
+        "storageAttributes": 0,
+        "storageAttributesSize": 0,
+        "textures": 15,
+        "texturesSize": 66609080,
+        "uniformBuffers": 4,
+        "uniformBuffersSize": 640,
+        "total": 69396463
+      },
+      {
+        "attributes": 80,
+        "attributesSize": 1930356,
+        "geometries": 38,
+        "indexAttributes": 36,
+        "indexAttributesSize": 843060,
+        "indirectStorageAttributes": 0,
+        "indirectStorageAttributesSize": 0,
+        "programs": 4,
+        "programsSize": 13327,
+        "readbackBuffers": 0,
+        "readbackBuffersSize": 0,
+        "renderTargets": 3,
+        "storageAttributes": 0,
+        "storageAttributesSize": 0,
+        "textures": 15,
+        "texturesSize": 66609080,
+        "uniformBuffers": 4,
+        "uniformBuffersSize": 640,
+        "total": 69396463
+      },
+      {
+        "attributes": 80,
+        "attributesSize": 1930356,
+        "geometries": 38,
+        "indexAttributes": 36,
+        "indexAttributesSize": 843060,
+        "indirectStorageAttributes": 0,
+        "indirectStorageAttributesSize": 0,
+        "programs": 4,
+        "programsSize": 13327,
+        "readbackBuffers": 0,
+        "readbackBuffersSize": 0,
+        "renderTargets": 3,
+        "storageAttributes": 0,
+        "storageAttributesSize": 0,
+        "textures": 15,
+        "texturesSize": 66609080,
+        "uniformBuffers": 4,
+        "uniformBuffersSize": 640,
+        "total": 69396463
+      }
+    ]
+  },
+  {
+    "name": "default-experience-disposal",
+    "before": {
+      "attributes": 80,
+      "attributesSize": 1930356,
+      "geometries": 38,
+      "indexAttributes": 36,
+      "indexAttributesSize": 843060,
+      "indirectStorageAttributes": 0,
+      "indirectStorageAttributesSize": 0,
+      "programs": 4,
+      "programsSize": 13327,
+      "readbackBuffers": 0,
+      "readbackBuffersSize": 0,
+      "renderTargets": 3,
+      "storageAttributes": 0,
+      "storageAttributesSize": 0,
+      "textures": 15,
+      "texturesSize": 66609080,
+      "uniformBuffers": 4,
+      "uniformBuffersSize": 640,
+      "total": 69396463
+    },
+    "afterUsers": {
+      "attributes": 6,
+      "attributesSize": 104972,
+      "geometries": 4,
+      "indexAttributes": 3,
+      "indexAttributesSize": 117888,
+      "indirectStorageAttributes": 0,
+      "indirectStorageAttributesSize": 0,
+      "programs": 4,
+      "programsSize": 13327,
+      "readbackBuffers": 0,
+      "readbackBuffersSize": 0,
+      "renderTargets": 1,
+      "storageAttributes": 0,
+      "storageAttributesSize": 0,
+      "textures": 3,
+      "texturesSize": 11127700,
+      "uniformBuffers": 4,
+      "uniformBuffersSize": 640,
+      "total": 11364527
+    },
+    "afterBackend": {
+      "attributes": 0,
+      "attributesSize": 0,
+      "geometries": 0,
+      "indexAttributes": 0,
+      "indexAttributesSize": 0,
+      "indirectStorageAttributes": 0,
+      "indirectStorageAttributesSize": 0,
+      "programs": 0,
+      "programsSize": 0,
+      "readbackBuffers": 0,
+      "readbackBuffersSize": 0,
+      "renderTargets": 0,
+      "storageAttributes": 0,
+      "storageAttributesSize": 0,
+      "textures": 0,
+      "texturesSize": 0,
+      "uniformBuffers": 0,
+      "uniformBuffersSize": 0,
+      "total": 0
+    }
+  },
+  {
+    "name": "postprocessing-toggle-and-reattach",
+    "ownedTargets": 12,
+    "disposedTargets": 12
+  },
+  {
+    "name": "postprocessing-experience-disposal",
+    "before": {
+      "attributes": 203,
+      "attributesSize": 42789696,
+      "geometries": 39,
+      "indexAttributes": 37,
+      "indexAttributesSize": 845124,
+      "indirectStorageAttributes": 0,
+      "indirectStorageAttributesSize": 0,
+      "programs": 492,
+      "programsSize": 2022898,
+      "readbackBuffers": 0,
+      "readbackBuffersSize": 0,
+      "renderTargets": 8,
+      "storageAttributes": 0,
+      "storageAttributesSize": 0,
+      "textures": 24,
+      "texturesSize": 111482896,
+      "uniformBuffers": 1017,
+      "uniformBuffersSize": 4899840,
+      "total": 162040454
+    },
+    "afterUsers": {
+      "attributes": 7,
+      "attributesSize": 104996,
+      "geometries": 4,
+      "indexAttributes": 3,
+      "indexAttributesSize": 117888,
+      "indirectStorageAttributes": 0,
+      "indirectStorageAttributesSize": 0,
+      "programs": 2,
+      "programsSize": 9461,
+      "readbackBuffers": 0,
+      "readbackBuffersSize": 0,
+      "renderTargets": 1,
+      "storageAttributes": 0,
+      "storageAttributesSize": 0,
+      "textures": 3,
+      "texturesSize": 11127700,
+      "uniformBuffers": 4,
+      "uniformBuffersSize": 832,
+      "total": 11360877
+    },
+    "afterBackend": {
+      "attributes": 0,
+      "attributesSize": 0,
+      "geometries": 0,
+      "indexAttributes": 0,
+      "indexAttributesSize": 0,
+      "indirectStorageAttributes": 0,
+      "indirectStorageAttributesSize": 0,
+      "programs": 0,
+      "programsSize": 0,
+      "readbackBuffers": 0,
+      "readbackBuffersSize": 0,
+      "renderTargets": 0,
+      "storageAttributes": 0,
+      "storageAttributesSize": 0,
+      "textures": 0,
+      "texturesSize": 0,
+      "uniformBuffers": 0,
+      "uniformBuffersSize": 0,
+      "total": 0
+    }
+  },
+  {
+    "name": "optional-failure",
+    "worldLoaded": true,
+    "noiseFallback": true
+  },
+  {
+    "name": "optional-experience-disposal",
+    "before": {
+      "attributes": 198,
+      "attributesSize": 40407848,
+      "geometries": 39,
+      "indexAttributes": 37,
+      "indexAttributesSize": 845124,
+      "indirectStorageAttributes": 0,
+      "indirectStorageAttributesSize": 0,
+      "programs": 384,
+      "programsSize": 1547049,
+      "readbackBuffers": 0,
+      "readbackBuffersSize": 0,
+      "renderTargets": 3,
+      "storageAttributes": 0,
+      "storageAttributesSize": 0,
+      "textures": 14,
+      "texturesSize": 65211328,
+      "uniformBuffers": 783,
+      "uniformBuffersSize": 4350720,
+      "total": 112362069
+    },
+    "afterUsers": {
+      "attributes": 6,
+      "attributesSize": 104972,
+      "geometries": 4,
+      "indexAttributes": 3,
+      "indexAttributesSize": 117888,
+      "indirectStorageAttributes": 0,
+      "indirectStorageAttributesSize": 0,
+      "programs": 4,
+      "programsSize": 13327,
+      "readbackBuffers": 0,
+      "readbackBuffersSize": 0,
+      "renderTargets": 1,
+      "storageAttributes": 0,
+      "storageAttributesSize": 0,
+      "textures": 3,
+      "texturesSize": 11127700,
+      "uniformBuffers": 4,
+      "uniformBuffersSize": 640,
+      "total": 11364527
+    },
+    "afterBackend": {
+      "attributes": 0,
+      "attributesSize": 0,
+      "geometries": 0,
+      "indexAttributes": 0,
+      "indexAttributesSize": 0,
+      "indirectStorageAttributes": 0,
+      "indirectStorageAttributesSize": 0,
+      "programs": 0,
+      "programsSize": 0,
+      "readbackBuffers": 0,
+      "readbackBuffersSize": 0,
+      "renderTargets": 0,
+      "storageAttributes": 0,
+      "storageAttributesSize": 0,
+      "textures": 0,
+      "texturesSize": 0,
+      "uniformBuffers": 0,
+      "uniformBuffersSize": 0,
+      "total": 0
+    }
+  },
+  {
+    "name": "required-failure-bootstrap",
+    "disposed": true,
+    "itemsRetained": 0
+  }
+]

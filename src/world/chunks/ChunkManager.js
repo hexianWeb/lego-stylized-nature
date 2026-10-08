@@ -20,12 +20,10 @@ export default class ChunkManager {
     layeredTerrainBuilder,
     brickColorResolver,
     brickGeometry,
+    materials,
     parentGroup,
     biomeRegistry = null,
     prefabRegistry = null,
-    waterNoiseTexture = null,
-    lavaConfig = {},
-    lavaNoiseTexture = null,
     createSlot = null
   }) {
     this.config = config
@@ -33,12 +31,10 @@ export default class ChunkManager {
     this.layeredTerrainBuilder = layeredTerrainBuilder
     this.brickColorResolver = brickColorResolver
     this.brickGeometry = brickGeometry
+    this.materials = materials
     this.parentGroup = parentGroup
     this.biomeRegistry = biomeRegistry
     this.prefabRegistry = prefabRegistry
-    this.waterNoiseTexture = waterNoiseTexture
-    this.lavaConfig = lavaConfig
-    this.lavaNoiseTexture = lavaNoiseTexture
     this.createSlotOverride = createSlot
 
     const chunkConfig = config.chunks ?? {}
@@ -50,6 +46,7 @@ export default class ChunkManager {
     this.visibilityPadding = chunkConfig.visibilityPadding ?? 0
     this.debugSpacing = chunkConfig.debugSpacing ?? 0
     this.cellSize = config.terrain.cellSize
+    this.buildTimings = { generationMs: 0, placementMs: 0, populateMs: 0, totalMs: 0, maxMs: 0, builds: 0 }
 
     const slotCount = (this.windowRadius * 2 + 1) ** 2
     this.slots = Array.from({ length: slotCount }, (_, index) => this.createSlot(index))
@@ -93,7 +90,8 @@ export default class ChunkManager {
       ? new PrefabPlacer({
         config: this.config,
         biomeRegistry: this.biomeRegistry,
-        prefabRegistry: this.prefabRegistry
+        prefabRegistry: this.prefabRegistry,
+        materials: this.materials
       })
       : null
 
@@ -104,7 +102,8 @@ export default class ChunkManager {
       cellSize: this.cellSize,
       terrainRenderer: new TerrainBrickRenderer({
         config: this.config,
-        brickGeometry: this.brickGeometry
+        brickGeometry: this.brickGeometry,
+        materials: this.materials
       }),
       heightfieldAO: new HeightfieldAO({ config: this.config }),
       prefabPlacer,
@@ -112,14 +111,13 @@ export default class ChunkManager {
         ? new WaterBrickRenderer({
           config: this.config,
           brickGeometry: this.brickGeometry,
-          waterNoiseTexture: this.waterNoiseTexture
+          materials: this.materials
         })
         : null,
       lavaRenderer: new LavaBrickRenderer({
         config: this.config,
         brickGeometry: this.brickGeometry,
-        lavaConfig: this.lavaConfig,
-        lavaNoiseTexture: this.lavaNoiseTexture
+        materials: this.materials
       })
     })
   }
@@ -300,13 +298,16 @@ export default class ChunkManager {
   }
 
   fillSlot(slot, coord) {
+    const started = performance.now()
     const origin = getRenderChunkOrigin(coord, this.chunkSize)
     const terrainMap = this.terrainGenerator.generateChunk({
       origin,
       size: this.chunkSize,
       halo: this.halo
     })
+    const generated = performance.now()
     const placements = this.layeredTerrainBuilder.buildPlacements(terrainMap)
+    const placed = performance.now()
 
     slot.populate({
       coord,
@@ -314,6 +315,16 @@ export default class ChunkManager {
       placements,
       colorResolver: this.brickColorResolver,
       debugSpacing: this.debugSpacing
+    })
+    const finished = performance.now()
+    Object.assign(this.buildTimings, {
+      generationMs: generated - started,
+      placementMs: placed - generated,
+      populateMs: finished - placed,
+      ...slot.buildTimings,
+      totalMs: finished - started,
+      maxMs: Math.max(this.buildTimings.maxMs, finished - started),
+      builds: this.buildTimings.builds + 1
     })
   }
 
@@ -389,11 +400,9 @@ export default class ChunkManager {
   }
 
   getDebugMaterials() {
-    const slot = this.activeSlots.values().next().value ?? this.slots[0]
-
     return {
-      legoMaterial: slot?.terrainRenderer?.material ?? null,
-      waterMaterial: slot?.waterRenderer?.material ?? null
+      legoMaterial: this.materials?.legoMaterial ?? null,
+      waterMaterial: this.materials?.waterMaterial ?? null
     }
   }
 

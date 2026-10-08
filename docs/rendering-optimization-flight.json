@@ -1,0 +1,83 @@
+{
+  "route": "hold W 16s; hold A 0.8s; hold W 12s; wait for streaming to settle",
+  "initialPosition": [
+    12.8,
+    3,
+    12.8
+  ],
+  "initialChunk": {
+    "x": 0,
+    "z": 0
+  },
+  "final": {
+    "frameMs": 16.699999999982538,
+    "cpuMs": 3.5,
+    "gpuMs": 5.2428799999999995,
+    "gpuTiming": "available",
+    "drawCalls": 300,
+    "triangles": 28662935,
+    "geometries": 41,
+    "textures": 16,
+    "waterInstances": 4959,
+    "chunkBuildMs": 15.699999999254942,
+    "prefabBuildMs": 2.699999999254942,
+    "viewport": [
+      970,
+      790
+    ],
+    "dpr": 1.100000023841858,
+    "init": {
+      "rendererMs": 89,
+      "resourcesWaitMs": 0,
+      "environmentMs": 24.699999999254942,
+      "worldMs": 53.70000000111759,
+      "warmupMs": 3405,
+      "totalMs": 3572.4000000003725
+    },
+    "chunk": {
+      "generationMs": 3.099999999627471,
+      "placementMs": 0.5,
+      "populateMs": 12.099999999627471,
+      "totalMs": 15.699999999254942,
+      "maxMs": 26.199999999254942,
+      "builds": 57,
+      "aoMs": 4.400000000372529,
+      "instancesMs": 7.599999999627471
+    },
+    "memory": {
+      "attributes": 264,
+      "attributesSize": 47437272,
+      "geometries": 41,
+      "indexAttributes": 39,
+      "indexAttributesSize": 846612,
+      "indirectStorageAttributes": 0,
+      "indirectStorageAttributesSize": 0,
+      "programs": 703,
+      "programsSize": 2568292,
+      "readbackBuffers": 0,
+      "readbackBuffersSize": 0,
+      "renderTargets": 3,
+      "storageAttributes": 0,
+      "storageAttributesSize": 0,
+      "textures": 16,
+      "texturesSize": 66611810,
+      "uniformBuffers": 1422,
+      "uniformBuffersSize": 10164912,
+      "total": 127628898
+    },
+    "loadedChunks": 9,
+    "waterMeshes": 17,
+    "terrainMaterials": 1,
+    "rawHDRRetained": false,
+    "playerPosition": [
+      62.161934261704644,
+      3,
+      60.57089982665056
+    ],
+    "chunkCenter": {
+      "x": 4,
+      "z": 4
+    },
+    "waterMaterials": 1
+  }
+}

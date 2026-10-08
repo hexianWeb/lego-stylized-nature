@@ -1,12 +1,11 @@
 import * as THREE from 'three/webgpu'
-import { createLavaMaterial } from '../../materials/tsl/lavaMaterial.js'
 import { getTerrainIterationBounds } from '../terrain/terrainMapBounds.js'
 
 export default class LavaBrickRenderer {
-  constructor({ config, brickGeometry, lavaConfig = {}, lavaNoiseTexture = null }) {
+  constructor({ config, brickGeometry, materials }) {
     this.config = config
     this.brickGeometry = brickGeometry
-    this.material = createLavaMaterial(lavaConfig, lavaNoiseTexture)
+    this.material = materials.lavaMaterial
     this.group = new THREE.Group()
     this.group.name = 'LavaBricks'
     this.mesh = null
@@ -58,13 +57,16 @@ export default class LavaBrickRenderer {
 
     this.mesh.count = cells.length
     this.mesh.instanceMatrix.needsUpdate = true
+    this.mesh.computeBoundingSphere()
+    if (this.mesh.boundingBox) {
+      this.mesh.computeBoundingBox()
+    }
 
     return this.group
   }
 
   dispose() {
     this.mesh?.dispose()
-    this.material.dispose()
     this.group.parent?.remove(this.group)
     this.group.clear()
     this.mesh = null

@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import * as THREE from 'three/webgpu'
 import WaterBrickRenderer from '../src/world/bricks/WaterBrickRenderer.js'
 import LavaBrickRenderer from '../src/world/bricks/LavaBrickRenderer.js'
+import WorldMaterials from '../src/world/WorldMaterials.js'
 
 function createChunkTerrainMap({ origin, visibleSize, halo, surfaceCells }) {
   const sampleWidth = visibleSize + halo * 2
@@ -21,6 +22,7 @@ function createChunkTerrainMap({ origin, visibleSize, halo, surfaceCells }) {
 
 test('water renderer uses chunk-local positions inside each slot', () => {
   const renderer = new WaterBrickRenderer({
+    materials: new WorldMaterials(),
     config: {
       terrain: {
         width: 128,
@@ -48,8 +50,8 @@ test('water renderer uses chunk-local positions inside each slot', () => {
 
   renderer.build(terrainMap)
 
-  assert.equal(renderer.instanceCount, 4)
-  assert.equal(renderer.mesh.count, 4)
+  assert.equal(renderer.instanceCount, 2)
+  assert.equal(renderer.mesh.count, 2)
 
   const matrix = new THREE.Matrix4()
   const position = new THREE.Vector3()
@@ -64,6 +66,7 @@ test('water renderer uses chunk-local positions inside each slot', () => {
 
 test('lava renderer uses chunk-local positions inside each slot', () => {
   const renderer = new LavaBrickRenderer({
+    materials: new WorldMaterials(),
     config: {
       terrain: {
         width: 128,
@@ -72,8 +75,7 @@ test('lava renderer uses chunk-local positions inside each slot', () => {
         layerHeight: 1
       }
     },
-    brickGeometry: new THREE.BoxGeometry(1, 1, 1),
-    lavaConfig: {}
+    brickGeometry: new THREE.BoxGeometry(1, 1, 1)
   })
 
   const terrainMap = createChunkTerrainMap({
@@ -101,17 +103,19 @@ test('lava renderer uses chunk-local positions inside each slot', () => {
   renderer.dispose()
 })
 
-test('water renderer reuses fixed grid matrices across rebuilds', () => {
+test('water renderer refills reused pages when the water mask changes at the same size', () => {
   const renderer = new WaterBrickRenderer({
+    materials: new WorldMaterials(),
     config: {
       terrain: { width: 3, depth: 1, cellSize: 0.2, layerHeight: 1, waterLevel: 4 },
       water: {}
     },
     brickGeometry: new THREE.BoxGeometry(1, 1, 1)
   })
+  let waterX = 0
   const terrainMap = {
-    getSurfaceCell() {
-      return { isWater: false }
+    getSurfaceCell(x) {
+      return { isWater: x === waterX }
     }
   }
 
@@ -119,15 +123,16 @@ test('water renderer reuses fixed grid matrices across rebuilds', () => {
   const firstMesh = renderer.mesh
   const firstMatrix = new THREE.Matrix4()
   renderer.mesh.getMatrixAt(0, firstMatrix)
-
+  waterX = 2
   renderer.build(terrainMap)
 
   assert.equal(renderer.mesh, firstMesh)
-  assert.equal(renderer.mesh.count, 3)
+  assert.equal(renderer.mesh.count, 1)
 
   const secondMatrix = new THREE.Matrix4()
   renderer.mesh.getMatrixAt(0, secondMatrix)
-  assert.deepEqual(secondMatrix.elements, firstMatrix.elements)
+  assert.notDeepEqual(secondMatrix.elements, firstMatrix.elements)
+  assert.ok(renderer.mesh.boundingSphere.containsPoint(new THREE.Vector3(0.5, 4, 0.1)))
 
   renderer.dispose()
 })

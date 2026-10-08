@@ -121,6 +121,20 @@ test('disposes the Gaussian blur node exactly once', () => {
   assert.equal(disposeCount, 1)
 })
 
+test('disposes the RTT input created for blur while retaining the source texture', () => {
+  const source = new THREE.Texture()
+  const effect = createTiltShiftEffect(texture(source).mul(0.9))
+  const input = effect.blurNode.textureNode
+  assert.equal(input.isRTTNode, true)
+  let disposed = 0
+  input.renderTarget.addEventListener('dispose', () => disposed++)
+  input._quadMesh.material.addEventListener('dispose', () => disposed++)
+  source.addEventListener('dispose', () => assert.fail('source texture is borrowed'))
+  effect.dispose()
+  effect.dispose()
+  assert.equal(disposed, 2)
+})
+
 function createRendererHarness() {
   const renderer = Object.create(Renderer.prototype)
   renderer.tiltShiftConfig = { ...TILT_SHIFT_DEFAULTS }
@@ -142,8 +156,12 @@ test('switches between prebuilt output chains without rebuilding them', () => {
     renderer.renderPipeline.outputNode,
     outputNodes.tiltShiftEnabled
   )
+  renderer.renderPipeline.needsUpdate = false
+  renderer.setTiltShiftEnabled(true)
+  assert.equal(renderer.renderPipeline.needsUpdate, false)
 
   renderer.setTiltShiftEnabled(false)
+  assert.equal(renderer.renderPipeline.needsUpdate, true)
   assert.equal(
     renderer.renderPipeline.outputNode,
     outputNodes.tiltShiftDisabled

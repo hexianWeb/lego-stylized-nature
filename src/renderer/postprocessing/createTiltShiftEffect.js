@@ -70,6 +70,13 @@ export function createTiltShiftEffect(
       }
 
       blurNode.dispose()
+      const input = blurNode.textureNode
+      if (input !== sceneColor && input.isRTTNode) {
+        // gaussianBlur() creates an RTT for non-texture inputs; r185 does not free it.
+        input.renderTarget.dispose()
+        input._quadMesh.material.dispose()
+        input.dispose()
+      }
       disposed = true
     }
   }

@@ -24,6 +24,8 @@ export default class Environment {
     constructor(scene) {
         this.scene = scene
         this.envMap = null
+        this.envMapRenderTarget = null
+        this.disposed = false
         this.environmentIntensity = 0.22
         this.useEnvBackground = true
         /** 0 = darker shadows, 1 = more ambient/env fill */
@@ -68,15 +70,19 @@ export default class Environment {
             return
         }
 
-        this.envMap?.dispose()
-        this.envMap = null
-
         equirectTexture.mapping = THREE.EquirectangularReflectionMapping
 
         const pmremGenerator = new THREE.PMREMGenerator(renderer)
-        pmremGenerator.compileEquirectangularShader()
-        this.envMap = pmremGenerator.fromEquirectangular(equirectTexture).texture
-        pmremGenerator.dispose()
+        let renderTarget
+        try {
+            pmremGenerator.compileEquirectangularShader()
+            renderTarget = pmremGenerator.fromEquirectangular(equirectTexture)
+        } finally {
+            pmremGenerator.dispose()
+        }
+        this.envMapRenderTarget?.dispose()
+        this.envMapRenderTarget = renderTarget
+        this.envMap = renderTarget.texture
 
         this.scene.environment = this.envMap
         this.syncEnvironmentIntensity()
@@ -167,10 +173,16 @@ export default class Environment {
     }
 
     dispose() {
+        if (this.disposed) {
+            return
+        }
+        this.disposed = true
         this.scene.environment = null
         this.scene.background = null
-        this.envMap?.dispose()
+        this.envMapRenderTarget?.dispose()
+        this.envMapRenderTarget = null
         this.envMap = null
+        this.directionalLight.dispose()
         this.scene.remove(this.ambientLight)
         this.scene.remove(this.directionalLight)
         this.scene.remove(this.directionalLight.target)

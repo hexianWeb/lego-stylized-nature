@@ -8,6 +8,7 @@ import TerrainGenerator from '../src/world/terrain/TerrainGenerator.js'
 import LayeredTerrainBuilder from '../src/world/terrain/LayeredTerrainBuilder.js'
 import BrickColorResolver from '../src/world/bricks/BrickColorResolver.js'
 import TerrainChunkPingPong from '../src/world/chunks/TerrainChunkPingPong.js'
+import WorldMaterials from '../src/world/WorldMaterials.js'
 
 const config = {
   seed: 1,
@@ -49,6 +50,7 @@ function createPingPong() {
   })
 
   return new TerrainChunkPingPong({
+    materials: new WorldMaterials({ config }),
     config,
     terrainGenerator,
     layeredTerrainBuilder: new LayeredTerrainBuilder({ config }),

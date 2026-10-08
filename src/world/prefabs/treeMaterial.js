@@ -12,11 +12,10 @@ const PART_SEED = {
   leaf: 0
 }
 
-const materialCache = new Map()
 const _color = new THREE.Color()
 const _hsl = { h: 0, s: 0, l: 0 }
 
-export function resolveTreeMaterial(mesh, biomeId) {
+export function resolveTreeMaterial(mesh, biomeId, materialCache = new Map()) {
   const part = getTreePart(mesh)
   if (!part) {
     return null
@@ -46,13 +45,6 @@ export function resolveTreeInstanceColor(mesh, biome, x, y, z, seed) {
 
   const baseHex = part === 'root' ? colors.subsurface : colors.surface
   return applyHslJitter(baseHex, x, y, z, seed, PART_SEED[part])
-}
-
-export function disposeTreeMaterials() {
-  for (const material of materialCache.values()) {
-    material.dispose()
-  }
-  materialCache.clear()
 }
 
 function applyHslJitter(baseHex, x, y, z, seed, salt) {

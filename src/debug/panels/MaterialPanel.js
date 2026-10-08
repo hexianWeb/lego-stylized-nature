@@ -12,6 +12,8 @@ export function createMaterialPanel(
     const waterToggle = folder.addBinding(config.water, 'enableWater', { label: 'Water' })
     if (onRegenerate) {
         waterToggle.on('change', onRegenerate)
+        folder.addBinding(config.water, 'castShadow', { label: 'Water shadows' })
+            .on('change', onRegenerate)
     }
 
     if (legoMaterial) {

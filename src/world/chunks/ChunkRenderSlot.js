@@ -30,6 +30,8 @@ export default class ChunkRenderSlot {
     this.placements = []
     this.prefabsBuiltForKey = null
     this.prefabsVisible = false
+    this.prefabBuildMs = 0
+    this.buildTimings = { aoMs: 0, instancesMs: 0 }
     this.group = new THREE.Group()
     this.group.name = `ChunkRenderSlot:${index}`
     this.group.add(terrainRenderer.group)
@@ -87,15 +89,20 @@ export default class ChunkRenderSlot {
     this.terrainMap = terrainMap
     this.placements = placements
     this.prefabsBuiltForKey = null
+    this.prefabBuildMs = 0
     this.setPrefabsVisible(false)
     this.debugSpacing = debugSpacing
 
     this.updateWorldPosition(debugSpacing)
 
+    const started = performance.now()
     this.heightfieldAO.build(terrainMap)
+    const aoBuilt = performance.now()
     this.terrainRenderer.build(placements, colorResolver, this.heightfieldAO)
     this.waterRenderer?.build(terrainMap)
     this.lavaRenderer?.build(terrainMap)
+    this.buildTimings.aoMs = aoBuilt - started
+    this.buildTimings.instancesMs = performance.now() - aoBuilt
     this.syncOverlayVisibility()
   }
 
@@ -108,7 +115,9 @@ export default class ChunkRenderSlot {
       return
     }
 
+    const started = performance.now()
     this.prefabPlacer.build(this.terrainMap)
+    this.prefabBuildMs = performance.now() - started
     this.prefabsBuiltForKey = this.key
   }
 

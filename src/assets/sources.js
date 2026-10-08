@@ -3,7 +3,7 @@ export default [
   { name: 'lavaNoiseTexture', type: 'texture', path: 'texture/lava-noise-ai.png' },
   { name: 'waterNoiseTexture', type: 'texture', path: 'texture/noise.jpg' },
 
-  { name: 'brick2x2Model', type: 'gltfModel', path: 'model/terrain/legoBlock2x2.glb' },
+  { name: 'brick2x2Model', type: 'gltfModel', path: 'model/terrain/legoBlock2x2.glb', required: true },
   { name: 'playerAircraftModel', type: 'gltfModel', path: 'model/player/fly.glb' },
   { name: 'biomeTowerModel', type: 'gltfModel', path: 'model/tower/tower.glb' },
 

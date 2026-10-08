@@ -4,6 +4,7 @@ import * as THREE from 'three/webgpu'
 import { createLavaMaterial } from '../src/materials/tsl/lavaMaterial.js'
 import LavaBrickRenderer from '../src/world/bricks/LavaBrickRenderer.js'
 import LayeredTerrainBuilder from '../src/world/terrain/LayeredTerrainBuilder.js'
+import WorldMaterials from '../src/world/WorldMaterials.js'
 
 test('creates lava material with pulse uniforms', () => {
   const material = createLavaMaterial({ pulseSpeed: 2, glowStrength: 0.8, roughness: 0.25 })
@@ -35,15 +36,14 @@ test('creates lava material with configured noise texture uniforms', () => {
   assert.ok(material.userData.uniforms.uFlowVariance)
 })
 
-test('passes lava noise texture from renderer config into material', () => {
+test('borrows the World lava material with its noise texture', () => {
   const lavaNoiseTexture = new THREE.Texture()
   const renderer = new LavaBrickRenderer({
+    materials: new WorldMaterials({ lavaNoiseTexture }),
     config: {
       terrain: { width: 1, depth: 1, cellSize: 0.2, layerHeight: 1 }
     },
-    brickGeometry: new THREE.BoxGeometry(1, 1, 1),
-    lavaConfig: {},
-    lavaNoiseTexture
+    brickGeometry: new THREE.BoxGeometry(1, 1, 1)
   })
 
   assert.equal(renderer.material.userData.lavaNoiseTexture, lavaNoiseTexture)
@@ -55,11 +55,11 @@ test('builds flat lava pool bricks at the pool lava height', () => {
   const layerHeight = 1
   const lavaHeight = 4
   const renderer = new LavaBrickRenderer({
+    materials: new WorldMaterials(),
     config: {
       terrain: { width: 2, depth: 2, cellSize: 0.2, layerHeight }
     },
-    brickGeometry: new THREE.BoxGeometry(1, 1, 1),
-    lavaConfig: {}
+    brickGeometry: new THREE.BoxGeometry(1, 1, 1)
   })
 
   const cells = [

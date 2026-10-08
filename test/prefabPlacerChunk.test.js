@@ -1,6 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import PrefabPlacer from '../src/world/prefabs/PrefabPlacer.js'
+import WorldMaterials from '../src/world/WorldMaterials.js'
 
 function createChunkTerrainMap({ origin, visibleSize, halo, biomeId = 'forest' }) {
   const sampleWidth = visibleSize + halo * 2
@@ -24,6 +25,7 @@ function createChunkTerrainMap({ origin, visibleSize, halo, biomeId = 'forest' }
 
 function createPlacer({ manifest, biomes }) {
   return new PrefabPlacer({
+    materials: new WorldMaterials(),
     config: {
       seed: 1,
       terrain: { width: 128, depth: 128, cellSize: 0.2, layerHeight: 1, waterLevel: 0 },

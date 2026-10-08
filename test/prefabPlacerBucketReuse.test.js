@@ -2,6 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import * as THREE from 'three/webgpu'
 import PrefabPlacer from '../src/world/prefabs/PrefabPlacer.js'
+import WorldMaterials from '../src/world/WorldMaterials.js'
 
 function createVariantScene() {
   const scene = new THREE.Group()
@@ -22,6 +23,7 @@ function createPlacer({
   const variantScene = createVariantScene()
 
   return new PrefabPlacer({
+    materials: new WorldMaterials(),
     config: {
       seed: 1,
       terrain: { width, depth, cellSize: 1, layerHeight: 1, waterLevel: 0 },
@@ -207,4 +209,26 @@ test('build clamps instance count to configured prefab capacity', () => {
   assert.equal(mesh.count, 2)
   assert.equal(warnings.length, 1)
   assert.match(warnings[0], /testGrass/)
+})
+
+test('reused prefab bounds cover expanded placements and refresh an existing box', () => {
+  const manifest = {
+    grass: { category: 'flora', placement: { surface: 'land' }, variants: [{ source: 'grassModel' }], randomRotation: false }
+  }
+  const biomes = { forest: { prefabs: [{ id: 'grass', density: 1 }] }, desert: { prefabs: [] } }
+  const placer = createPlacer({ manifest, biomes, width: 8 })
+  placer.build(createTerrainMap([['forest', ...Array(7).fill('desert')]]))
+  const mesh = collectInstancedMeshes(placer.group)[0]
+  const firstRadius = mesh.boundingSphere.radius
+  mesh.computeBoundingBox()
+
+  placer.build(createTerrainMap([Array(8).fill('forest')]))
+
+  assert.equal(collectInstancedMeshes(placer.group)[0], mesh)
+  assert.equal(mesh.count, 8)
+  assert.ok(mesh.boundingSphere.radius > firstRadius)
+  assert.ok(mesh.boundingSphere.containsPoint(new THREE.Vector3(7.5, 4, 0.5)))
+  assert.ok(mesh.boundingBox.max.x >= 8)
+  placer.dispose()
+  placer.materials.dispose()
 })

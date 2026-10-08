@@ -1,43 +1,26 @@
 import * as THREE from 'three/webgpu'
-import { createWaterMaterial } from '../../materials/tsl/waterMaterial.js'
 import { getTerrainIterationBounds } from '../terrain/terrainMapBounds.js'
 
 const WATER_PAGE_CAPACITY = 900
-
-function resolveWaterGridSize(config) {
-  const chunkSize = config.chunks?.size
-  if (config.chunks?.enabled === true && chunkSize != null) {
-    return { width: chunkSize, depth: chunkSize }
-  }
-
-  return {
-    width: config.terrain.width,
-    depth: config.terrain.depth
-  }
-}
 
 export default class WaterBrickRenderer {
   constructor({
     config,
     brickGeometry,
-    waterNoiseTexture = null,
+    materials,
     pageCapacity = WATER_PAGE_CAPACITY
   }) {
     this.config = config
     this.brickGeometry = brickGeometry
-    this.material = createWaterMaterial(config.water, waterNoiseTexture)
+    this.material = materials.waterMaterial
 
     this.group = new THREE.Group()
     this.group.name = 'WaterBricks'
 
     this.pageCapacity = pageCapacity
     this.pages = []
-    this.initialized = false
+    this._instanceCount = 0
     this._matrix = new THREE.Matrix4()
-
-    const { width, depth } = resolveWaterGridSize(config)
-    this.gridWidth = width
-    this.gridDepth = depth
   }
 
   get mesh() {
@@ -45,40 +28,24 @@ export default class WaterBrickRenderer {
   }
 
   get instanceCount() {
-    return this.gridWidth * this.gridDepth
+    return this._instanceCount
   }
 
-  build(terrainMap = null) {
-    let width = this.gridWidth
-    let depth = this.gridDepth
-
-    if (terrainMap) {
-      const bounds = getTerrainIterationBounds(terrainMap, this.config)
-      width = bounds.visibleWidth
-      depth = bounds.visibleDepth
+  build(terrainMap) {
+    const bounds = getTerrainIterationBounds(terrainMap, this.config)
+    for (const page of this.pages) {
+      page.count = 0
     }
-
-    if (this.initialized && width === this.gridWidth && depth === this.gridDepth) {
-      return this.group
-    }
-
-    this.gridWidth = width
-    this.gridDepth = depth
-    this.initializeGrid()
-    this.initialized = true
-
-    return this.group
-  }
-
-  initializeGrid() {
-    this.disposePages()
-
     const { cellSize, layerHeight, waterLevel } = this.config.terrain
     const waterY = waterLevel * layerHeight
     let instanceIndex = 0
 
-    for (let localZ = 0; localZ < this.gridDepth; localZ++) {
-      for (let localX = 0; localX < this.gridWidth; localX++) {
+    for (let localZ = 0; localZ < bounds.visibleDepth; localZ++) {
+      for (let localX = 0; localX < bounds.visibleWidth; localX++) {
+        if (this.config.water?.enableWater === false
+            || !terrainMap.getSurfaceCell(bounds.halo + localX, bounds.halo + localZ)?.isWater) {
+          continue
+        }
         const pageIndex = Math.floor(instanceIndex / this.pageCapacity)
         const localIndex = instanceIndex % this.pageCapacity
         const page = this.ensurePage(pageIndex)
@@ -90,22 +57,29 @@ export default class WaterBrickRenderer {
         )
 
         page.mesh.setMatrixAt(localIndex, this._matrix)
-        page.count = Math.max(page.count, localIndex + 1)
-        page.mesh.count = page.count
-        page.mesh.visible = true
-        page.mesh.instanceMatrix.needsUpdate = true
+        page.count = localIndex + 1
 
         instanceIndex++
       }
     }
+    this._instanceCount = instanceIndex
+    for (const page of this.pages) {
+      page.mesh.count = page.count
+      page.mesh.visible = page.count > 0
+      page.mesh.castShadow = this.config.water?.castShadow !== false
+      page.mesh.instanceMatrix.needsUpdate = true
+      page.mesh.computeBoundingSphere()
+      if (page.mesh.boundingBox) {
+        page.mesh.computeBoundingBox()
+      }
+    }
+    return this.group
   }
 
   ensurePage(pageIndex) {
     let page = this.pages[pageIndex]
 
     if (page) {
-      page.count = 0
-      page.mesh.count = 0
       return page
     }
 
@@ -118,10 +92,9 @@ export default class WaterBrickRenderer {
     mesh.name = pageIndex === 0 ? 'WaterBrickInstances' : `WaterBrickInstances_${pageIndex}`
     mesh.castShadow = true
     mesh.receiveShadow = true
-    mesh.frustumCulled = false
     mesh.count = 0
     mesh.visible = false
-    mesh.instanceMatrix.setUsage(THREE.StaticDrawUsage)
+    mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage)
 
     page = {
       mesh,
@@ -145,13 +118,12 @@ export default class WaterBrickRenderer {
     }
 
     this.pages.length = 0
+    this._instanceCount = 0
   }
 
   dispose() {
     this.disposePages()
-    this.material.dispose()
     this.group.parent?.remove(this.group)
     this.group.clear()
-    this.initialized = false
   }
 }

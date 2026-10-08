@@ -2,9 +2,11 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import * as THREE from 'three/webgpu'
 import PrefabPlacer from '../src/world/prefabs/PrefabPlacer.js'
+import WorldMaterials from '../src/world/WorldMaterials.js'
 
 function createPlacer({ manifest, biomes, width = 2, depth = 1 }) {
   return new PrefabPlacer({
+    materials: new WorldMaterials(),
     config: {
       seed: 1,
       terrain: { width, depth, cellSize: 1, layerHeight: 1, waterLevel: 0 },
@@ -356,7 +358,7 @@ test('buildVariantInstances preserves material array order when tinting', () => 
   assert.notEqual(group.children[0].material[1], second)
 })
 
-test('clearInstances disposes tinted material clones without disposing textures', () => {
+test('clearInstances releases meshes while retaining borrowed materials and textures', () => {
   const texture = new THREE.Texture()
   const material = new THREE.MeshBasicMaterial({ map: texture })
   let materialDisposed = false
@@ -374,7 +376,7 @@ test('clearInstances disposes tinted material clones without disposing textures'
 
   placer.clearInstances()
 
-  assert.equal(materialDisposed, true)
+  assert.equal(materialDisposed, false)
   assert.equal(textureDisposed, false)
   assert.equal(placer.group.children.length, 0)
 })

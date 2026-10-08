@@ -2,8 +2,6 @@ import * as THREE from 'three/webgpu'
 import { random01, hashString } from '../../utils/random.js'
 
 const INSTANCE_COLOR_CLONE_FLAG = 'isInstanceColorClone'
-const instanceColorMaterialCache = new WeakMap()
-const instanceColorCloneSources = new WeakMap()
 
 export function normalizeInstanceColors(config, warn = console.warn) {
   if (!config || typeof config.meshNameSuffix !== 'string' || config.meshNameSuffix.length === 0) {
@@ -56,12 +54,12 @@ export function matchesInstanceColorMesh(name, suffix) {
   return new RegExp(`${escapedSuffix}(?:\\.\\d{3})?$`).test(name)
 }
 
-export function resolveInstanceColorMaterial(sourceMaterial) {
+export function resolveInstanceColorMaterial(sourceMaterial, instanceColorMaterialCache = new Map()) {
   if (Array.isArray(sourceMaterial)) {
-    return sourceMaterial.map(resolveSingleInstanceColorMaterial)
+    return sourceMaterial.map((material) => resolveSingleInstanceColorMaterial(material, instanceColorMaterialCache))
   }
 
-  return resolveSingleInstanceColorMaterial(sourceMaterial)
+  return resolveSingleInstanceColorMaterial(sourceMaterial, instanceColorMaterialCache)
 }
 
 export function disposeInstanceColorMaterial(material) {
@@ -71,16 +69,11 @@ export function disposeInstanceColorMaterial(material) {
   }
 
   if (material?.userData?.[INSTANCE_COLOR_CLONE_FLAG] === true) {
-    const sourceMaterial = instanceColorCloneSources.get(material)
-    if (sourceMaterial) {
-      instanceColorMaterialCache.delete(sourceMaterial)
-      instanceColorCloneSources.delete(material)
-    }
     material.dispose()
   }
 }
 
-function resolveSingleInstanceColorMaterial(sourceMaterial) {
+function resolveSingleInstanceColorMaterial(sourceMaterial, instanceColorMaterialCache) {
   if (!sourceMaterial) {
     return sourceMaterial
   }
@@ -98,7 +91,6 @@ function resolveSingleInstanceColorMaterial(sourceMaterial) {
   clone.needsUpdate = true
 
   instanceColorMaterialCache.set(sourceMaterial, clone)
-  instanceColorCloneSources.set(clone, sourceMaterial)
 
   return clone
 }

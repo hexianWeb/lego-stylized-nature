@@ -108,6 +108,7 @@ export default class PlayerAircraft {
     this.engineFlames = { left: null, right: null }
 
     this._engineBaseEmissive = new WeakMap()
+    this._engineMaterials = new Set()
 
     this.cameraFollow = {
 
@@ -247,15 +248,21 @@ export default class PlayerAircraft {
 
     for (const node of [this.engineNodes.left, this.engineNodes.right]) {
 
-      const material = node?.material
-
-      if (!material?.emissive) {
-
+      if (!node?.material) {
         continue
-
       }
-
-      this._engineBaseEmissive.set(material, material.emissive.clone())
+      const cloneEmissiveMaterial = (source) => {
+        if (!source?.emissive) {
+          return source
+        }
+        const material = source.clone()
+        this._engineBaseEmissive.set(material, material.emissive.clone())
+        this._engineMaterials.add(material)
+        return material
+      }
+      node.material = Array.isArray(node.material)
+        ? node.material.map(cloneEmissiveMaterial)
+        : cloneEmissiveMaterial(node.material)
 
     }
 
@@ -307,24 +314,17 @@ export default class PlayerAircraft {
 
 
   _setEngineIntensity(node, intensity) {
-
-    const material = node?.material
-
-    const base = this._engineBaseEmissive.get(material)
-
-    if (!material || !base) {
-
+    if (!node?.material) {
       return
-
     }
-
-
-
-    material.emissive.copy(base).multiplyScalar(intensity)
-
-    material.emissiveIntensity = intensity
-
-    material.needsUpdate = true
+    const materials = Array.isArray(node?.material) ? node.material : [node?.material]
+    for (const material of materials) {
+      const base = this._engineBaseEmissive.get(material)
+      if (base) {
+        material.emissive.copy(base)
+        material.emissiveIntensity = intensity
+      }
+    }
 
   }
 
@@ -676,6 +676,11 @@ export default class PlayerAircraft {
 
     this.wingAirflow = null
     this.modelRoot = null
+    for (const material of this._engineMaterials) {
+      material.dispose()
+    }
+    this._engineMaterials.clear()
+    this.engineNodes = { left: null, right: null }
 
     this.group.clear()
 

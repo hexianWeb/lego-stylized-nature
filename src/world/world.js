@@ -1,5 +1,6 @@
 import * as THREE from 'three/webgpu'
 import { worldConfig } from './WorldConfig.js'
+import WorldMaterials from './WorldMaterials.js'
 import BiomeRegistry from './biomes/BiomeRegistry.js'
 import BiomeBlender from './biomes/BiomeBlender.js'
 import BiomeMaskGenerator from './biomes/BiomeMaskGenerator.js'
@@ -41,6 +42,7 @@ export default class World {
         this.terrainPlacements = []
 
         this.brickGeometry = null
+        this.materials = null
         this.biomeRegistry = null
         this.biomeBlender = null
         this.biomeMaskGenerator = null
@@ -56,6 +58,8 @@ export default class World {
         this.playerAircraft = null
         this.biomeCenterSystem = null
         this.terrainChunkManager = null
+        this.prefabWarmup = null
+        this.disposed = false
     }
 
     addSystem(system) {
@@ -77,7 +81,7 @@ export default class World {
             return
         }
 
-        if (!this.terrainBrickRenderer) {
+        if (!this.terrainGenerator) {
             this.biomeRegistry = new BiomeRegistry()
             this.biomeBlender = new BiomeBlender(this.biomeRegistry)
             this.biomeMaskGenerator = new BiomeMaskGenerator(this.config)
@@ -97,9 +101,11 @@ export default class World {
 
             const useChunkTerrain = this.config.chunks?.enabled === true
 
-            this.terrainBrickRenderer = new TerrainBrickRenderer({
+            this.materials = new WorldMaterials({
                 config: this.config,
-                brickGeometry: this.brickGeometry
+                waterNoiseTexture: resources.items.waterNoiseTexture,
+                lavaConfig: this.biomeRegistry.get('volcano').lava,
+                lavaNoiseTexture: resources.items.lavaNoiseTexture
             })
 
             const prefabRegistry = new PrefabRegistry(resources)
@@ -115,12 +121,14 @@ export default class World {
                     parentGroup: this.group,
                     biomeRegistry: this.biomeRegistry,
                     prefabRegistry,
-                    waterNoiseTexture: resources.items.waterNoiseTexture,
-                    lavaConfig: this.biomeRegistry.get('volcano').lava,
-                    lavaNoiseTexture: resources.items.lavaNoiseTexture
+                    materials: this.materials
                 })
-                this.terrainBrickRenderer.group.visible = false
             } else {
+                this.terrainBrickRenderer = new TerrainBrickRenderer({
+                    config: this.config,
+                    brickGeometry: this.brickGeometry,
+                    materials: this.materials
+                })
                 this.addSystem(this.terrainBrickRenderer)
             }
 
@@ -130,22 +138,22 @@ export default class World {
                     this.waterBrickRenderer = new WaterBrickRenderer({
                         config: this.config,
                         brickGeometry: this.brickGeometry,
-                        waterNoiseTexture: resources.items.waterNoiseTexture
+                        materials: this.materials
                     })
                     this.addSystem(this.waterBrickRenderer)
                 }
                 this.lavaBrickRenderer = new LavaBrickRenderer({
                     config: this.config,
                     brickGeometry: this.brickGeometry,
-                    lavaConfig: this.biomeRegistry.get('volcano').lava,
-                    lavaNoiseTexture: resources.items.lavaNoiseTexture
+                    materials: this.materials
                 })
                 this.addSystem(this.lavaBrickRenderer)
 
                 this.prefabPlacer = new PrefabPlacer({
                     config: this.config,
                     biomeRegistry: this.biomeRegistry,
-                    prefabRegistry
+                    prefabRegistry,
+                    materials: this.materials
                 })
                 this.addSystem(this.prefabPlacer)
             }
@@ -168,7 +176,7 @@ export default class World {
     }
 
     regenerate() {
-        if (!this.terrainGenerator || !this.terrainBrickRenderer) {
+        if (!this.terrainGenerator) {
             return
         }
 
@@ -270,12 +278,7 @@ export default class World {
         createAOPanel(debug, this.config, onRegenerate, onAOPreviewChange)
         createBiomePanel(debug, this.config, onRegenerate)
         createPlacementPanel(debug, this.config, onRegenerate, onPlacementVisibilityChange)
-        createMaterialPanel(debug, this.config, {
-            legoMaterial: this.terrainChunkManager?.getDebugMaterials().legoMaterial
-                ?? this.terrainBrickRenderer?.material,
-            waterMaterial: this.terrainChunkManager?.getDebugMaterials().waterMaterial
-                ?? this.waterBrickRenderer?.material
-        }, onRegenerate)
+        createMaterialPanel(debug, this.config, this.materials, onRegenerate)
 
         if (this.terrainChunkManager) {
             createChunksPanel(debug, this.config, this.terrainChunkManager)
@@ -302,24 +305,55 @@ export default class World {
         }
     }
 
-    async warmupPrefabPipelines(renderer, camera) {
-        return warmupPrefabPipelines({
+    async warmupPrefabPipelines(renderer, camera, renderFrame) {
+        this.prefabWarmup?.dispose()
+        const warmup = await warmupPrefabPipelines({
             renderer,
             scene: this.scene,
             camera,
-            prefabRegistry: this.prefabRegistry
+            prefabRegistry: this.prefabRegistry,
+            materials: this.materials,
+            renderFrame,
+            retainPipelines: true
         })
+        if (this.disposed) warmup.dispose?.()
+        else this.prefabWarmup = warmup
+        return warmup
     }
 
     dispose() {
+        if (this.disposed) return
+        this.disposed = true
+        this.experience.renderer?.releaseSceneObjects?.(this.group)
+        this.prefabWarmup?.dispose()
+        this.prefabWarmup = null
         for (const child of this.children) {
             child.dispose?.()
         }
         this.terrainChunkManager?.dispose()
         this.terrainChunkManager = null
+        this.materials?.dispose()
+        this.materials = null
+        this.brickGeometry?.dispose()
+        this.brickGeometry = null
+        this.terrainMap = null
+        this.terrainPlacements = []
+        this.terrainGenerator = null
+        this.heightfieldAO = null
+        this.brickColorResolver = null
+        this.layeredTerrainBuilder = null
+        this.biomeMaskGenerator = null
+        this.biomeBlender = null
+        this.biomeRegistry = null
+        this.terrainBrickRenderer = null
+        this.waterBrickRenderer = null
+        this.lavaBrickRenderer = null
+        this.prefabPlacer = null
+        this.playerAircraft = null
         this.prefabRegistry = null
         this.biomeCenterSystem = null
         this.children.length = 0
+        this.group.clear()
         this.scene.remove(this.group)
     }
 }

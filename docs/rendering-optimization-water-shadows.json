@@ -1,0 +1,144 @@
+{
+  "enabled": {
+    "frameMs": 16.69999999999891,
+    "cpuMs": 3.699999999254942,
+    "gpuMs": 5.308415999999999,
+    "gpuTiming": "available",
+    "drawCalls": 280,
+    "triangles": 28317791,
+    "geometries": 39,
+    "textures": 15,
+    "waterInstances": 8160,
+    "chunkBuildMs": 14.599999999627471,
+    "prefabBuildMs": 4.5,
+    "viewport": [
+      878,
+      718
+    ],
+    "dpr": 1.100000023841858,
+    "init": {
+      "rendererMs": 82.29999999888241,
+      "resourcesWaitMs": 0,
+      "environmentMs": 19.59999999962747,
+      "worldMs": 48.90000000037253,
+      "warmupMs": 3456.7000000011176,
+      "totalMs": 3607.5
+    },
+    "chunk": {
+      "generationMs": 4,
+      "placementMs": 0.599999999627471,
+      "populateMs": 10,
+      "totalMs": 14.599999999627471,
+      "maxMs": 25.300000000745058,
+      "builds": 9,
+      "aoMs": 3.400000000372529,
+      "instancesMs": 6.599999999627471
+    },
+    "memory": {
+      "attributes": 198,
+      "attributesSize": 40407848,
+      "geometries": 39,
+      "indexAttributes": 37,
+      "indexAttributesSize": 845124,
+      "indirectStorageAttributes": 0,
+      "indirectStorageAttributesSize": 0,
+      "programs": 384,
+      "programsSize": 1548492,
+      "readbackBuffers": 0,
+      "readbackBuffersSize": 0,
+      "renderTargets": 3,
+      "storageAttributes": 0,
+      "storageAttributesSize": 0,
+      "textures": 15,
+      "texturesSize": 64619024,
+      "uniformBuffers": 783,
+      "uniformBuffersSize": 4351040,
+      "total": 111771528
+    },
+    "loadedChunks": 9,
+    "waterMeshes": 13,
+    "terrainMaterials": 1,
+    "rawHDRRetained": false,
+    "playerPosition": [
+      12.8,
+      3,
+      12.8
+    ],
+    "chunkCenter": {
+      "x": 0,
+      "z": 0
+    },
+    "waterMaterials": 1
+  },
+  "disabled": {
+    "frameMs": 16.69999999999709,
+    "cpuMs": 3.400000000372529,
+    "gpuMs": 5.308416,
+    "gpuTiming": "available",
+    "drawCalls": 267,
+    "triangles": 26914271,
+    "geometries": 39,
+    "textures": 15,
+    "waterInstances": 8160,
+    "chunkBuildMs": 14.400000000372529,
+    "prefabBuildMs": 3.200000001117587,
+    "viewport": [
+      878,
+      718
+    ],
+    "dpr": 1.100000023841858,
+    "init": {
+      "rendererMs": 82.29999999888241,
+      "resourcesWaitMs": 0,
+      "environmentMs": 19.59999999962747,
+      "worldMs": 48.90000000037253,
+      "warmupMs": 3456.7000000011176,
+      "totalMs": 3607.5
+    },
+    "chunk": {
+      "generationMs": 3.600000001490116,
+      "placementMs": 0.5,
+      "populateMs": 10.299999998882413,
+      "totalMs": 14.400000000372529,
+      "maxMs": 25.300000000745058,
+      "builds": 18,
+      "aoMs": 3.399999998509884,
+      "instancesMs": 6.900000000372529
+    },
+    "memory": {
+      "attributes": 198,
+      "attributesSize": 40407848,
+      "geometries": 39,
+      "indexAttributes": 37,
+      "indexAttributesSize": 845124,
+      "indirectStorageAttributes": 0,
+      "indirectStorageAttributesSize": 0,
+      "programs": 384,
+      "programsSize": 1548492,
+      "readbackBuffers": 0,
+      "readbackBuffersSize": 0,
+      "renderTargets": 3,
+      "storageAttributes": 0,
+      "storageAttributesSize": 0,
+      "textures": 15,
+      "texturesSize": 64619024,
+      "uniformBuffers": 783,
+      "uniformBuffersSize": 4351040,
+      "total": 111771528
+    },
+    "loadedChunks": 9,
+    "waterMeshes": 13,
+    "terrainMaterials": 1,
+    "rawHDRRetained": false,
+    "playerPosition": [
+      12.8,
+      3,
+      12.8
+    ],
+    "chunkCenter": {
+      "x": 0,
+      "z": 0
+    },
+    "waterMaterials": 1
+  }
+}

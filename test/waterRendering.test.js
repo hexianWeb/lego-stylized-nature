@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import * as THREE from 'three/webgpu'
 import { createWaterMaterial } from '../src/materials/tsl/waterMaterial.js'
 import WaterBrickRenderer from '../src/world/bricks/WaterBrickRenderer.js'
+import WorldMaterials from '../src/world/WorldMaterials.js'
 
 test('creates animated noise-mixed water material with a procedural fallback', () => {
   const noiseTexture = new THREE.Texture()
@@ -39,8 +40,9 @@ test('creates animated noise-mixed water material with a procedural fallback', (
   assert.equal(texturedMaterial.metalness, 0)
 })
 
-test('initializes a fixed water grid once and skips matrix uploads on rebuild', () => {
+test('builds only water cells and leaves shared material disposal to the World', () => {
   const renderer = new WaterBrickRenderer({
+    materials: new WorldMaterials(),
     config: {
       terrain: {
         width: 3,
@@ -51,12 +53,11 @@ test('initializes a fixed water grid once and skips matrix uploads on rebuild', 
       },
       water: {}
     },
-    brickGeometry: new THREE.BoxGeometry(1, 1, 1),
-    waterNoiseTexture: new THREE.Texture()
+    brickGeometry: new THREE.BoxGeometry(1, 1, 1)
   })
   const terrainMap = {
-    getSurfaceCell() {
-      return { isWater: false }
+    getSurfaceCell(x) {
+      return { isWater: x !== 1 }
     }
   }
 
@@ -65,14 +66,15 @@ test('initializes a fixed water grid once and skips matrix uploads on rebuild', 
 
   assert.equal(renderer.group.children.length, 1)
   assert.equal(renderer.mesh.name, 'WaterBrickInstances')
-  assert.equal(renderer.mesh.count, 3)
-  assert.equal(renderer.instanceCount, 3)
+  assert.equal(renderer.mesh.count, 2)
+  assert.equal(renderer.instanceCount, 2)
+  assert.equal(renderer.mesh.frustumCulled, true)
 
   renderer.build(terrainMap)
 
   assert.equal(renderer.mesh, firstMesh)
   assert.equal(renderer.group.children.length, 1)
-  assert.equal(renderer.mesh.count, 3)
+  assert.equal(renderer.mesh.count, 2)
 
   let materialDisposed = false
   renderer.material.dispose = () => {
@@ -80,7 +82,42 @@ test('initializes a fixed water grid once and skips matrix uploads on rebuild', 
   }
   renderer.dispose()
 
-  assert.equal(materialDisposed, true)
+  assert.equal(materialDisposed, false)
   assert.equal(renderer.mesh, null)
   assert.equal(renderer.group.children.length, 0)
+})
+
+test('water pages grow, shrink to zero and refill without stale instances', () => {
+  const config = { terrain: { width: 5, depth: 1, cellSize: 1, layerHeight: 1, waterLevel: 3 }, water: {} }
+  const materials = new WorldMaterials({ config })
+  const renderer = new WaterBrickRenderer({ config, materials, brickGeometry: new THREE.BoxGeometry(), pageCapacity: 2 })
+  let count = 5
+  const terrainMap = { getSurfaceCell: (x) => ({ isWater: x < count }) }
+  renderer.build(terrainMap)
+  const meshes = renderer.pages.map((page) => page.mesh)
+  assert.deepEqual(meshes.map((mesh) => mesh.count), [2, 2, 1])
+
+  count = 1
+  renderer.build(terrainMap)
+  assert.deepEqual(meshes.map((mesh) => mesh.count), [1, 0, 0])
+  assert.deepEqual(meshes.map((mesh) => mesh.visible), [true, false, false])
+  count = 0
+  renderer.build(terrainMap)
+  assert.equal(renderer.instanceCount, 0)
+  assert.ok(meshes.every((mesh) => mesh.boundingSphere.isEmpty() && !mesh.visible))
+
+  count = 5
+  config.terrain.waterLevel = 9
+  config.water.castShadow = false
+  renderer.build(terrainMap)
+  assert.deepEqual(renderer.pages.map((page) => page.mesh), meshes)
+  assert.equal(renderer.instanceCount, 5)
+  assert.ok(meshes.every((mesh) => !mesh.castShadow && mesh.frustumCulled))
+  assert.ok(meshes[2].boundingSphere.containsPoint(new THREE.Vector3(4.5, 9, 0.5)))
+
+  config.water.enableWater = false
+  renderer.build(terrainMap)
+  assert.equal(renderer.instanceCount, 0)
+  renderer.dispose()
+  materials.dispose()
 })
