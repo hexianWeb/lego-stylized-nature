@@ -9,6 +9,7 @@ import TerrainGenerator from './terrain/TerrainGenerator.js'
 import LayeredTerrainBuilder from './terrain/LayeredTerrainBuilder.js'
 import { extractBrickGeometry } from './bricks/BrickGeometry.js'
 import BrickColorResolver from './bricks/BrickColorResolver.js'
+import { isTerrainPreview } from './bricks/terrainColorScheme.js'
 import HeightfieldAO from './bricks/HeightfieldAO.js'
 import TerrainBrickRenderer from './bricks/TerrainBrickRenderer.js'
 import WaterBrickRenderer from './bricks/WaterBrickRenderer.js'
@@ -19,6 +20,7 @@ import { warmupPrefabPipelines } from './prefabs/PrefabPipelineWarmup.js'
 import PlayerAircraft from './player/PlayerAircraft.js'
 import ChunkManager from './chunks/ChunkManager.js'
 import { createTerrainPanel } from '../debug/panels/TerrainPanel.js'
+import { createTerrainColorPanel } from '../debug/panels/TerrainColorPanel.js'
 import { createAOPanel } from '../debug/panels/AOPanel.js'
 import { createBiomePanel } from '../debug/panels/BiomePanel.js'
 import { createPlacementPanel } from '../debug/panels/PlacementPanel.js'
@@ -226,12 +228,16 @@ export default class World {
     }
 
     refreshAOPreview() {
-        const preview = this.config.terrain.ao?.previewGrayscale === true
-
-        if (preview && this.terrainMap && this.heightfieldAO) {
+        if (this.config.terrain.ao?.previewGrayscale && this.terrainMap && this.heightfieldAO) {
             this.heightfieldAO.build(this.terrainMap)
         }
 
+        this.refreshTerrainColors()
+    }
+
+    refreshTerrainColors() {
+        const preview = isTerrainPreview(this.config)
+        this.brickColorResolver?.invalidatePalettes?.()
         this.terrainBrickRenderer?.updateInstanceColors()
         this.terrainChunkManager?.refreshAOPreview(!preview)
 
@@ -250,6 +256,21 @@ export default class World {
         if (this.playerAircraft?.group) {
             this.playerAircraft.group.visible = !preview
         }
+        if (this.biomeCenterSystem?.group) {
+            this.biomeCenterSystem.group.visible = !preview
+        }
+    }
+
+    getTerrainColorHistogram() {
+        const histogram = Array(10).fill(0)
+        const slots = this.terrainChunkManager?.activeSlots?.values()
+        const renderers = slots
+            ? Array.from(slots, (slot) => slot.terrainRenderer)
+            : [this.terrainBrickRenderer]
+        for (const renderer of renderers) {
+            renderer?.colorHistogram?.forEach((count, i) => { histogram[i] += count })
+        }
+        return histogram
     }
 
     /**
@@ -261,7 +282,13 @@ export default class World {
         }
 
         const onRegenerate = () => this.regenerate()
-        const onAOPreviewChange = () => this.refreshAOPreview()
+        const onAOPreviewChange = () => {
+            if (this.config.terrain.ao?.previewGrayscale && this.config.terrain.color) {
+                this.config.terrain.color.preview = 'final'
+            }
+            this.refreshAOPreview()
+            debug.ui.refresh()
+        }
         const onPlacementVisibilityChange = () => {
             const enabled = this.config.placement.enablePrefabs !== false
                 || this.config.placement.enableTrees !== false
@@ -270,11 +297,13 @@ export default class World {
             } else if (this.prefabPlacer) {
                 this.prefabPlacer.syncVariantGroupVisibility()
                 this.prefabPlacer.group.visible = enabled
-                    && this.config.terrain.ao?.previewGrayscale !== true
+                    && !isTerrainPreview(this.config)
             }
         }
 
         createTerrainPanel(debug, this.config, onRegenerate)
+        createTerrainColorPanel(debug, this.config, this.biomeRegistry,
+            () => this.refreshTerrainColors(), () => this.getTerrainColorHistogram())
         createAOPanel(debug, this.config, onRegenerate, onAOPreviewChange)
         createBiomePanel(debug, this.config, onRegenerate)
         createPlacementPanel(debug, this.config, onRegenerate, onPlacementVisibilityChange)

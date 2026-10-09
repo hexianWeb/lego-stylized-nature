@@ -1,4 +1,5 @@
 import * as THREE from 'three/webgpu'
+import { isTerrainPreview } from './terrainColorScheme.js'
 
 export default class TerrainBrickRenderer {
   constructor({ config, brickGeometry, materials }) {
@@ -13,14 +14,18 @@ export default class TerrainBrickRenderer {
     this._placements = []
     this._colorResolver = null
     this._heightfieldAO = null
+    this._origin = { x: 0, z: 0 }
+    this._colorSample = {}
+    this.colorHistogram = new Uint32Array(10)
   }
 
-  build(placements, colorResolver, heightfieldAO = null) {
+  build(placements, colorResolver, heightfieldAO = null, origin = { x: 0, z: 0 }) {
     const { cellSize, layerHeight } = this.config.terrain
 
     this._placements = placements
     this._colorResolver = colorResolver
     this._heightfieldAO = heightfieldAO
+    this._origin = origin
 
     if (!this.mesh || placements.length > this.capacity) {
       this.mesh?.dispose()
@@ -62,38 +67,58 @@ export default class TerrainBrickRenderer {
       return
     }
 
-    const preview = this.config.terrain.ao?.previewGrayscale === true
-    this.mesh.material = preview ? this.previewMaterial : this.material
+    const aoPreview = this.config.terrain.ao?.previewGrayscale === true
+    const colorPreview = this.config.terrain.color?.preview ?? 'final'
+    this.mesh.material = this.isPreview() ? this.previewMaterial : this.material
+    this.colorHistogram.fill(0)
 
     const color = new THREE.Color()
     const ao = this._heightfieldAO
-    const aoEnabled = ao?.isActive() && this.config.terrain.ao?.enabled
+    const aoEnabled = colorPreview === 'final' && ao?.isActive() && this.config.terrain.ao?.enabled
+    const sample = this._colorSample
 
     this._placements.forEach((p, i) => {
-      if (preview && ao) {
+      // Instance transforms and AO stay chunk-local; color/noise use stable world-grid coordinates.
+      sample.biomeCell = p.biomeCell
+      sample.surfaceCell = p.surfaceCell
+      sample.layer = p.layer
+      sample.x = this._origin.x + p.x
+      sample.y = p.y
+      sample.z = this._origin.z + p.z
+      let tone = null
+
+      if (aoPreview && ao) {
         const aoValue = ao.get(p.x, p.y, p.z)
         color.setRGB(aoValue, aoValue, aoValue)
+      } else if (colorPreview === 'noise' && this._colorResolver.sampleTone) {
+        tone = this._colorResolver.sampleTone(sample)
+        color.setRGB(tone, tone, tone)
       } else {
-        color.set(this._colorResolver.resolve({
-          biomeCell: p.biomeCell,
-          surfaceCell: p.surfaceCell,
-          layer: p.layer,
-          x: p.x,
-          y: p.y,
-          z: p.z
-        }))
+        if (this._colorResolver.resolveColor) {
+          this._colorResolver.resolveColor(sample, color)
+          tone = this._colorResolver.lastTone
+        } else {
+          color.set(this._colorResolver.resolve(sample))
+        }
 
         if (aoEnabled) {
           color.multiplyScalar(ao.get(p.x, p.y, p.z))
         }
       }
 
+      if (Number.isFinite(tone)) {
+        this.colorHistogram[Math.min(9, Math.max(0, Math.floor(tone * 10)))]++
+      }
       this.mesh.setColorAt(i, color)
     })
 
     if (this.mesh.instanceColor) {
       this.mesh.instanceColor.needsUpdate = true
     }
+  }
+
+  isPreview() {
+    return isTerrainPreview(this.config)
   }
 
   dispose() {
@@ -105,5 +130,6 @@ export default class TerrainBrickRenderer {
     this._placements = []
     this._colorResolver = null
     this._heightfieldAO = null
+    this.colorHistogram.fill(0)
   }
 }

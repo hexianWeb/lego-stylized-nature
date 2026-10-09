@@ -23,7 +23,12 @@ const config = {
     noiseOctaves: 4,
     noiseGain: 0.5,
     noiseLacunarity: 2,
-    seaClip: 0.35,
+    heightCurve: [
+      { n: 0, h: 0 },
+      { n: 0.36, h: 0 },
+      { n: 0.49, h: 14 },
+      { n: 1, h: 30 }
+    ],
     ao: { enabled: false, previewGrayscale: false }
   },
   biomes: {

@@ -64,6 +64,7 @@ export default class ChunkRenderSlot {
   }
 
   setOverlaysVisible(visible) {
+    visible = visible && this.terrainRenderer.isPreview?.() !== true
     if (this.waterRenderer?.group) {
       this.waterRenderer.group.visible = visible
     }
@@ -98,7 +99,7 @@ export default class ChunkRenderSlot {
     const started = performance.now()
     this.heightfieldAO.build(terrainMap)
     const aoBuilt = performance.now()
-    this.terrainRenderer.build(placements, colorResolver, this.heightfieldAO)
+    this.terrainRenderer.build(placements, colorResolver, this.heightfieldAO, this.origin)
     this.waterRenderer?.build(terrainMap)
     this.lavaRenderer?.build(terrainMap)
     this.buildTimings.aoMs = aoBuilt - started
@@ -124,7 +125,7 @@ export default class ChunkRenderSlot {
   setPrefabsVisible(visible) {
     this.prefabsVisible = visible
     if (this.prefabPlacer?.group) {
-      this.prefabPlacer.group.visible = visible
+      this.prefabPlacer.group.visible = visible && this.terrainRenderer.isPreview?.() !== true
     }
   }
 
@@ -145,6 +146,7 @@ export default class ChunkRenderSlot {
 
   updateInstanceColors() {
     this.terrainRenderer.updateInstanceColors()
+    this.setPrefabsVisible(this.prefabsVisible)
   }
 
   dispose() {

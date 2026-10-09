@@ -1,5 +1,6 @@
 import { TILT_SHIFT_DEFAULTS } from '../renderer/postprocessing/tiltShiftConfig.js'
 import { SPEED_LINES_DEFAULTS } from '../renderer/postprocessing/speedLinesConfig.js'
+import { createTerrainColorSettings } from './bricks/terrainColorScheme.js'
 
 export const worldConfig = {
   seed: 20260608,
@@ -14,15 +15,29 @@ export const worldConfig = {
   terrain: {
     width: 128,
     depth: 128,
-    maxHeight: 36,
+    maxHeight: 64,
     layerHeight: 0.095,
     cellSize: 0.2,
     waterLevel: 3,
-    noiseScale: 34,
+    noiseScale: 72,
     noiseOctaves: 4,
     noiseGain: 0.5,
     noiseLacunarity: 2,
-    seaClip: 0.35,
+    /** Piecewise-linear remap from FBM n01 to height in layers; n must be ascending. */
+    heightCurve: [
+      { n: 0.00, h: 0 },
+      { n: 0.35, h: 0 },
+      { n: 0.38, h: 2 },   // 第一层平台，约 14%
+      { n: 0.44, h: 2 },
+      { n: 0.46, h: 11 },  // 第二层平台，约 18%
+      { n: 0.53, h: 11 },
+      { n: 0.55, h: 20 },  // 第三层平台，约 16%
+      { n: 0.62, h: 20 },
+      { n: 0.64, h: 29 },  // 第四层平台，约 17%
+      { n: 0.80, h: 29 },
+      { n: 1.00, h: 32 }
+    ],
+    color: createTerrainColorSettings(),
     ao: {
       enabled: true,
       previewGrayscale: false,

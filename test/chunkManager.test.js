@@ -16,7 +16,6 @@ const config = {
     noiseOctaves: 4,
     noiseGain: 0.5,
     noiseLacunarity: 2,
-    seaClip: 0.35,
     ao: { enabled: false, previewGrayscale: false }
   },
   placement: { enablePrefabs: true, enableTrees: false },

@@ -6,6 +6,21 @@ import VolcanoSurfaceFeatureGenerator from './VolcanoSurfaceFeatureGenerator.js'
 import DesertSurfaceFeatureGenerator from './DesertSurfaceFeatureGenerator.js'
 import { mulberry32 } from '../../utils/random.js'
 
+export function sampleHeightCurve(points, n) {
+  if (n <= points[0].n) {
+    return points[0].h
+  }
+  for (let i = 1; i < points.length; i++) {
+    const b = points[i]
+    if (n <= b.n) {
+      const a = points[i - 1]
+      const t = b.n > a.n ? (n - a.n) / (b.n - a.n) : 1
+      return a.h + (b.h - a.h) * t
+    }
+  }
+  return points[points.length - 1].h
+}
+
 export default class TerrainGenerator {
   constructor({ config, biomeMaskGenerator, biomeBlender, biomeRegistry }) {
     this.config = config
@@ -108,8 +123,8 @@ export default class TerrainGenerator {
     const heightMagnitude = this.biomeBlender.blendTerrainParam(biomeCell.weights, 'heightMagnitude', 1)
 
     const n01 = 0.5 + 0.5 * this.fbm(worldX, worldZ)
-    const shaped = Math.max(0, Math.min(1, (n01 - terrain.seaClip) / (1 - terrain.seaClip)))
-    const height = Math.floor(shaped * terrain.maxHeight * heightMagnitude + terrain.waterLevel + heightOffset)
+    const shaped = sampleHeightCurve(terrain.heightCurve, n01)
+    const height = Math.floor(shaped * heightMagnitude + terrain.waterLevel + heightOffset)
 
     field.set(x, z, Math.max(0, Math.min(terrain.maxHeight, height)))
   }

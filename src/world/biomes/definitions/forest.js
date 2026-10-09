@@ -9,6 +9,35 @@ export default {
       subsurface: '#6e4a28',
       deep: '#8c8c8c',
       shore: '#e8d18b'
+    },
+    // Tone order runs cool/dark -> warm/light; height influence pushes high plateaus toward later entries.
+    palettes: {
+      surface: [
+        { at: 0, color: '#2f6e46' },
+        { at: 0.3, color: '#3f8a47' },
+        { at: 0.52, color: '#5a9e48' },
+        { at: 0.74, color: '#7fb350' },
+        { at: 1, color: '#a8c25e' }
+      ],
+      subsurface: [
+        { at: 0, color: '#62422a' },
+        { at: 0.35, color: '#7d5734' },
+        { at: 0.62, color: '#966c40' },
+        { at: 1, color: '#7f7a3c' }
+      ],
+      deep: [
+        { at: 0, color: '#646a64' },
+        { at: 0.3, color: '#7a7e76' },
+        { at: 0.55, color: '#959485' },
+        { at: 0.78, color: '#ab9f83' },
+        { at: 1, color: '#77835a' }
+      ],
+      shore: [
+        { at: 0, color: '#c7ab74' },
+        { at: 0.4, color: '#dcc28a' },
+        { at: 0.7, color: '#e8d6a4' },
+        { at: 1, color: '#b9b56e' }
+      ]
     }
   },
   prefabs: [

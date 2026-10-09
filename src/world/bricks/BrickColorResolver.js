@@ -1,18 +1,12 @@
 import * as THREE from 'three/webgpu'
-import { random01 } from '../../utils/random.js'
-
-const HSL_JITTER = {
-  hue: 0.03,
-  saturation: 0.04,
-  lightness: 0.04
-}
-
-const LAYER_SEED = {
-  surface: 0,
-  subsurface: 41,
-  deep: 73,
-  shore: 19
-}
+import { createNoise2D, createNoise3D } from 'simplex-noise'
+import { mulberry32, random01 } from '../../utils/random.js'
+import {
+  createDefaultColorPalette,
+  ensureTerrainColorSettings,
+  prepareColorPalette,
+  sampleColorPalette
+} from './terrainColorScheme.js'
 
 export default class BrickColorResolver {
   constructor({ biomeRegistry, biomeBlender, config }) {
@@ -20,43 +14,69 @@ export default class BrickColorResolver {
     this.biomeBlender = biomeBlender
     this.config = config
     this._color = new THREE.Color()
-    this._hsl = { h: 0, s: 0, l: 0 }
+    this.settings = ensureTerrainColorSettings(config, biomeRegistry.getAll?.() ?? [])
+    this._palettes = new Map()
+    this._noiseSeed = null
+    this.lastTone = 0.5
   }
 
-  resolve({ biomeCell, surfaceCell, layer, x, y, z }) {
-    const biomeId = this.biomeBlender.pickDitheredBiomeId(biomeCell.weights, x, z, this.config.seed)
-    const colors = this.biomeRegistry.get(biomeId).terrain.colors
+  resolve(sample) {
+    return `#${this.resolveColor(sample, this._color).getHexString()}`
+  }
 
-    let baseHex
-    if (layer === 'surface' && surfaceCell.isShore) {
-      baseHex = colors.shore
-    } else if (layer === 'surface') {
-      baseHex = colors.surface
-    } else if (layer === 'subsurface') {
-      baseHex = colors.subsurface
-    } else {
-      baseHex = colors.deep
+  resolveColor(sample, target) {
+    const { biomeCell, surfaceCell, layer, x, z } = sample
+    const biomeId = this.biomeBlender.pickDitheredBiomeId(biomeCell.weights, x, z, this.config.seed)
+    const colorLayer = layer === 'surface' && surfaceCell?.isShore ? 'shore' : layer
+    const key = `${biomeId}:${colorLayer}`
+    let palette = this._palettes.get(key)
+    if (!palette) {
+      const palettes = this.settings.palettes[biomeId] ??= {}
+      palettes[colorLayer] ??= createDefaultColorPalette(this.biomeRegistry.get(biomeId).terrain.colors[colorLayer])
+      palette = prepareColorPalette(palettes[colorLayer])
+      this._palettes.set(key, palette)
     }
 
-    return this.applyHslJitter(baseHex, x, y, z, layer)
+    this.lastTone = this.sampleTone(sample, colorLayer)
+    return sampleColorPalette(palette, this.lastTone, target)
   }
 
-  applyHslJitter(baseHex, x, y, z, layer) {
-    const seed = this.config.seed
-    const layerSalt = LAYER_SEED[layer] ?? 0
+  sampleTone({ x, y, z, layer, surfaceCell }, colorLayer = layer) {
+    this.ensureNoise()
+    const settings = this.settings
+    const nx = (x + 0.5) / settings.macroScale
+    const nz = (z + 0.5) / settings.macroScale
+    const isRock = colorLayer === 'subsurface' || colorLayer === 'deep'
+    let noise = isRock
+      ? this._noise3D(nx, (y + 0.5) / settings.verticalScale, nz)
+      : this._noise2D(nx, nz)
 
-    this._color.set(baseHex)
-    this._color.getHSL(this._hsl)
+    if (isRock && settings.layerStrength > 0) {
+      const warp = this._warp2D(nx * 0.5, nz * 0.5) * settings.layerWarp
+      const band = Math.sin((y + 0.5 + warp) * Math.PI * 2 / settings.layerScale)
+      noise = (noise + band * settings.layerStrength) / (1 + settings.layerStrength)
+    }
 
-    const hueJitter = (random01(x, y, seed + z + layerSalt) * 2 - 1) * HSL_JITTER.hue
-    const satJitter = (random01(z, x, seed + y + layerSalt + 17) * 2 - 1) * HSL_JITTER.saturation
-    const lightJitter = (random01(y, z, seed + x + layerSalt + 31) * 2 - 1) * HSL_JITTER.lightness
+    const microSeed = settings.seed ^ Math.imul(y + 1013, 1597334677)
+    const micro = (random01(x, z, microSeed) * 2 - 1) * settings.microVariation
+    // Bias by the generated column height, rather than replacing the noise field with altitude bands.
+    const height = Number.isFinite(surfaceCell?.height) ? surfaceCell.height : y
+    const height01 = THREE.MathUtils.clamp(
+      (height - settings.heightMin) / Math.max(Number.EPSILON, settings.heightMax - settings.heightMin), 0, 1
+    )
+    const heightBias = (height01 - 0.5) * settings.heightInfluence
+    return THREE.MathUtils.clamp(0.5 + noise * 0.5 * settings.contrast + settings.bias + heightBias + micro, 0, 1)
+  }
 
-    this._hsl.h = (this._hsl.h + hueJitter + 1) % 1
-    this._hsl.s = THREE.MathUtils.clamp(this._hsl.s + satJitter, 0, 1)
-    this._hsl.l = THREE.MathUtils.clamp(this._hsl.l + lightJitter, 0, 1)
+  ensureNoise() {
+    if (this._noiseSeed === this.settings.seed) return
+    this._noiseSeed = this.settings.seed
+    this._noise2D = createNoise2D(mulberry32(this._noiseSeed))
+    this._noise3D = createNoise3D(mulberry32(this._noiseSeed + 104729))
+    this._warp2D = createNoise2D(mulberry32(this._noiseSeed + 130363))
+  }
 
-    this._color.setHSL(this._hsl.h, this._hsl.s, this._hsl.l)
-    return `#${this._color.getHexString()}`
+  invalidatePalettes() {
+    this._palettes.clear()
   }
 }
