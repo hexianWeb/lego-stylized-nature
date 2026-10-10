@@ -156,7 +156,7 @@ document.querySelector('#run').addEventListener('click', async () => {
       await frames(optional)
       assert(optional.resources.errors.waterNoiseTexture, 'Optional failure not recorded')
       assert(optional.world.terrainChunkManager.activeSlots.size === 9, 'Optional failure blocked world')
-      record({ name: 'optional-failure', worldLoaded: true, noiseFallback: !optional.world.materials.waterMaterial.userData.waterNoiseTexture })
+      record({ name: 'optional-failure', worldLoaded: true, noiseFallback: !optional.world.materials.waterMaterial.userData.noiseTexture })
       await disposeAndRecord(optional, 'optional-experience-disposal')
     } finally { optional.dispose(); noise.path = noisePath }
 

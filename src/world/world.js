@@ -106,8 +106,7 @@ export default class World {
             this.materials = new WorldMaterials({
                 config: this.config,
                 waterNoiseTexture: resources.items.waterNoiseTexture,
-                lavaConfig: this.biomeRegistry.get('volcano').lava,
-                lavaNoiseTexture: resources.items.lavaNoiseTexture
+                lavaConfig: this.biomeRegistry.get('volcano').lava
             })
 
             const prefabRegistry = new PrefabRegistry(resources)

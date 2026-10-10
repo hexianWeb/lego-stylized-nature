@@ -1,7 +1,7 @@
 export function createMaterialPanel(
     debug,
     config,
-    { legoMaterial, waterMaterial },
+    { legoMaterial, waterMaterial, lavaMaterial },
     onRegenerate = null
 ) {
     const folder = debug.addFolder({ title: 'Materials', expanded: false })
@@ -77,7 +77,11 @@ export function createMaterialPanel(
                     label: key
                 })
                 .on('change', ({ value }) => {
-                    waterMaterial[key] = value
+                    for (const material of [waterMaterial, lavaMaterial]) {
+                        if (material) {
+                            material[key] = value
+                        }
+                    }
                 })
         }
     }

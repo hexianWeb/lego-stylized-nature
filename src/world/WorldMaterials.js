@@ -8,11 +8,23 @@ import { resolveInstanceColorMaterial } from './prefabs/prefabInstanceColor.js'
 
 // The World owns these materials; slots and warmup meshes only borrow them.
 export default class WorldMaterials {
-  constructor({ config = {}, waterNoiseTexture = null, lavaConfig = {}, lavaNoiseTexture = null } = {}) {
+  constructor({ config = {}, waterNoiseTexture = null, lavaConfig = {} } = {}) {
+    const waterConfig = config.water ?? {}
     this.legoMaterial = createLegoMaterial()
     this.previewMaterial = new THREE.MeshBasicNodeMaterial()
-    this.waterMaterial = createWaterMaterial(config.water, waterNoiseTexture)
-    this.lavaMaterial = createLavaMaterial(lavaConfig, lavaNoiseTexture)
+    this.waterMaterial = createWaterMaterial(waterConfig, waterNoiseTexture)
+    this.lavaMaterial = createLavaMaterial({
+      textureScale: waterConfig.textureScale,
+      flowSpeed: waterConfig.flowSpeed,
+      flowStrength: waterConfig.flowStrength,
+      flowVariance: waterConfig.flowVariance,
+      roughness: waterConfig.roughness,
+      clearcoat: waterConfig.clearcoat,
+      clearcoatRoughness: waterConfig.clearcoatRoughness,
+      darkColor: lavaConfig.darkColor,
+      midColor: lavaConfig.midColor,
+      lightColor: lavaConfig.lightColor
+    }, waterNoiseTexture, this.waterMaterial.userData.uniforms)
     this.treeMaterials = new Map()
     this.tintMaterials = new Map()
     this.instanceColorMaterials = new Map()

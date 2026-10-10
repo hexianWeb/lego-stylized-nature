@@ -9,8 +9,7 @@ function createExperience() {
     resources: {
       items: {
         brick2x2Model: new THREE.Group(),
-        waterNoiseTexture: null,
-        lavaNoiseTexture: null
+        waterNoiseTexture: null
       }
     },
     worldCamera: {
