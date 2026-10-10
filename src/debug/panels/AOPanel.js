@@ -14,7 +14,7 @@ export function createAOPanel(debug, config, onRegenerate, onPreviewChange) {
 
     folder.addBinding(ao, 'enabled', { label: 'enabled' }).on('change', onRegenerate)
 
-    folder.addBinding(ao, 'strength', { min: 0, max: 2, step: 0.05, label: 'strength' })
+    folder.addBinding(ao, 'strength', { min: 0, max: 3, step: 0.05, label: 'strength' })
         .on('change', onRegenerate)
     folder.addBinding(ao, 'min', { min: 0.2, max: 0.95, step: 0.01, label: 'minBrightness' })
         .on('change', onRegenerate)

@@ -41,7 +41,7 @@ export const worldConfig = {
     ao: {
       enabled: true,
       previewGrayscale: false,
-      strength: 1.4,
+      strength: 2,
       min: 0.2,
       /** Grid steps sampled along each of 8 directions. Max value must be ≤ chunks.halo. */
       sampleDistances: [1, 2, 4, 8],

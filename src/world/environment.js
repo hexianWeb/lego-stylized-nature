@@ -26,7 +26,7 @@ export default class Environment {
         this.envMap = null
         this.envMapRenderTarget = null
         this.disposed = false
-        this.environmentIntensity = 0.22
+        this.environmentIntensity = 0.27
         this.useEnvBackground = true
         /** 0 = darker shadows, 1 = more ambient/env fill */
         this.shadowFill = 0.25
@@ -36,10 +36,10 @@ export default class Environment {
         }
         this.directionalTarget = { x: 12, y: 12, z: 12 }
 
-        this.ambientLight = new THREE.AmbientLight(0xffffff, 0.08)
+        this.ambientLight = new THREE.AmbientLight(0xffffff, 0.13)
         this.scene.add(this.ambientLight)
 
-        this.directionalLight = new THREE.DirectionalLight(0xffffff, 1.85)
+        this.directionalLight = new THREE.DirectionalLight(0xffffff, 1.3)
         this.directionalLight.position.set(-8, 23, -10)
         this.directionalLight.castShadow = true
         this.directionalLight.shadow.mapSize.set(1024*2, 1024*2)
@@ -55,8 +55,8 @@ export default class Environment {
 
     applyShadowFill() {
         const fill = THREE.MathUtils.clamp(this.shadowFill, 0, 1)
-        this.ambientLight.intensity = fill * 0.16 + 0.04
-        this.environmentIntensity = fill * 0.38 + 0.12
+        this.ambientLight.intensity = fill * 0.16 + 0.09
+        this.environmentIntensity = fill * 0.38 + 0.175
         this.syncEnvironmentIntensity()
     }
 
