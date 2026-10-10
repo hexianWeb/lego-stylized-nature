@@ -23,20 +23,6 @@ export const worldConfig = {
     noiseOctaves: 4,
     noiseGain: 0.5,
     noiseLacunarity: 2,
-    /** Piecewise-linear remap from FBM n01 to height in layers; n must be ascending. */
-    heightCurve: [
-      { n: 0.00, h: 0 },
-      { n: 0.35, h: 0 },
-      { n: 0.38, h: 2 },   // 第一层平台，约 14%
-      { n: 0.44, h: 2 },
-      { n: 0.46, h: 11 },  // 第二层平台，约 18%
-      { n: 0.53, h: 11 },
-      { n: 0.55, h: 20 },  // 第三层平台，约 16%
-      { n: 0.62, h: 20 },
-      { n: 0.64, h: 29 },  // 第四层平台，约 17%
-      { n: 0.80, h: 29 },
-      { n: 1.00, h: 32 }
-    ],
     color: createTerrainColorSettings(),
     ao: {
       enabled: true,
@@ -53,11 +39,16 @@ export const worldConfig = {
     }
   },
   biomes: {
-    regions: [
-      { id: 'autumnForest', center: [0, 0], radius: 120, weight: 1 },
-      { id: 'autumnForest', center: [400, 400], radius: 120, weight: 1 },
-      { id: 'desert', center: [400, -400], radius: 120, weight: 1 },
-      { id: 'volcano', center: [-400, 400], radius: 120, weight: 1 }
+    cellSize: 192,
+    jitter: 0.6,
+    blendWidth: 24,
+    warp: { amplitude: 40, scale: 160 },
+    originBiome: 'autumnForest',
+    table: [
+      { id: 'forest', weight: 4 },
+      { id: 'autumnForest', weight: 3 },
+      { id: 'desert', weight: 2 },
+      { id: 'volcano', weight: 1 }
     ]
   },
   placement: {

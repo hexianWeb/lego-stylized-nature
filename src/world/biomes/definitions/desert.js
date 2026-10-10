@@ -2,8 +2,16 @@ export default {
   id: 'desert',
   label: 'Desert',
   terrain: {
-    heightOffset: -1,
-    heightMagnitude: 0.65,
+    shape: {
+      type: 'dunes',
+      noise: { scale: 110, octaves: 3 },
+      baseHeight: 2,
+      baseAmplitude: 5,
+      duneAmplitude: 13,
+      duneScale: 24,
+      duneStretch: 4,
+      windAngle: Math.PI / 6
+    },
     colors: {
       surface: '#d2b77f',
       subsurface: '#ca945b',

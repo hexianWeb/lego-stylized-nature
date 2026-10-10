@@ -2,8 +2,23 @@ export default {
   id: 'forest',
   label: 'Forest',
   terrain: {
-    heightOffset: 0,
-    heightMagnitude: 0.95,
+    shape: {
+      type: 'terraced',
+      // Absolute layers above waterLevel, preserving the former 0.95 height scale.
+      heightCurve: [
+        { n: 0.00, h: 0 },
+        { n: 0.35, h: 0 },
+        { n: 0.38, h: 1.9 },
+        { n: 0.44, h: 1.9 },
+        { n: 0.46, h: 10.45 },
+        { n: 0.53, h: 10.45 },
+        { n: 0.55, h: 19 },
+        { n: 0.62, h: 19 },
+        { n: 0.64, h: 27.55 },
+        { n: 0.80, h: 27.55 },
+        { n: 1.00, h: 30.4 }
+      ]
+    },
     colors: {
       surface: '#2e8b3c',
       subsurface: '#6e4a28',

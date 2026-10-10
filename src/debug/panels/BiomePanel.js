@@ -4,7 +4,13 @@ export function createBiomePanel(debug, config, onRegenerate) {
         return
     }
 
-    for (const region of config.biomes.regions) {
-        folder.addBinding(region, 'radius', { min: 8, max: 60, step: 1, label: region.id }).on('change', onRegenerate)
+    const biomes = config.biomes
+    folder.addBinding(biomes, 'cellSize', { min: 32, max: 512, step: 1 }).on('change', onRegenerate)
+    folder.addBinding(biomes, 'jitter', { min: 0, max: 1, step: 0.01 }).on('change', onRegenerate)
+    folder.addBinding(biomes, 'blendWidth', { min: 1, max: 192, step: 1 }).on('change', onRegenerate)
+    folder.addBinding(biomes.warp, 'amplitude', { min: 0, max: 128, step: 1, label: 'Warp amplitude' }).on('change', onRegenerate)
+
+    for (const entry of biomes.table) {
+        folder.addBinding(entry, 'weight', { min: 0, max: 10, step: 1, label: entry.id }).on('change', onRegenerate)
     }
 }

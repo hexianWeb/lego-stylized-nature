@@ -2,8 +2,23 @@ export default {
   id: 'autumnForest',
   label: 'Autumn Forest',
   terrain: {
-    heightOffset: 0,
-    heightMagnitude: 1.0,
+    shape: {
+      type: 'terraced',
+      noiseOffset: { x: 1709, z: -2381 },
+      // Low waterside terraces and tall upper plateaus emphasize the elevation contrast.
+      heightCurve: [
+        { n: 0.00, h: 0 },
+        { n: 0.35, h: 0 },
+        { n: 0.38, h: 1 },
+        { n: 0.44, h: 1 },
+        { n: 0.46, h: 9 },
+        { n: 0.55, h: 9 },
+        { n: 0.57, h: 23 },
+        { n: 0.66, h: 23 },
+        { n: 0.68, h: 40 },
+        { n: 1.00, h: 40 }
+      ]
+    },
     colors: {
       surface: '#df6827',
       subsurface: '#7a4b24',

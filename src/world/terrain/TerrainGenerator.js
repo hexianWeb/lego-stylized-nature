@@ -5,27 +5,13 @@ import SurfaceClassifier from './SurfaceClassifier.js'
 import VolcanoSurfaceFeatureGenerator from './VolcanoSurfaceFeatureGenerator.js'
 import DesertSurfaceFeatureGenerator from './DesertSurfaceFeatureGenerator.js'
 import { mulberry32 } from '../../utils/random.js'
-
-export function sampleHeightCurve(points, n) {
-  if (n <= points[0].n) {
-    return points[0].h
-  }
-  for (let i = 1; i < points.length; i++) {
-    const b = points[i]
-    if (n <= b.n) {
-      const a = points[i - 1]
-      const t = b.n > a.n ? (n - a.n) / (b.n - a.n) : 1
-      return a.h + (b.h - a.h) * t
-    }
-  }
-  return points[points.length - 1].h
-}
+import { heightShapers } from './heightShapers.js'
 
 export default class TerrainGenerator {
-  constructor({ config, biomeMaskGenerator, biomeBlender, biomeRegistry }) {
+  constructor({ config, biomeMaskGenerator, biomeRegistry }) {
     this.config = config
     this.biomeMaskGenerator = biomeMaskGenerator
-    this.biomeBlender = biomeBlender
+    this.biomeRegistry = biomeRegistry
     this.surfaceClassifier = new SurfaceClassifier(config)
     this.volcanoSurfaceFeatureGenerator = new VolcanoSurfaceFeatureGenerator({
       config,
@@ -119,30 +105,20 @@ export default class TerrainGenerator {
 
   writeHeightSample(field, x, z, biomeCell, worldX = x, worldZ = z) {
     const terrain = this.config.terrain
-    const heightOffset = this.biomeBlender.blendTerrainParam(biomeCell.weights, 'heightOffset', 0)
-    const heightMagnitude = this.biomeBlender.blendTerrainParam(biomeCell.weights, 'heightMagnitude', 1)
-
-    const n01 = 0.5 + 0.5 * this.fbm(worldX, worldZ)
-    const shaped = sampleHeightCurve(terrain.heightCurve, n01)
-    const height = Math.floor(shaped * heightMagnitude + terrain.waterLevel + heightOffset)
-
-    field.set(x, z, Math.max(0, Math.min(terrain.maxHeight, height)))
-  }
-
-  fbm(x, z) {
-    const terrain = this.config.terrain
-    let value = 0
-    let amplitude = 1
-    let frequency = 1 / terrain.noiseScale
-    let totalAmplitude = 0
-
-    for (let octave = 0; octave < terrain.noiseOctaves; octave++) {
-      value += this.noise2D(x * frequency, z * frequency) * amplitude
-      totalAmplitude += amplitude
-      amplitude *= terrain.noiseGain
-      frequency *= terrain.noiseLacunarity
+    let height = terrain.waterLevel
+    for (const [biomeId, weight] of Object.entries(biomeCell.weights)) {
+      if (weight <= 0) continue
+      const params = this.biomeRegistry.get(biomeId).terrain.shape
+      height += weight * heightShapers[params.type]({
+        x: worldX,
+        z: worldZ,
+        noise2D: this.noise2D,
+        terrain,
+        params,
+        site: biomeCell.sites?.[biomeId]
+      })
     }
 
-    return value / totalAmplitude
+    field.set(x, z, Math.max(0, Math.min(terrain.maxHeight, Math.floor(height))))
   }
 }

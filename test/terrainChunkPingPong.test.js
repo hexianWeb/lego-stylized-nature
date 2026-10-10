@@ -23,17 +23,19 @@ const config = {
     noiseOctaves: 4,
     noiseGain: 0.5,
     noiseLacunarity: 2,
-    heightCurve: [
-      { n: 0, h: 0 },
-      { n: 0.36, h: 0 },
-      { n: 0.49, h: 14 },
-      { n: 1, h: 30 }
-    ],
     ao: { enabled: false, previewGrayscale: false }
   },
   biomes: {
-    regions: [
-      { id: 'forest', center: [24, 34], radius: 30, weight: 1 }
+    cellSize: 192,
+    jitter: 0.6,
+    blendWidth: 24,
+    warp: { amplitude: 40, scale: 160 },
+    originBiome: 'autumnForest',
+    table: [
+      { id: 'forest', weight: 4 },
+      { id: 'autumnForest', weight: 3 },
+      { id: 'desert', weight: 2 },
+      { id: 'volcano', weight: 1 }
     ]
   },
   chunks: {
@@ -50,7 +52,6 @@ function createPingPong() {
   const terrainGenerator = new TerrainGenerator({
     config,
     biomeMaskGenerator: new BiomeMaskGenerator(config),
-    biomeBlender,
     biomeRegistry
   })
 

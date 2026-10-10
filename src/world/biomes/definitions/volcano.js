@@ -2,8 +2,26 @@ export default {
   id: 'volcano',
   label: 'Volcano',
   terrain: {
-    heightOffset: 3,
-    heightMagnitude: 1.35,
+    shape: {
+      type: 'volcano',
+      noise: { scale: 52, octaves: 3 },
+      // Fits inside the default biome's core: 192 * (1 - 0.6) / 2 + 24 = 62.4.
+      coneRadius: 60,
+      power: 1.4,
+      peak: 64,
+      craterRadius: 12,
+      craterDepth: 40,
+      roughness: 1.5,
+      terraceStep: 1,
+      heightCurve: [
+        { n: 0.00, h: 4 },
+        { n: 0.35, h: 4 },
+        { n: 0.45, h: 8 },
+        { n: 0.60, h: 8 },
+        { n: 0.70, h: 12 },
+        { n: 1.00, h: 12 }
+      ]
+    },
     colors: {
       surface: '#4a545e',
       subsurface: '#3e4650',

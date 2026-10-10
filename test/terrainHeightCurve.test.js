@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { sampleHeightCurve } from '../src/world/terrain/TerrainGenerator.js'
+import { sampleHeightCurve } from '../src/world/terrain/heightShapers.js'
 import HeightField from '../src/world/terrain/HeightField.js'
 import SurfaceClassifier from '../src/world/terrain/SurfaceClassifier.js'
 
