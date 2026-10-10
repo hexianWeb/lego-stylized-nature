@@ -5,9 +5,22 @@ Open the development page with `#debug`, then expand **Terrain Colors**.
 ## Color scheme
 
 Each biome has independent `surface`, `subsurface`, `deep`, and `shore` palettes.
-The initial three colors are generated around the biome's existing base color.
+The four current biomes use authored palettes from `src/world/biomes/definitions/`:
+five tones for surface/deep and four for subsurface/shore, following the forest layout.
+Biomes without an authored palette fall back to three colors generated around their base color.
 Each brick selects one exact palette color; there is no color interpolation.
 Three.js converts the authored Hex colors to linear sRGB for `instanceColor`.
+
+| Biome | Surface | Soil / rock | Shore |
+| --- | --- | --- | --- |
+| Forest | Cool green to yellow-green | Brown earth, moss-tinted gray rock | Sand with an olive accent |
+| Autumn Forest | Leaf litter, coarse dirt, rust grass, sunlit orange, yellow poplar | Chestnut earth, warm gray to ochre rock | Light red clay, paler than the rust grass |
+| Desert | Ochre to pale golden sand | Terracotta earth, muted sandstone | Light cream sand |
+| Volcano | Rare magma, blackstone, blue-gray basalt | Cool basalt columns, mauve charcoal | Light mauve gravel, paler than the basalt |
+
+Higher tones generally move toward warmer/lighter colors, so the existing height influence
+reinforces each style. Rock and grass prefab biome tints are configured separately in
+`src/assets/manifests/biomePrefabs.js`; tree leaves/trunks use the biome's base surface/subsurface colors.
 
 - Choose a biome and layer to edit its palette.
 - Edit colors and their **Tone center** positions; endpoints stay at 0 and 1.
@@ -79,4 +92,4 @@ color = palette entry closest to t
 
 Color edits refresh instance-color buffers without rebuilding the terrain or
 instance transforms. Preview modes isolate terrain by hiding water, lava,
-prefabs, towers, and the aircraft.
+prefabs, and the aircraft.

@@ -9,7 +9,7 @@
 **不在范围内**（保持 GLB 不动）：
 
 - 有机造型：`skull.glb`、三种树（`tree` / `fruittree` / `Ctree`）。
-- 非 biome prefab：`legoBlock2x2.glb`（地形砖）、`tower.glb`（biome 中心塔）、`fly.glb`（玩家）。
+- 非 biome prefab：`legoBlock2x2.glb`（地形砖）、`fly.glb`（玩家）。
 - 已足够轻量的普通石头 `rock_1~4.glb`（20–34 面）。
 
 **非目标**：不做每实例独立几何体、不做 L-system / 噪声位移、不做 shader 内几何变形、不做建模 DSL 或可视化编辑器。

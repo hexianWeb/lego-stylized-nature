@@ -321,7 +321,7 @@ r185 的 `RenderOutputNode` 在输出色彩空间等于工作色彩空间（线�
 修复发光时需要一起处理：
 
 1. 确认模型中哪个 mesh 应该发光；如果没有单独的发光 mesh，需要调整模型或换一种实现方式。
-2. `sourceScene.clone(true)` 会共享材质。被修改的材质要先克隆，由 PlayerAircraft 在 `dispose()` 中释放。项目内 `BiomeCenterSystem` 对塔灯材质的克隆与释放方式可以参考。
+2. `sourceScene.clone(true)` 会共享材质。被修改的材质要先克隆，由 PlayerAircraft 在 `dispose()` 中释放。
 3. 现在的代码既把 `emissive` 乘以 intensity，又设置 `emissiveIntensity = intensity`，最终亮度按 intensity 的平方变化。只保留其中一个。
 4. 去掉逐帧的 `material.needsUpdate = true`。颜色和强度是数值参数，不需要触发材质重新处理。
 
