@@ -213,7 +213,7 @@ export default class World {
 
         this.terrainMap = this.terrainGenerator.generate()
         this.terrainPlacements = this.layeredTerrainBuilder.buildPlacements(this.terrainMap)
-        this.heightfieldAO.build(this.terrainMap)
+        this.heightfieldAO.build(this.terrainMap, this.terrainPlacements)
 
         this.terrainBrickRenderer.build(
             this.terrainPlacements,
@@ -229,7 +229,7 @@ export default class World {
 
     refreshAOPreview() {
         if (this.config.terrain.ao?.previewGrayscale && this.terrainMap && this.heightfieldAO) {
-            this.heightfieldAO.build(this.terrainMap)
+            this.heightfieldAO.build(this.terrainMap, this.terrainPlacements)
         }
 
         this.refreshTerrainColors()

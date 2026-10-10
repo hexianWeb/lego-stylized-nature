@@ -43,13 +43,13 @@ export const worldConfig = {
       previewGrayscale: false,
       strength: 1.4,
       min: 0.2,
-      horizonScale: 2.5,
+      /** Grid steps sampled along each of 8 directions. Max value must be ≤ chunks.halo. */
+      sampleDistances: [1, 2, 4, 8],
+      /** Softens far samples: atten = 1 / (1 + (dist - 1) * falloff). */
+      distanceFalloff: 0.25,
       creviceScale: 2.5,
-      depthScale: 6.5,
       horizonWeight: 0.61,
-      creviceWeight: 0.42,
-      depthWeight: 0.32,
-      sideWeight: 0.52
+      creviceWeight: 0.42
     }
   },
   biomes: {
@@ -110,7 +110,8 @@ export const worldConfig = {
   chunks: {
     enabled: true,
     size: 72,
-    halo: 1,
+    /** Must cover terrain AO sampleDistances (max 8) and placement neighbor lookups. */
+    halo: 8,
     windowRadius: 1,
     maxPendingBuildsPerFrame: 1,
     visibilityPadding: 1,

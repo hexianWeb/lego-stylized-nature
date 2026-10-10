@@ -88,7 +88,7 @@ export default class TerrainBrickRenderer {
       let tone = null
 
       if (aoPreview && ao) {
-        const aoValue = ao.get(p.x, p.y, p.z)
+        const aoValue = ao.get(i)
         color.setRGB(aoValue, aoValue, aoValue)
       } else if (colorPreview === 'noise' && this._colorResolver.sampleTone) {
         tone = this._colorResolver.sampleTone(sample)
@@ -102,7 +102,7 @@ export default class TerrainBrickRenderer {
         }
 
         if (aoEnabled) {
-          color.multiplyScalar(ao.get(p.x, p.y, p.z))
+          color.multiplyScalar(ao.get(i))
         }
       }
 

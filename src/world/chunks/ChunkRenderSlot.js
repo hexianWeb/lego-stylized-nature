@@ -97,7 +97,7 @@ export default class ChunkRenderSlot {
     this.updateWorldPosition(debugSpacing)
 
     const started = performance.now()
-    this.heightfieldAO.build(terrainMap)
+    this.heightfieldAO.build(terrainMap, placements)
     const aoBuilt = performance.now()
     this.terrainRenderer.build(placements, colorResolver, this.heightfieldAO, this.origin)
     this.waterRenderer?.build(terrainMap)
