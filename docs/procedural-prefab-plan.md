@@ -116,10 +116,15 @@ src/world/prefabs/builders/
 
 ### 3.3 公共工具 `prefabParts.js`
 
-- **单位常量**：`STUD_PITCH = 0.1`、`STUD_ORIGIN = [-0.05, 0, 0.05]`、凸点半径/高度（Phase 0 从 `legoBlock2x2.glb` 量取）。
-- **`stud()`**：8 段圆柱、底面开口，24 面。
-- **`makePrefabScene(slots)`**：输入 `[{ name, color, parts: BufferGeometry[] }]`，每个槽 `mergeGeometries`（`three/addons/utils/BufferGeometryUtils.js`）合并为一个 mesh，删除 `uv`，整体平移到 `STUD_ORIGIN`，返回 `THREE.Group`。
-- **`getPartMaterial(color)`**：按颜色缓存 `MeshStandardMaterial({ color, roughness, metalness: 0 })`，保证同色共享实例（约束 3）。
+- **单位常量**（地形即真实 LEGO 比例：2×2 砖 = `cellSize`，砖高 ≈ 1.2 × 凸点间距）：
+  - `STUD_PITCH = cellSize / 2 = 0.1`、`BRICK_HEIGHT = layerHeight = 0.095`、`PLATE_HEIGHT = layerHeight / 3 ≈ 0.032`。
+  - 凸点半径 ≈ 0.024、高 ≈ 0.017（Phase 0 从 `legoBlock2x2.glb` 量取后校准）。
+  - `STUD_ORIGIN = [-0.05, 0, 0.05]`。
+- **零件 API 以 LEGO 单位为参数**：`brick(w, d, plates)`、`roundPlate(diameter)`、`cone(...)`、`leafPlate(...)`、`stud()`，位置也以凸点 / 板高为单位。风格一致性由 API 保证；确需非标尺寸（如花瓣、草叶）时显式使用原始基本体，并在该 builder 内限定使用。
+- **`stud()`**：6–8 段圆柱、底面开口，18–24 面；只放在视觉重点（花心、仙人掌顶），计入面数预算。
+- **`makePrefabScene(slots)`**：输入 `[{ name, color, parts: BufferGeometry[] }]`。合并前统一属性：删除 `uv`，对非索引几何体（`IcosahedronGeometry` 等 Polyhedron 系）做 `mergeVertices`，保证全部为索引几何且属性集一致，否则 `mergeGeometries`（`three/addons/utils/BufferGeometryUtils.js`）会失败。每个槽合并为一个 mesh，整体平移到 `STUD_ORIGIN`，返回 `THREE.Group`。
+- **`getPartMaterial(color)`**：基于 `createLegoMaterial()`（`src/materials/tsl/legoMaterial.js`，与地形砖相同的 Physical + clearcoat/sheen 参数）设置颜色。同色零件已合并进同一个槽，因此每个槽一个材质实例即满足约束 3，不需要全局颜色缓存；材质随构建结果归 `PrefabRegistry` 所有并由其释放。`resolvePrefabMaterial` / `resolveInstanceColorMaterial` 使用 `clone()`，塑料参数随之保留。
+- **色板**：builder 只从命名色板取色，不直接写十六进制。
 
 ### 3.4 构建函数约定
 
@@ -127,6 +132,15 @@ src/world/prefabs/builders/
 - 只用低分段基本体：`BoxGeometry`、`CylinderGeometry`（5–8 段）、`ConeGeometry`、`IcosahedronGeometry`（detail 0）、`SphereGeometry`（≤ 8×6）。
 - 零件先 `rotate*` / `translate` 到位再交给 `makePrefabScene`。
 - 风格以 LEGO 零件为词汇：圆板、砖、锥、植物叶片件、凸点；不追求还原原模型顶点。
+- 不做倒角，边缘由 AO 与 clearcoat 表现。
+
+### 3.4.1 面数规则
+
+- **只生成可见面**：贴地底面不生成；堆叠零件之间的盖面用 `openEnded` 圆柱去掉；凸点不生成底面。
+- **分段数**：凸点 6–8，茎 4–5，圆板 8，球体用 detail 0 的 icosahedron。
+- 不保留 `uv`，几何体保持索引。
+- 同材质零件合并为一个 mesh，每变体 ≤ 2 槽（普通 + `_InstanceColor`）；多色物件（如芦苇）优先合并颜色而不是增加槽。
+- 可选：小型地被（浮萍、草、气泡）关闭投影，阴影 pass 顶点量减半。需在 manifest 增加 `castShadow` 字段，并替换 `PrefabPlacer` / `PrefabPipelineWarmup` 中硬编码的 `castShadow = true`，作为单独提交。
 
 ### 3.5 面数预算
 
@@ -200,7 +214,8 @@ src/world/prefabs/builders/
 
 | 风险 | 对策 |
 |---|---|
-| 程序模型风格与现有 GLB / 地形砖不统一 | 统一用 `prefabParts.js` 的单位与凸点；试点先只做花，确认风格后再推广 |
+| 程序模型风格与现有 GLB / 地形砖不统一 | 统一用 `prefabParts.js` 的 LEGO 单位、凸点与 `createLegoMaterial` 塑料参数；试点先只做花，确认风格后再推广 |
+| Physical 材质使 prefab 着色变重 | Phase 0 基线对比帧时间；prefab 屏幕占比小，预期影响有限 |
 | 原点偏移导致悬空/穿插 | 测试断言 `min.y` 与 XZ 中心 |
 | 共享材质被调色逻辑误改 | 调色逻辑本就克隆材质；测试中验证 builder 材质在 `resolvePrefabMaterial` 后未被修改 |
 | 变体或 mesh 过多导致 draw call 增加 | 变体 ≤ 3、mesh ≤ 2，Phase 0 基线对比 draw calls |
