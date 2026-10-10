@@ -2,13 +2,43 @@ export default {
   id: 'autumnForest',
   label: 'Autumn Forest',
   terrain: {
-    heightOffset: 1,
+    heightOffset: 0,
     heightMagnitude: 1.0,
     colors: {
-      surface: '#c5792a',
+      surface: '#df6827',
       subsurface: '#7a4b24',
-      deep: '#8c8c8c',
-      shore: '#d9b36c'
+      deep: '#958970',
+      shore: '#e08878'
+    },
+    // Dappled forest ground: leaf litter, coarse dirt, rust grass, sunlit orange, yellow poplar.
+    // Shore is pale red clay: lighter and redder than the rust grass, so the bank stays warm without matching the inland surface.
+    palettes: {
+      surface: [
+        { at: 0, color: '#8c3a04' },
+        { at: 0.22, color: '#7a5842' },
+        { at: 0.48, color: '#df6827' },
+        { at: 0.78, color: '#e68e30' },
+        { at: 1, color: '#f0c14e' }
+      ],
+      subsurface: [
+        { at: 0, color: '#5e412f' },
+        { at: 0.35, color: '#7a4b32' },
+        { at: 0.62, color: '#98603b' },
+        { at: 1, color: '#b1814b' }
+      ],
+      deep: [
+        { at: 0, color: '#656b62' },
+        { at: 0.3, color: '#7c7c69' },
+        { at: 0.55, color: '#958970' },
+        { at: 0.78, color: '#ad9b7b' },
+        { at: 1, color: '#c5af86' }
+      ],
+      shore: [
+        { at: 0, color: '#b08b54' },
+        { at: 0.4, color: '#c8a66b' },
+        { at: 0.7, color: '#dfc184' },
+        { at: 1, color: '#eed7a5' }
+      ]
     }
   },
   prefabs: [

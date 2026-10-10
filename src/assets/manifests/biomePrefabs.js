@@ -35,9 +35,9 @@ export const biomePrefabs = {
     randomRotation: true,
     biomeTints: {
       forest: { color: '#7a8178', strength: 0.35 },
-      autumnForest: { color: '#9a7a55', strength: 0.4 },
-      desert: { color: '#b59a68', strength: 0.45 },
-      volcano: { color: '#3a3a3a', strength: 0.65 }
+      autumnForest: { color: '#958970', strength: 0.45 },
+      desert: { color: '#c4a481', strength: 0.55 },
+      volcano: { color: '#48464a', strength: 0.65 }
     }
   },
   volcanoRock: {
@@ -103,8 +103,8 @@ export const biomePrefabs = {
     randomRotation: true,
     biomeTints: {
       forest: { color: '#67b65d', strength: 0.35 },
-      autumnForest: { color: '#c99a42', strength: 0.55 },
-      desert: { color: '#c6b56a', strength: 1 }
+      autumnForest: { color: '#cfa04c', strength: 0.75 },
+      desert: { color: '#d2b77f', strength: 1 }
     }
   },
   landMushroom: {

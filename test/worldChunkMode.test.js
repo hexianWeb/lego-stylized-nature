@@ -99,7 +99,6 @@ for (const chunkMode of [true, false]) {
     Object.assign(world.config.terrain, { width: 8, depth: 8 })
     Object.assign(world.config.chunks, { enabled: chunkMode, size: 4 })
     world.config.player.aircraft.enabled = false
-    world.config.biomeCenters.enabled = false
     world.build()
     if (chunkMode) {
       assert.equal(world.terrainBrickRenderer, null)

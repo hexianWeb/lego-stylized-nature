@@ -347,13 +347,11 @@ test('World color refresh updates loaded slots without rebuilding terrain or AO'
       activeSlots: new Map([['0:0', slot]]),
       refreshAOPreview(showOverlays) { refreshed++; assert.equal(showOverlays, false) }
     },
-    playerAircraft: { group: group() },
-    biomeCenterSystem: { group: group() }
+    playerAircraft: { group: group() }
   })
   world.refreshTerrainColors()
   assert.equal(refreshed, 1)
   assert.equal(invalidated, 1)
   assert.equal(world.playerAircraft.group.visible, false)
-  assert.equal(world.biomeCenterSystem.group.visible, false)
   assert.deepEqual(world.getTerrainColorHistogram(), [...slot.terrainRenderer.colorHistogram])
 })

@@ -4,7 +4,6 @@ import WorldMaterials from './WorldMaterials.js'
 import BiomeRegistry from './biomes/BiomeRegistry.js'
 import BiomeBlender from './biomes/BiomeBlender.js'
 import BiomeMaskGenerator from './biomes/BiomeMaskGenerator.js'
-import BiomeCenterSystem from './biomes/BiomeCenterSystem.js'
 import TerrainGenerator from './terrain/TerrainGenerator.js'
 import LayeredTerrainBuilder from './terrain/LayeredTerrainBuilder.js'
 import { extractBrickGeometry } from './bricks/BrickGeometry.js'
@@ -58,7 +57,6 @@ export default class World {
         this.prefabPlacer = null
         this.prefabRegistry = null
         this.playerAircraft = null
-        this.biomeCenterSystem = null
         this.terrainChunkManager = null
         this.prefabWarmup = null
         this.disposed = false
@@ -161,16 +159,6 @@ export default class World {
 
             this.playerAircraft = new PlayerAircraft(this.experience, { config: this.config })
             this.addSystem(this.playerAircraft)
-
-            if (!this.biomeCenterSystem && this.config.biomeCenters?.enabled !== false) {
-                this.biomeCenterSystem = new BiomeCenterSystem({
-                    config: this.config,
-                    resources,
-                    terrainGenerator: this.terrainGenerator
-                })
-                this.biomeCenterSystem.build()
-                this.addSystem(this.biomeCenterSystem)
-            }
         }
 
         this.regenerate()
@@ -254,9 +242,6 @@ export default class World {
         }
         if (this.playerAircraft?.group) {
             this.playerAircraft.group.visible = !preview
-        }
-        if (this.biomeCenterSystem?.group) {
-            this.biomeCenterSystem.group.visible = !preview
         }
     }
 
@@ -379,7 +364,6 @@ export default class World {
         this.prefabPlacer = null
         this.playerAircraft = null
         this.prefabRegistry = null
-        this.biomeCenterSystem = null
         this.children.length = 0
         this.group.clear()
         this.scene.remove(this.group)

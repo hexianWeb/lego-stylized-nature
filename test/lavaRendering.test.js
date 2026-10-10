@@ -6,49 +6,91 @@ import LavaBrickRenderer from '../src/world/bricks/LavaBrickRenderer.js'
 import LayeredTerrainBuilder from '../src/world/terrain/LayeredTerrainBuilder.js'
 import WorldMaterials from '../src/world/WorldMaterials.js'
 
-test('creates lava material with pulse uniforms', () => {
-  const material = createLavaMaterial({ pulseSpeed: 2, glowStrength: 0.8, roughness: 0.25 })
-
-  assert.equal(material.roughness, 0.25)
-  assert.equal(material.metalness, 0)
-  assert.ok(material.colorNode)
-  assert.ok(material.emissiveNode)
-  assert.ok(material.userData.uniforms.uPulseSpeed)
-  assert.ok(material.userData.uniforms.uGlowStrength)
-})
-
-test('creates lava material with configured noise texture uniforms', () => {
+test('creates animated noise-mixed lava material with a procedural fallback', () => {
   const lavaNoiseTexture = new THREE.Texture()
-  const material = createLavaMaterial({
-    textureScale: 2.5,
-    flowStrength: 0.7,
-    poolSeedScale: 0.08,
-    flowVariance: 0.6
-  }, lavaNoiseTexture)
+  const config = {
+    darkColor: '#C2410C',
+    midColor: '#F15A24',
+    lightColor: '#FFB020',
+    textureScale: 0.1,
+    flowSpeed: 0.6,
+    flowStrength: 0.72,
+    flowVariance: 0.55,
+    roughness: 0.3,
+    clearcoat: 0.45,
+    clearcoatRoughness: 0.2
+  }
 
+  const texturedMaterial = createLavaMaterial(config, lavaNoiseTexture)
+  const fallbackMaterial = createLavaMaterial(config)
+
+  assert.ok(texturedMaterial instanceof THREE.MeshPhysicalNodeMaterial)
   assert.equal(lavaNoiseTexture.wrapS, THREE.RepeatWrapping)
   assert.equal(lavaNoiseTexture.wrapT, THREE.RepeatWrapping)
   assert.equal(lavaNoiseTexture.colorSpace, THREE.NoColorSpace)
-  assert.equal(material.userData.lavaNoiseTexture, lavaNoiseTexture)
-  assert.ok(material.userData.uniforms.uTextureScale)
-  assert.ok(material.userData.uniforms.uFlowStrength)
-  assert.ok(material.userData.uniforms.uPoolSeedScale)
-  assert.ok(material.userData.uniforms.uFlowVariance)
+  assert.ok(lavaNoiseTexture.version > 0)
+  assert.ok(texturedMaterial.colorNode)
+  assert.equal(texturedMaterial.emissiveNode, null)
+  assert.equal(texturedMaterial.userData.uniforms.uTextureScale.value, 0.1)
+  assert.equal(texturedMaterial.userData.uniforms.uFlowSpeed.value, 0.6)
+  assert.equal(texturedMaterial.userData.uniforms.uFlowStrength.value, 0.72)
+  assert.equal(texturedMaterial.userData.uniforms.uFlowVariance.value, 0.55)
+  assert.equal(texturedMaterial.userData.noiseTexture, lavaNoiseTexture)
+  assert.ok(fallbackMaterial.colorNode)
+  assert.equal(fallbackMaterial.userData.uniforms.uFlowSpeed.value, 0.6)
+  assert.equal(fallbackMaterial.userData.noiseTexture, undefined)
+  assert.equal(texturedMaterial.transparent, false)
+  assert.equal(texturedMaterial.opacity, 1)
+  assert.equal(texturedMaterial.metalness, 0)
+  assert.equal(texturedMaterial.roughness, 0.3)
+  assert.equal(texturedMaterial.clearcoat, 0.45)
+  assert.equal(texturedMaterial.clearcoatRoughness, 0.2)
 })
 
-test('borrows the World lava material with its noise texture', () => {
-  const lavaNoiseTexture = new THREE.Texture()
+test('lava borrows the shared liquid pattern and keeps its own colors', () => {
+  const noiseTexture = new THREE.Texture()
+  const materials = new WorldMaterials({
+    config: {
+      water: {
+        darkColor: '#0757A6',
+        midColor: '#168FD2',
+        lightColor: '#42DDEB',
+        textureScale: 0.1,
+        flowSpeed: 0.6,
+        flowStrength: 0.72,
+        flowVariance: 0.55,
+        roughness: 0.3,
+        clearcoat: 0.45,
+        clearcoatRoughness: 0.2
+      }
+    },
+    waterNoiseTexture: noiseTexture,
+    lavaConfig: {
+      darkColor: '#C2410C',
+      midColor: '#F15A24',
+      lightColor: '#FFB020',
+      textureScale: 4
+    }
+  })
   const renderer = new LavaBrickRenderer({
-    materials: new WorldMaterials({ lavaNoiseTexture }),
+    materials,
     config: {
       terrain: { width: 1, depth: 1, cellSize: 0.2, layerHeight: 1 }
     },
     brickGeometry: new THREE.BoxGeometry(1, 1, 1)
   })
 
-  assert.equal(renderer.material.userData.lavaNoiseTexture, lavaNoiseTexture)
+  assert.equal(renderer.material, materials.lavaMaterial)
+  assert.equal(materials.lavaMaterial.userData.noiseTexture, noiseTexture)
+  assert.equal(materials.waterMaterial.userData.noiseTexture, noiseTexture)
+  assert.equal(materials.lavaMaterial.userData.uniforms, materials.waterMaterial.userData.uniforms)
+  assert.equal(materials.lavaMaterial.userData.uniforms.uTextureScale.value, 0.1)
+  assert.equal(materials.lavaMaterial.colorNode === materials.waterMaterial.colorNode, false)
+  assert.equal(materials.lavaMaterial.roughness, 0.3)
+  assert.equal(materials.lavaMaterial.clearcoat, 0.45)
 
   renderer.dispose()
+  materials.dispose()
 })
 
 test('builds flat lava pool bricks at the pool lava height', () => {

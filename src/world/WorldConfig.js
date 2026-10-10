@@ -54,43 +54,11 @@ export const worldConfig = {
   },
   biomes: {
     regions: [
-      { id: 'forest', center: [0, 0], radius: 120, weight: 1 },
+      { id: 'autumnForest', center: [0, 0], radius: 120, weight: 1 },
       { id: 'autumnForest', center: [400, 400], radius: 120, weight: 1 },
       { id: 'desert', center: [400, -400], radius: 120, weight: 1 },
       { id: 'volcano', center: [-400, 400], radius: 120, weight: 1 }
     ]
-  },
-  biomeCenters: {
-    enabled: true,
-    assetName: 'biomeTowerModel',
-    footprintCells: 4,
-    lightMeshName: 'light',
-    towers: {
-      forest: {
-        light: {
-          color: '#43ff7a',
-          emissiveIntensity: 1.8
-        }
-      },
-      autumnForest: {
-        light: {
-          color: '#b24cff',
-          emissiveIntensity: 1.6
-        }
-      },
-      desert: {
-        light: {
-          color: '#ffd34a',
-          emissiveIntensity: 1.5
-        }
-      },
-      volcano: {
-        light: {
-          color: '#ff4a1f',
-          emissiveIntensity: 2.2
-        }
-      }
-    }
   },
   placement: {
     enablePrefabs: true,
