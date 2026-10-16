@@ -47,6 +47,9 @@ export default class ChunkManager {
     this.windowRadius = chunkConfig.windowRadius ?? 1
     this.maxPendingBuildsPerFrame = chunkConfig.maxPendingBuildsPerFrame ?? 1
     this.maxPrefabBuildsPerFrame = chunkConfig.maxPrefabBuildsPerFrame ?? 1
+    this.mainThreadBudgetMs = Number.isFinite(chunkConfig.mainThreadBudgetMs) && chunkConfig.mainThreadBudgetMs > 0
+      ? chunkConfig.mainThreadBudgetMs
+      : 4
     this.visibilityPadding = chunkConfig.visibilityPadding ?? 0
     this.debugSpacing = chunkConfig.debugSpacing ?? 0
     this.cellSize = config.terrain.cellSize
@@ -178,6 +181,7 @@ export default class ChunkManager {
       return
     }
 
+    const deadline = performance.now() + this.mainThreadBudgetMs
     this.updateTransitions(deltaSeconds)
     const worldBlock = this.getStableWorldBlockFromPosition(worldX, worldZ)
     const nextCenterCoord = getRenderChunkCoord(worldBlock.x, worldBlock.z, this.chunkSize)
@@ -188,8 +192,11 @@ export default class ChunkManager {
       immediateBuilds = this.reconcileRequiredWindow(nextCenterCoord)
     }
 
-    this.buildPendingChunks(Math.max(0, this.maxPendingBuildsPerFrame - immediateBuilds))
-    this.updateVisibility(worldBlock)
+    const remainingBuilds = immediateBuilds > 0 && performance.now() >= deadline
+      ? 0
+      : Math.max(0, this.maxPendingBuildsPerFrame - immediateBuilds)
+    this.buildPendingChunks(remainingBuilds, deadline)
+    this.updateVisibility(worldBlock, { deadline })
   }
 
   updateSchedulingPosition(worldX, worldZ) {
@@ -337,9 +344,9 @@ export default class ChunkManager {
     this.pendingPrefabBuildKeys.delete(key)
   }
 
-  buildPendingChunks(limit = this.maxPendingBuildsPerFrame) {
+  buildPendingChunks(limit = this.maxPendingBuildsPerFrame, deadline = Infinity) {
     if (this.buildWorkers) {
-      const applied = this.applyCompletedBuilds(limit)
+      const applied = this.applyCompletedBuilds(limit, deadline)
       this.dispatchPendingBuilds()
       return applied
     }
@@ -348,6 +355,10 @@ export default class ChunkManager {
     let built = 0
 
     while (built < limit && this.pendingQueue.length > 0) {
+      // A single population is atomic. Always allow progress, but do not stack
+      // more populations (or prefabs below) onto a frame that used its budget.
+      if (built > 0 && performance.now() >= deadline)
+        break
       this.loadCoordNow(this.pendingQueue[0])
       built++
     }
@@ -392,11 +403,13 @@ export default class ChunkManager {
     }
   }
 
-  applyCompletedBuilds(limit) {
+  applyCompletedBuilds(limit, deadline = Infinity) {
     this.completedBuilds.sort((a, b) => this.compareBuildCoords(a.coord, b.coord))
     let applied = 0
 
     while (applied < limit && this.completedBuilds.length > 0) {
+      if (applied > 0 && performance.now() >= deadline)
+        break
       const { coord, packed } = this.completedBuilds.shift()
       const key = getRenderChunkKey(coord)
       this.inFlightBuilds.delete(key)
@@ -426,7 +439,7 @@ export default class ChunkManager {
       && Math.abs(coord.z - this.centerCoord.z) <= this.windowRadius
   }
 
-  buildPendingPrefabs(desiredPrefabKeys) {
+  buildPendingPrefabs(desiredPrefabKeys, deadline = Infinity) {
     this.pendingPrefabBuildQueue = this.pendingPrefabBuildQueue.filter((key) => {
       const keep = desiredPrefabKeys.has(key) && this.activeSlots.has(key)
       if (!keep) {
@@ -441,6 +454,8 @@ export default class ChunkManager {
 
     let built = 0
     while (built < this.maxPrefabBuildsPerFrame && this.pendingPrefabBuildQueue.length > 0) {
+      if (performance.now() >= deadline)
+        break
       const key = this.pendingPrefabBuildQueue.shift()
       this.pendingPrefabBuildKeys.delete(key)
 
@@ -571,7 +586,7 @@ export default class ChunkManager {
     }
   }
 
-  updateVisibility(worldBlock, { buildPrefabs = true } = {}) {
+  updateVisibility(worldBlock, { buildPrefabs = true, deadline = Infinity } = {}) {
     const placementEnabled = this.config.placement?.enablePrefabs !== false
       || this.config.placement?.enableTrees !== false
     const prefabActiveKeys = new Set(this.activeSlots.keys())
@@ -595,7 +610,7 @@ export default class ChunkManager {
     }
 
     if (placementEnabled && buildPrefabs) {
-      this.buildPendingPrefabs(prefabActiveKeys)
+      this.buildPendingPrefabs(prefabActiveKeys, deadline)
     }
   }
 

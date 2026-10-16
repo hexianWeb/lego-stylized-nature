@@ -1,4 +1,5 @@
 import { gaussianBlur } from 'three/addons/tsl/display/GaussianBlurNode.js'
+import { NodeUpdateType } from 'three/webgpu'
 import {
   dot,
   float,
@@ -41,6 +42,16 @@ export function createTiltShiftEffect(
     BLUR_SIGMA,
     { resolutionScale: BLUR_RESOLUTION_SCALE },
   )
+
+  // Non-texture inputs get an implicit RTT. Its default RENDER frequency redraws
+  // the same input for both blur passes; this screen-space input changes per frame.
+  if (blurNode.textureNode !== sceneColor && blurNode.textureNode.isRTTNode) {
+    const input = blurNode.textureNode
+    input.updateBeforeType = NodeUpdateType.FRAME
+    // GaussianBlur temporarily swaps .value for the horizontal result. Keep the
+    // update key stable too, or the vertical pass schedules the RTT a second time.
+    input.updateReference = () => input.renderTarget.texture
+  }
 
   const distance = screenUV.y.sub(uniforms.focusCenter).abs()
   const clearEdge = uniforms.focusWidth.mul(0.5)

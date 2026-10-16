@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import * as THREE from 'three/webgpu'
-import test from 'vitest'
+import test from 'node:test'
 import { installObjectResourceCleanup } from '../src/renderer/installObjectResourceCleanup.js'
 import { installPrefabRenderPreparation, withPipelineErrorScopes } from '../src/renderer/installPrefabRenderPreparation.js'
 
@@ -202,6 +202,25 @@ test('mesh disposal while queued prevents node publication and resolves whenIdle
   assert.equal(f.adapter.metrics.prepared, 0)
   assert.equal(f.renderer._nodes.nodeBuilderCache.size, 0)
   assert.equal(f.renderObjects.size, 0)
+  f.adapter.dispose()
+})
+
+test('streamed terrain and liquid meshes defer cold main and shadow draws until prepared', async () => {
+  const f = fixture()
+  delete f.mesh.userData.streamingPrefab
+  f.mesh.userData.streamingChunk = true
+  const shadowMaterial = new THREE.NodeMaterial()
+  shadowMaterial.isShadowPassMaterial = true
+  f.submit()
+  f.submit(shadowMaterial, f.shadowContext, f.shadowTarget)
+  assert.equal(f.draws.length, 0)
+  assert.equal(f.builds.length, 0)
+  await f.adapter.whenIdle()
+  f.submit()
+  f.submit(shadowMaterial, f.shadowContext, f.shadowTarget)
+  assert.equal(f.adapter.metrics.failed, 0)
+  assert.equal(f.draws.length, 2)
+  assert.equal(f.mesh.count, 3)
   f.adapter.dispose()
 })
 

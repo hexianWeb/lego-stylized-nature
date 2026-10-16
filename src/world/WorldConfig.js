@@ -84,6 +84,8 @@ export const worldConfig = {
     windowRadius: 1,
     maxPendingBuildsPerFrame: 1,
     maxPrefabBuildsPerFrame: 1,
+    /** Shared main-thread budget; individual chunk/prefab populations are atomic and may exceed it. */
+    mainThreadBudgetMs: 4,
     /** Web Workers that generate terrain, placements and AO off the main thread; 0 builds on the main thread. */
     buildWorkers: 2,
     /** Seconds per column / across the chunk; riseDistance is in world units. */

@@ -35,6 +35,7 @@ export default class TerrainBrickRenderer {
       this.capacity = Math.ceil(Math.max(placements.length, 1) * 1.2)
       this.mesh = new THREE.InstancedMesh(this.brickGeometry, this.material, this.capacity)
       this.mesh.name = 'TerrainBrickInstances'
+      this.mesh.userData.streamingChunk = true
       this.mesh.castShadow = true
       this.mesh.receiveShadow = true
       this.group.add(this.mesh)

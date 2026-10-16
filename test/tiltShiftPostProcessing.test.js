@@ -135,6 +135,26 @@ test('disposes the RTT input created for blur while retaining the source texture
   assert.equal(disposed, 2)
 })
 
+test('blur input renders once per frame even while the blur swaps its texture', () => {
+  const effect = createTiltShiftEffect(texture(new THREE.Texture()).mul(0.9))
+  const input = effect.blurNode.textureNode
+  const frame = new THREE.NodeFrame()
+  frame.frameId = 1
+  const original = input.value
+  let renders = 0
+  input.updateBefore = () => { renders++ }
+  frame.updateBeforeNode(input)
+  input.value = new THREE.Texture()
+  frame.updateBeforeNode(input)
+  input.value = original
+  frame.updateBeforeNode(input)
+  assert.equal(renders, 1)
+  frame.frameId++
+  frame.updateBeforeNode(input)
+  assert.equal(renders, 2)
+  effect.dispose()
+})
+
 function createRendererHarness() {
   const renderer = Object.create(Renderer.prototype)
   renderer.tiltShiftConfig = { ...TILT_SHIFT_DEFAULTS }

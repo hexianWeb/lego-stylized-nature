@@ -90,6 +90,7 @@ export default class WaterBrickRenderer {
     )
 
     mesh.name = pageIndex === 0 ? 'WaterBrickInstances' : `WaterBrickInstances_${pageIndex}`
+    mesh.userData.streamingChunk = true
     mesh.castShadow = true
     mesh.receiveShadow = true
     mesh.count = 0

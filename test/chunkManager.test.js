@@ -566,6 +566,55 @@ test('ao preview updates all slots and only shows overlays on visible slots', ()
   assert.ok(manager.slots.every((slot) => slot.overlaysVisible === false))
 })
 
+test('an expensive terrain population defers further terrain and prefab work without starving queues', (t) => {
+  let now = 0
+  t.mock.method(performance, 'now', () => now)
+  const calls = []
+  const manager = createManager({ calls, overrides: { maxPendingBuildsPerFrame: 8, mainThreadBudgetMs: 4 } })
+  manager.bootstrap(6.4, 6.4)
+  const prefabsBefore = manager.slots.reduce((sum, slot) => sum + slot.prefabBuilds, 0)
+  const fill = manager.fillSlot.bind(manager)
+  manager.fillSlot = (...args) => { fill(...args); now += 10 }
+  manager.update(6.4, 6.4)
+  assert.equal(calls.length, 2)
+  assert.equal(manager.slots.reduce((sum, slot) => sum + slot.prefabBuilds, 0), prefabsBefore)
+  assert.equal(manager.pendingPrefabBuildQueue.length, 1)
+  settleChunkAndPrefabQueues(manager, 6.4, 6.4)
+  assert.equal(calls.length, 9)
+  assert.ok([...manager.activeSlots.values()].every(slot => slot.prefabsVisible))
+  assertManagerInvariants(manager)
+})
+
+test('worker completions respect the same population budget and keep unapplied results queued', (t) => {
+  let now = 0
+  t.mock.method(performance, 'now', () => now)
+  const manager = createManager()
+  manager.bootstrap(6.4, 6.4)
+  manager.completedBuilds = manager.pendingQueue.slice(0, 3).map(coord => ({ coord, packed: {} }))
+  const load = manager.loadCoordNow.bind(manager)
+  manager.loadCoordNow = (coord) => { const slot = load(coord); now += 10; return slot }
+  assert.equal(manager.applyCompletedBuilds(3, 4), 1)
+  assert.equal(manager.completedBuilds.length, 2)
+  assert.equal(manager.applyCompletedBuilds(3, now + 4), 1)
+  assert.equal(manager.completedBuilds.length, 1)
+  assertManagerInvariants(manager)
+})
+
+test('an expensive emergency center build does not also build outer chunks in the same frame', (t) => {
+  let now = 0
+  t.mock.method(performance, 'now', () => now)
+  const calls = []
+  const manager = createManager({ calls, overrides: { maxPendingBuildsPerFrame: 8, mainThreadBudgetMs: 4 } })
+  manager.bootstrap(6.4, 6.4)
+  const fill = manager.fillSlot.bind(manager)
+  manager.fillSlot = (...args) => { fill(...args); now += 10 }
+  manager.update(64, 64)
+  assert.equal(calls.length, 2)
+  assert.equal(manager.activeSlots.size, 1)
+  assert.equal(manager.pendingQueue.length, 8)
+  assertManagerInvariants(manager)
+})
+
 test('outgoing chunks are immediately hidden and recycled while incoming chunks animate', () => {
   const manager = createManager({ overrides: { transition: { enabled: true } } })
   manager.bootstrap(6.4, 6.4)

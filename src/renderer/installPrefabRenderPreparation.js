@@ -276,7 +276,8 @@ export function installPrefabRenderPreparation(renderer, { budgetMs = 4, maxConc
   }
 
   const gate = function (object, material, scene, camera, lightsNode, group, clippingContext, passId) {
-    if (disposed || object.userData?.streamingPrefab !== true || failedObjects.has(object)) {
+    const streamed = object.userData?.streamingPrefab === true || object.userData?.streamingChunk === true
+    if (disposed || !streamed || failedObjects.has(object)) {
       return originalRender.apply(this, arguments)
     }
     if (!isRenderable(object))
