@@ -3,7 +3,7 @@ import { buildDuckweed } from './duckweed.js'
 import { buildFlower } from './flower.js'
 import { buildGrassShort, buildGrassTall } from './grass.js'
 import { buildMushroom } from './mushroom.js'
-import { buildIceCluster, buildSnowPine, buildWaterLily, buildWetlandTree } from './natureFeatures.js'
+import { buildIceCluster, buildSnowPine, buildWaterLily } from './natureFeatures.js'
 import { buildPhragmites } from './phragmites.js'
 import { buildVolcanoRock, buildVolcanoRockSmall } from './volcanoRock.js'
 
@@ -16,7 +16,6 @@ export const prefabBuilders = {
   mushroom: buildMushroom,
   snowPine: buildSnowPine,
   iceCluster: buildIceCluster,
-  wetlandTree: buildWetlandTree,
   waterLily: buildWaterLily,
   phragmites: buildPhragmites,
   volcanoRock: buildVolcanoRock,

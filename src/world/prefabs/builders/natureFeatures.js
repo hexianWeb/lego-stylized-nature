@@ -44,27 +44,6 @@ export function buildIceCluster() {
   ])
 }
 
-export function buildWetlandTree() {
-  const wood = [cylinder({ radius: 0.07, height: 0.95, segments: 6 })]
-  const moss = []
-  for (const side of [-1, 1]) {
-    wood.push(cylinder({ radius: 0.035, height: 0.4, segments: 6, bottom: true })
-      .rotateZ(-side * 0.9).translate(0, side > 0 ? 0.42 : 0.55, 0))
-    wood.push(cylinder({ radius: 0.027, height: 0.19, segments: 6 })
-      .translate(side * Math.sin(0.9) * 0.4, (side > 0 ? 0.42 : 0.55) + Math.cos(0.9) * 0.4, 0))
-  }
-  for (let i = 0; i < 4; i++) {
-    const angle = i * Math.PI / 2
-    wood.push(box({ width: 0.07, height: 0.07, depth: 0.26, bottom: true })
-      .translate(0, 0, 0.09).rotateY(angle))
-    moss.push(stud().translate(Math.sin(angle) * 0.12, 0.07, Math.cos(angle) * 0.12))
-  }
-  return makePrefabScene([
-    { name: 'wetlandTree_root', color: '#756d56', parts: wood },
-    { name: 'wetlandTree_moss', color: '#75945a', parts: moss },
-  ])
-}
-
 export function buildWaterLily() {
   const pads = [
     sector({ radius: 0.095, height: 0.014, segments: 12, thetaLength: Math.PI * 1.8, bottom: true }),

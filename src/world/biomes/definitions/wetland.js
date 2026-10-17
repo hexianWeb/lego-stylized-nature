@@ -48,7 +48,7 @@ export default {
       ],
     },
   },
-  trees: { trunkColor: '#756d56' },
+  trees: { leafColor: '#d4b04a', trunkColor: '#6e4a28' },
   prefabs: [
     { id: 'wetlandTree', density: 0.007, minHeight: 4, maxSlope: 1, allowShore: true },
     { id: 'commonRock', density: 0.006, minHeight: 5, maxSlope: 2 },

@@ -15,6 +15,7 @@ export default [
   { name: 'treeModel', type: 'gltfModel', path: 'model/tree/tree.glb' },
   { name: 'fruitTreeModel', type: 'gltfModel', path: 'model/tree/fruittree.glb' },
   { name: 'cTreeModel', type: 'gltfModel', path: 'model/tree/Ctree.glb' },
+  { name: 'wetlandTreeModel', type: 'gltfModel', path: 'model/tree/wetland_tree.glb' },
 
   { name: 'deadBushModel', type: 'gltfModel', path: 'model/prefab/dead_bush.glb' },
   { name: 'skullModel', type: 'gltfModel', path: 'model/prefab/skull.glb' },

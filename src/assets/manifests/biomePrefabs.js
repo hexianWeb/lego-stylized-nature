@@ -158,7 +158,7 @@ export const biomePrefabs = {
   wetlandTree: {
     category: 'tree',
     placement: { surface: 'land', biomes: ['wetland'] },
-    variants: [{ builder: 'wetlandTree', weight: 1 }],
+    variants: [{ source: 'wetlandTreeModel', weight: 1 }],
     randomRotation: true,
   },
   waterLily: {

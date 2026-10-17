@@ -166,7 +166,7 @@ test('new prefab builders instantiate with valid bounds and keep snow separate f
   try {
     for (const [id, biomeId] of [
       ['snowPine', 'snowForest'], ['iceCluster', 'snowForest'],
-      ['wetlandTree', 'wetland'], ['waterLily', 'wetland'], ['meadowFlower', 'meadow'],
+      ['waterLily', 'wetland'], ['meadowFlower', 'meadow'],
     ]) {
       const entry = registry.get(id).entry
       for (let variant = 0; variant < entry.variants.length; variant++) {
