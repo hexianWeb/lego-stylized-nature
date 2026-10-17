@@ -17,16 +17,6 @@ import PrefabPlacer from './prefabs/PrefabPlacer.js'
 import { warmupPrefabPipelines } from './prefabs/PrefabPipelineWarmup.js'
 import PlayerAircraft from './player/PlayerAircraft.js'
 import ChunkManager from './chunks/ChunkManager.js'
-import BiomeRadarHUD, { BIOME_RADAR_HUD_UPDATE_EVENT } from '../ui/BiomeRadarHUD.js'
-import ControlGuideHUD from '../ui/ControlGuideHUD.js'
-import StoryRecordManager, {
-    CONTROLS_LOCK_EVENT,
-    CONTROLS_UNLOCK_EVENT
-} from '../story/StoryRecordManager.js'
-import StoryRecordModalHUD from '../ui/StoryRecordModalHUD.js'
-import StoryObjectiveHUD from '../ui/StoryObjectiveHUD.js'
-import { getLocalizedStoryContent } from '../i18n/getLocalizedStoryContent.js'
-import { LOCALE_CHANGED_EVENT } from '../i18n/i18n.js'
 import { eventBus } from '../utils/event-bus.js'
 import { createTerrainPanel } from '../debug/panels/TerrainPanel.js'
 import { createAOPanel } from '../debug/panels/AOPanel.js'
@@ -67,12 +57,6 @@ export default class World {
         this.playerAircraft = null
         this.biomeCenterSystem = null
         this.terrainChunkManager = null
-        this.biomeRadarHUD = null
-        this._lastBiomeRadarHUDUpdate = null
-        this.controlGuideHUD = null
-        this.storyRecordManager = null
-        this.storyRecordModalHUD = null
-        this.storyObjectiveHUD = null
         this.controlsLocked = false
         this._onControlsLock = () => {
             this.controlsLocked = true
@@ -80,11 +64,6 @@ export default class World {
         }
         this._onControlsUnlock = () => {
             this.controlsLocked = false
-        }
-        this._onLocaleChanged = ({ locale }) => {
-            if (this.storyRecordManager) {
-                this.storyRecordManager.setContent(getLocalizedStoryContent(locale))
-            }
         }
     }
 
@@ -195,32 +174,8 @@ export default class World {
                 this.addSystem(this.biomeCenterSystem)
             }
 
-            if (!this.biomeRadarHUD && this.config.ui?.biomeRadar?.enabled !== false) {
-                this.biomeRadarHUD = new BiomeRadarHUD({ config: this.config })
-            }
-
-            if (!this.controlGuideHUD && this.config.ui?.controlGuide?.enabled !== false) {
-                this.controlGuideHUD = new ControlGuideHUD({ config: this.config })
-            }
-
-            if (!this.storyRecordModalHUD && this.config.ui?.storyRecord?.enabled !== false) {
-                this.storyRecordModalHUD = new StoryRecordModalHUD({ config: this.config })
-            }
-
-            if (!this.storyObjectiveHUD && this.config.ui?.storyObjective?.enabled !== false) {
-                this.storyObjectiveHUD = new StoryObjectiveHUD({ config: this.config })
-            }
-
-            if (!this.storyRecordManager && this.config.ui?.storyRecord?.enabled !== false) {
-                this.storyRecordManager = new StoryRecordManager({
-                    content: getLocalizedStoryContent()
-                })
-                this.storyRecordManager.start()
-            }
-
             eventBus.on(CONTROLS_LOCK_EVENT, this._onControlsLock)
             eventBus.on(CONTROLS_UNLOCK_EVENT, this._onControlsUnlock)
-            eventBus.on(LOCALE_CHANGED_EVENT, this._onLocaleChanged)
         }
 
         this.regenerate()
@@ -340,11 +295,6 @@ export default class World {
             child.update?.()
         }
 
-        if (this.biomeRadarHUD && this.playerAircraft?.enabled) {
-            this.emitBiomeRadarHUDUpdateIfNeeded()
-            this.biomeRadarHUD.update(this.experience.time.getDelta())
-        }
-
         if (this.biomeCenterSystem && this.playerAircraft?.enabled) {
             this.biomeCenterSystem.update(this.playerAircraft.state.position)
         }
@@ -369,72 +319,16 @@ export default class World {
         })
     }
 
-    emitBiomeRadarHUDUpdateIfNeeded() {
-        const state = this.playerAircraft?.state
-
-        if (!state) {
-            return
-        }
-
-        const thresholds = this.config.ui?.biomeRadar?.updateThreshold ?? {}
-        const positionThreshold = Number.isFinite(thresholds.position) ? thresholds.position : 0.02
-        const yawThreshold = Number.isFinite(thresholds.yaw) ? thresholds.yaw : 0.01
-        const payload = {
-            position: {
-                x: state.position.x,
-                z: state.position.z
-            },
-            yaw: state.yaw
-        }
-
-        if (!this._lastBiomeRadarHUDUpdate || this.hasBiomeRadarHUDUpdateChanged(payload, {
-            positionThreshold,
-            yawThreshold
-        })) {
-            eventBus.emit(BIOME_RADAR_HUD_UPDATE_EVENT, payload)
-            this._lastBiomeRadarHUDUpdate = payload
-        }
-    }
-
-    hasBiomeRadarHUDUpdateChanged(payload, { positionThreshold, yawThreshold }) {
-        const previous = this._lastBiomeRadarHUDUpdate
-
-        if (!previous) {
-            return true
-        }
-
-        const dx = payload.position.x - previous.position.x
-        const dz = payload.position.z - previous.position.z
-        const positionDelta = Math.sqrt(dx * dx + dz * dz)
-        const yawDelta = Math.abs(Math.atan2(
-            Math.sin(payload.yaw - previous.yaw),
-            Math.cos(payload.yaw - previous.yaw)
-        ))
-
-        return positionDelta > positionThreshold || yawDelta > yawThreshold
-    }
-
     dispose() {
         eventBus.off(CONTROLS_LOCK_EVENT, this._onControlsLock)
         eventBus.off(CONTROLS_UNLOCK_EVENT, this._onControlsUnlock)
-        eventBus.off(LOCALE_CHANGED_EVENT, this._onLocaleChanged)
         for (const child of this.children) {
             child.dispose?.()
         }
         this.terrainChunkManager?.dispose()
-        this.biomeRadarHUD?.dispose()
-        this.controlGuideHUD?.dispose()
-        this.storyRecordManager?.dispose()
-        this.storyRecordModalHUD?.dispose()
-        this.storyObjectiveHUD?.dispose()
         this.terrainChunkManager = null
         this.prefabRegistry = null
         this.biomeCenterSystem = null
-        this.biomeRadarHUD = null
-        this.controlGuideHUD = null
-        this.storyRecordManager = null
-        this.storyRecordModalHUD = null
-        this.storyObjectiveHUD = null
         this.controlsLocked = false
         this.children.length = 0
         this.scene.remove(this.group)

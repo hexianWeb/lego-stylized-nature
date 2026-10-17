@@ -2,8 +2,10 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Three.js TSL template</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Lego Sandbox</title>
+    <link rel="manifest" href="/manifest.json">
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400..900&display=swap" rel="stylesheet">
@@ -11,6 +13,12 @@
 </head>
 <body>
     <p id="app-error" class="app-error" hidden></p>
+    <div class="sandbox-loading" id="sandbox-loading">
+        <span>Loading sandbox</span>
+        <span class="sandbox-loading__dot"></span>
+        <span class="sandbox-loading__dot"></span>
+        <span class="sandbox-loading__dot"></span>
+    </div>
     <canvas class="webgl"></canvas>
     <div class="line-box-overlay" aria-hidden="true"></div>
     <script type="module" src="./script.js"></script>

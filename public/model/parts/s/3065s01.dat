@@ -1,0 +1,19 @@
+0 ~Brick  1 x  2 without Centre Stud without Front
+0 Name: s\3065s01.dat
+0 Author: Rene Rechthaler [Blechtaler]
+0 !LDRAW_ORG Subpart UPDATE 2025-06
+0 !LICENSE Licensed under CC BY 4.0 : see CAreadme.txt
+
+0 BFC CERTIFY CCW
+
+0 !HISTORY 2025-04-10 [Blechtaler] made from 3065 by James Jessiman
+0 !HISTORY 2025-06-26 [OrionP] Official Update 2025-06
+
+1 16 0 0 0 1 0 0 0 1 0 0 0 1 stug-1x2.dat
+1 16 0 24 0 20 0 0 0 -24 0 0 0 10 box4t.dat
+0 BFC INVERTNEXT
+1 16 0 24 0 16 0 0 0 -20 0 0 0 6 box5.dat
+4 16 20 24 10 16 24 6 -16 24 6 -20 24 10
+4 16 -20 24 10 -16 24 6 -16 24 -6 -20 24 -10
+4 16 -20 24 -10 -16 24 -6 16 24 -6 20 24 -10
+4 16 20 24 -10 16 24 -6 16 24 6 20 24 10

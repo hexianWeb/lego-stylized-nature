@@ -1,0 +1,20 @@
+0 ~Plate  1 x  6 without Front Face
+0 Name: s\3666s01.dat
+0 Author: Massimo Maso [Sirio]
+0 !LDRAW_ORG Subpart UPDATE 2023-02
+0 !LICENSE Licensed under CC BY 4.0 : see CAreadme.txt
+
+0 BFC CERTIFY CCW
+
+0 !HISTORY 2023-04-17 [OrionP] Official Update 2023-02
+
+
+1 16 0 4 0 1 0 0 0 -1 0 0 0 1 stug3-1x5.dat
+0 BFC INVERTNEXT
+1 16 0 8 0 56 0 0 0 -4 0 0 0 6 box5.dat
+4 16 60 8 10 56 8 6 -56 8 6 -60 8 10
+4 16 -60 8 10 -56 8 6 -56 8 -6 -60 8 -10
+4 16 -60 8 -10 -56 8 -6 56 8 -6 60 8 -10
+4 16 60 8 -10 56 8 -6 56 8 6 60 8 10
+1 16 0 8 0 60 0 0 0 -8 0 0 0 10 box4t.dat
+1 16 0 0 0 1 0 0 0 1 0 0 0 1 stug-1x6.dat

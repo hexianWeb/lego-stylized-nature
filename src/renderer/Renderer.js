@@ -54,6 +54,9 @@ export default class Renderer {
    * }} options
    */
   constructor({ canvas, postProcessing = {} }) {
+    if (typeof navigator !== 'undefined' && navigator.gpu === undefined) {
+      throw new Error('navigator.gpu is undefined (no WebGPU support)')
+    }
     this.instance = new THREE.WebGPURenderer({
       canvas,
       forceWebGL: false
@@ -184,7 +187,16 @@ export default class Renderer {
   }
 
   async init() {
-    await this.instance.init()
+    // Bound WebGPU init: if the device request hangs (some browsers with
+    // WebGPU enabled but no working device), force a reject so the
+    // fallback path can take over.
+    await Promise.race([
+      this.instance.init(),
+      new Promise((_, reject) => setTimeout(
+        () => reject(new Error('WebGPU init timed out after 5s')),
+        5000
+      ))
+    ])
   }
 
   /**

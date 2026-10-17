@@ -1,9 +1,26 @@
 import * as THREE from 'three/webgpu'
 
-export function extractBrickGeometry(gltf, cellSize) {
+/**
+ * Extract a `BufferGeometry` from a loaded GLTF asset.
+ *
+ * @param {{ scene?: THREE.Object3D }} gltf - Loaded GLTF asset.
+ * @param {number} cellSize - World unit width of one build cell (currently informational).
+ * @param {string | null} [meshName] - Optional mesh name to pick. When null,
+ *   the first mesh encountered is used (legacy behavior, backward compatible).
+ * @returns {THREE.BufferGeometry | null}
+ */
+export function extractBrickGeometry(gltf, cellSize, meshName = null) {
   let sourceMesh = null
+
   gltf?.scene?.traverse((child) => {
-    if (child.isMesh && !sourceMesh) {
+    if (!child.isMesh) {
+      return
+    }
+    if (meshName) {
+      if (child.name === meshName && !sourceMesh) {
+        sourceMesh = child
+      }
+    } else if (!sourceMesh) {
       sourceMesh = child
     }
   })
@@ -12,13 +29,5 @@ export function extractBrickGeometry(gltf, cellSize) {
     return null
   }
 
-  const geometry = sourceMesh.geometry.clone()
-  // geometry.computeBoundingBox()
-  // const size = new THREE.Vector3()
-  // geometry.boundingBox.getSize(size)
-
-  // const scale = cellSize / size.x
-  // geometry.scale(scale, scale, scale)
-
-  return geometry
+  return sourceMesh.geometry.clone()
 }

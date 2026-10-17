@@ -1,4 +1,5 @@
 import * as THREE from 'three/webgpu'
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js'
 import { color, fog, rangeFogFactor, uniform } from 'three/tsl'
 import { createEnvironmentPanel } from '../debug/panels/EnvironmentPanel.js'
 import { createFogPanel } from '../debug/panels/FogPanel.js'
@@ -84,7 +85,8 @@ export default class Environment {
         this.renderer = renderer
 
         if (!equirectTexture) {
-            console.warn('[Environment] Missing HDR texture; scene.environment skipped.')
+            console.warn('[Environment] Missing HDR texture; using RoomEnvironment instead.')
+            this.applyRoomEnvironment(renderer)
             return
         }
 
@@ -101,6 +103,21 @@ export default class Environment {
         this.scene.environment = this.envMap
         this.syncEnvironmentIntensity()
         this.syncBackground()
+    }
+
+    /**
+     * Apply Three.js's built-in `RoomEnvironment` as a procedural IBL.
+     * Works in both WebGL and WebGPU, no external HDR file required.
+     */
+    applyRoomEnvironment(renderer) {
+        this.renderer = renderer
+        this.envMap?.dispose()
+        const pmrem = new THREE.PMREMGenerator(renderer)
+        pmrem.compileEquirectangularShader()
+        this.envMap = pmrem.fromScene(new RoomEnvironment(), 0.04).texture
+        pmrem.dispose()
+        this.scene.environment = this.envMap
+        this.syncEnvironmentIntensity()
     }
 
     syncEnvironmentIntensity() {
