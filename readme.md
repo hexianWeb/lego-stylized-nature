@@ -32,3 +32,22 @@ npm run dev
 # Build for production in the dist/ directory
 npm run build
 ```
+
+---
+
+## Build mode
+
+The project also ships a freeform Lego building game on top of the same
+rendering pipeline. Visit `http://localhost:5173/#build` after `npm run dev`.
+
+- **100 real LDraw parts** (CC-BY 2.0, `public/model/parts/`) organized into 9 categories: bricks, plates, slopes, tiles, rounds, wedges, technic, baseplates, decorations
+- **Vertical building**: `[` / `]` to change layer height; bricks auto-stack when clicking an occupied cell
+- **Four surface finishes**: `F` cycles matte / glossy / transparent / metallic
+- **Tools**: place (B) · select (V) · delete (X) · paint (P) · move (M)
+- **Persistence**: `Cmd+S` to save / load JSON, share via URL hash; `.ldr` import/export round-trips position, color and 90° yaw
+- **Height ruler** along the baseplate south edge with a live top-layer indicator
+- **Minimap** + ** tutorials** ** achievements** + ** stats** overlays
+- **i18n**: EN / 中文 across all sandbox HUDs
+
+See `docs/deferred-improvements.md` for the 10% deferred polish items
+(WebGPU fallback, SSAO, marquee select, etc.).
