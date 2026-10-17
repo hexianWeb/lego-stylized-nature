@@ -105,12 +105,15 @@ export function createBrickLODGeometries(source) {
 }
 
 // Smallest projected diameter of a horizontal stud disk, in render-buffer pixels.
-// Unlike camera distance, this responds correctly to orthographic zoom and tilt.
+// Supports both orthographic zoom and perspective focus-plane distance.
 export function projectedStudPixels(camera, width, height, diameter) {
   const view = camera.matrixWorldInverse.elements
   const projection = camera.projectionMatrix.elements
-  const sx = width * Math.abs(projection[0]) * 0.5
-  const sy = height * Math.abs(projection[5]) * 0.5
+  const distance = camera.isPerspectiveCamera
+    ? Math.max(1e-4, camera.userData?.focusDistance || -view[14] || camera.position.length() || 1)
+    : 1
+  const sx = (width * Math.abs(projection[0]) * 0.5) / distance
+  const sy = (height * Math.abs(projection[5]) * 0.5) / distance
   const a = sx * view[0]
   const b = sx * view[8]
   const c = sy * view[1]
@@ -152,7 +155,7 @@ export default class BrickLOD {
   update(group, camera, renderer) {
     if (!renderer || !camera)
       return
-    if (this.settings.enabled && camera.isOrthographicCamera && this.geometries.length === 3) {
+    if (this.settings.enabled && (camera.isOrthographicCamera || camera.isPerspectiveCamera) && this.geometries.length === 3) {
       camera.updateWorldMatrix(true, false)
       renderer.getDrawingBufferSize(this._size)
       this.studPixels = projectedStudPixels(camera, this._size.x, this._size.y, this.studDiameter)

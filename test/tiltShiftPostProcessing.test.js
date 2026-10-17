@@ -16,7 +16,7 @@ test('defines the approved tilt-shift defaults and debug ranges', () => {
   assert.deepEqual(TILT_SHIFT_DEFAULTS, {
     enabled: true,
     focusCenter: 0.55,
-    focusWidth: 0.22,
+    focusWidth: 0.46,
     falloff: 0.32,
     blurStrength: 1.35
   })

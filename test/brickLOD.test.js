@@ -77,6 +77,22 @@ test('orthographic stud coverage follows zoom, resolution and tilt, not distance
   assert.ok(Math.abs(projectedStudPixels(tilted, 1000, 1000, 0.06) - 3) < 1e-6)
 })
 
+test('perspective stud coverage matches orthographic coverage at equivalent focus frustum height', () => {
+  const fov = 22
+  const frustumHeight = 10
+  const distance = frustumHeight / (2 * Math.tan(THREE.MathUtils.degToRad(fov * 0.5)))
+  const perspective = new THREE.PerspectiveCamera(fov, 1, 0.1, 200)
+  perspective.position.set(0, distance, 0)
+  perspective.lookAt(0, 0, 0)
+  perspective.updateProjectionMatrix()
+  perspective.updateMatrixWorld(true)
+  perspective.userData.focusDistance = distance
+
+  assert.ok(Math.abs(projectedStudPixels(perspective, 1000, 1000, 0.06) - 6) < 1e-5)
+  perspective.userData.focusDistance = distance * 2
+  assert.ok(Math.abs(projectedStudPixels(perspective, 1000, 1000, 0.06) - 3) < 1e-5)
+})
+
 test('LOD hysteresis stabilizes both boundaries and supports large zoom changes', () => {
   const settings = BRICK_LOD_DEFAULTS
   assert.equal(selectBrickLOD(10, null, settings), 0)
