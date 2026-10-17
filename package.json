@@ -14,5 +14,10 @@
     "three": "^0.185.0",
     "tweakpane": "^4.0.5",
     "vite": "^5.4.10"
+  },
+  "pnpm": {
+    "overrides": {
+      "postcss>nanoid": "5.1.16"
+    }
   }
 }
