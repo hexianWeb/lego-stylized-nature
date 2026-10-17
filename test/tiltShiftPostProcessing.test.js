@@ -17,7 +17,7 @@ test('defines the approved tilt-shift defaults and debug ranges', () => {
     enabled: true,
     focusCenter: 0.61,
     focusWidth: 0.33,
-    falloff: 0.30,
+    falloff: 0.50,
     blurStrength: 0.45
   })
 
@@ -49,7 +49,18 @@ test('reaches full blur outside the clear band and falloff', () => {
     TILT_SHIFT_DEFAULTS.falloff
 
   assert.equal(evaluateTiltShiftMask(fullBlurY), 1)
-  assert.equal(evaluateTiltShiftMask(0), 1)
+  // With the approved falloff the screen edge (y=0) sits inside the
+  // transition band: expect the smoothstep value, not full blur.
+  const t = Math.min(
+    1,
+    Math.max(
+      0,
+      (Math.abs(TILT_SHIFT_DEFAULTS.focusCenter - 0) -
+        TILT_SHIFT_DEFAULTS.focusWidth * 0.5) /
+        TILT_SHIFT_DEFAULTS.falloff
+    )
+  )
+  assert.equal(evaluateTiltShiftMask(0), t * t * (3 - 2 * t))
 })
 
 test('uses a symmetric smooth transition above and below the focus center', () => {

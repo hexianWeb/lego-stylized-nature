@@ -31,7 +31,11 @@ test('tracks WASD key state and ignores unrelated keys', () => {
     KeyW: true,
     KeyA: true,
     KeyS: false,
-    KeyD: false
+    KeyD: false,
+    ArrowUp: false,
+    ArrowDown: false,
+    ArrowLeft: false,
+    ArrowRight: false
   })
 
   input.handleKeyUp({ code: 'KeyW' })
@@ -59,7 +63,11 @@ test('blur clears all key state', () => {
     KeyW: false,
     KeyA: false,
     KeyS: false,
-    KeyD: false
+    KeyD: false,
+    ArrowUp: false,
+    ArrowDown: false,
+    ArrowLeft: false,
+    ArrowRight: false
   })
 })
 
@@ -92,6 +100,10 @@ test('attach is safe when no target is available', () => {
     KeyW: false,
     KeyA: false,
     KeyS: false,
-    KeyD: false
+    KeyD: false,
+    ArrowUp: false,
+    ArrowDown: false,
+    ArrowLeft: false,
+    ArrowRight: false
   })
 })

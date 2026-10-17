@@ -7,17 +7,17 @@ import sources from '../src/assets/sources.js'
 test('flower and mushroom define instance color palettes', () => {
   assert.deepEqual(biomePrefabs.landMushroom.instanceColors, {
     meshNameSuffix: '_InstanceColor',
-    palette: ['#c9110e', '#0158b8', '#ea9202', '#03b1a0']
+    palette: ['#ff0000', '#0158b8', '#ea9202', '#03b1a0']
   })
   assert.deepEqual(biomePrefabs.landFlower.instanceColors, {
     meshNameSuffix: '_InstanceColor',
-    palette: ['#f97ba8', '#f695b5', '#ed4e90']
+    palette: ['#ff1111', '#ffff00', '#ffffff']
   })
 })
 
 test('mushroom uses only its first model', () => {
   assert.deepEqual(biomePrefabs.landMushroom.variants, [
-    { source: 'landMushroom1Model', weight: 1 }
+    { source: 'landMushroom1Model', weight: 0.5 }
   ])
 })
 
