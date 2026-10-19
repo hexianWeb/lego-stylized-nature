@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import * as THREE from 'three/webgpu'
 import WorldMaterials from '../src/world/WorldMaterials.js'
 import PrefabPlacer from '../src/world/prefabs/PrefabPlacer.js'
+import { biomePrefabs } from '../src/assets/manifests/biomePrefabs.js'
 import {
   buildPrefabPipelineWarmupGroup,
   warmupPrefabPipelines
@@ -42,6 +43,10 @@ function collectWarmupMeshes(group) {
 
 test('builds one-instance warmup meshes for prefab material modes', () => {
   const manifest = {
+    cactus: {
+      ...biomePrefabs.desertCactusSmall,
+      variants: [{ source: 'cactusModel', weight: 1 }]
+    },
     plainProp: {
       category: 'prop',
       placement: { surface: 'land' },
@@ -71,6 +76,7 @@ test('builds one-instance warmup meshes for prefab material modes', () => {
     }
   }
   const registry = createRegistry(manifest, {
+    cactusModel: createScene('cactus'),
     plainModel: createScene('plain'),
     tintedModel: createScene('rock'),
     treeModel: createScene('leaf'),
@@ -78,7 +84,7 @@ test('builds one-instance warmup meshes for prefab material modes', () => {
   })
 
   const materials = new WorldMaterials()
-  const config = { placement: { prefabCapacity: { prop: 192, rock: 128, tree: 64, flora: 32 } } }
+  const config = { placement: { prefabCapacity: { prop: 192, rock: 128, tree: 64, flora: 32, plant: 32 } } }
   const group = buildPrefabPipelineWarmupGroup({ prefabRegistry: registry, materials, config })
   const meshes = collectWarmupMeshes(group)
   const modes = meshes.map((mesh) => mesh.userData.prefabWarmupMaterialMode).sort()
@@ -97,7 +103,10 @@ test('builds one-instance warmup meshes for prefab material modes', () => {
     assert.equal(mesh.instanceMatrix.count, expected)
     if (mesh.instanceColor) assert.equal(mesh.instanceColor.count, expected)
   }
-  assert.ok(meshes.every((mesh) => !mesh.frustumCulled && mesh.castShadow && mesh.receiveShadow))
+  assert.ok(meshes.every((mesh) => !mesh.frustumCulled && mesh.receiveShadow))
+  for (const mesh of meshes) {
+    assert.equal(mesh.castShadow, mesh.name.endsWith(':leaf') || mesh.name.endsWith(':cactus'))
+  }
   assert.ok(meshes.filter((mesh) => mesh.instanceColor).length >= 2)
   group.traverse((mesh) => mesh.isInstancedMesh && mesh.dispose())
   materials.dispose()

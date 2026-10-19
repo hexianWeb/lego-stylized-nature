@@ -68,6 +68,7 @@ export const biomePrefabs = {
   },
   desertCactusSmall: {
     category: 'plant',
+    castShadow: true,
     placement: { surface: 'land', biomes: ['desert'] },
     variants: [
       { builder: 'cactus', weight: 1 },

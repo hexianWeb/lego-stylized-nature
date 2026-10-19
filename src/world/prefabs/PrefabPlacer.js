@@ -3,6 +3,7 @@ import { placementRandom01 } from '../../utils/random.js'
 import { getTerrainIterationBounds } from '../terrain/terrainMapBounds.js'
 import { canPlacePrefab, createVariantEntries, makePrefabTransform, pickVariantIndex, samplePlacementDensity } from './placementRules.js'
 import { getPrefabCapacity } from './prefabCapacity.js'
+import { shouldCastPrefabShadow } from './prefabShadows.js'
 import {
   matchesInstanceColorMesh,
   normalizeInstanceColors,
@@ -181,7 +182,7 @@ export default class PrefabPlacer {
 
       const mesh = new THREE.InstancedMesh(child.geometry, meshContext.material, transforms.length)
       mesh.userData.streamingPrefab = true
-      mesh.castShadow = true
+      mesh.castShadow = shouldCastPrefabShadow(prefabEntry)
       mesh.receiveShadow = true
       this.populateInstancedMesh(
         mesh,
@@ -271,6 +272,7 @@ export default class PrefabPlacer {
         meshContext.material,
         capacity,
       )
+      mesh.castShadow = shouldCastPrefabShadow(prefabEntry)
 
       this.populateInstancedMesh(
         mesh,
@@ -310,7 +312,7 @@ export default class PrefabPlacer {
     const mesh = new THREE.InstancedMesh(geometry, material, capacity)
     mesh.userData.streamingPrefab = true
     mesh.userData.prefabBucketKey = bucketKey
-    mesh.castShadow = true
+    mesh.castShadow = false
     mesh.receiveShadow = true
     variantGroup.add(mesh)
     this.meshBuckets.set(bucketKey, { mesh, capacity })

@@ -1,5 +1,6 @@
 import * as THREE from 'three/webgpu'
 import { getPrefabCapacity } from './prefabCapacity.js'
+import { shouldCastPrefabShadow } from './prefabShadows.js'
 import {
   matchesInstanceColorMesh,
   normalizeInstanceColors,
@@ -27,7 +28,7 @@ export function buildPrefabPipelineWarmupGroup({ prefabRegistry, materials, conf
           return
         }
 
-        addWarmupMesh(group, child, child.material, 'source', capacity)
+        addWarmupMesh(group, child, child.material, 'source', capacity, prefabEntry)
         addTintWarmupMeshes(group, child, prefabEntry, materials, capacity)
         addTreeWarmupMeshes(group, child, prefabEntry, materials, capacity)
         addInstanceColorWarmupMesh(group, child, prefabEntry, materials, capacity)
@@ -81,7 +82,7 @@ export async function warmupPrefabPipelines({
 
 function addTintWarmupMeshes(group, child, prefabEntry, materials, capacity) {
   for (const tint of Object.values(prefabEntry.biomeTints ?? {})) {
-    addWarmupMesh(group, child, materials.resolvePrefabMaterial(child.material, tint), 'tint', capacity)
+    addWarmupMesh(group, child, materials.resolvePrefabMaterial(child.material, tint), 'tint', capacity, prefabEntry)
   }
 }
 
@@ -94,7 +95,7 @@ function addTreeWarmupMeshes(group, child, prefabEntry, materials, capacity) {
   for (const biomeId of biomeIds) {
     const material = materials.resolveTreeMaterial(child, biomeId)
     if (material) {
-      addWarmupMesh(group, child, material, 'tree', capacity, { useInstanceColor: true })
+      addWarmupMesh(group, child, material, 'tree', capacity, prefabEntry, { useInstanceColor: true })
     }
   }
 }
@@ -111,16 +112,17 @@ function addInstanceColorWarmupMesh(group, child, prefabEntry, materials, capaci
     materials.resolveInstanceColorMaterial(child.material),
     'instanceColor',
     capacity,
+    prefabEntry,
     { color: instanceColors.palette[0] },
   )
 }
 
-function addWarmupMesh(group, child, material, materialMode, capacity, { color = null, useInstanceColor = false } = {}) {
+function addWarmupMesh(group, child, material, materialMode, capacity, prefabEntry, { color = null, useInstanceColor = false } = {}) {
   const mesh = new THREE.InstancedMesh(child.geometry, material, capacity)
   mesh.name = `PrefabPipelineWarmup:${materialMode}:${child.name || 'mesh'}`
   mesh.userData.prefabWarmupMaterialMode = materialMode
   mesh.frustumCulled = false
-  mesh.castShadow = true
+  mesh.castShadow = shouldCastPrefabShadow(prefabEntry)
   mesh.receiveShadow = true
   mesh.setMatrixAt(0, new THREE.Matrix4())
   if (color || useInstanceColor) {
