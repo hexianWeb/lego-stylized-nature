@@ -1,0 +1,74 @@
+0 Technic Axle Hole Open Two Opposite Sides
+0 Name: axlehol5.dat
+0 Author: James Jessiman
+0 !LDRAW_ORG Primitive UPDATE 2022-02
+0 !LICENSE Licensed under CC BY 4.0 : see CAreadme.txt
+
+0 BFC CERTIFY CCW
+
+0 !HISTORY 2000-04-23 [sbliss] Added conditional edges along outermost diameters
+0 !HISTORY 2000-05-07 [PTadmin] Official Update 2000-01
+0 !HISTORY 2002-11-08 [OrionP] Adjusted fit and precision
+0 !HISTORY 2002-11-30 [PTadmin] Official Update 2002-05
+0 !HISTORY 2003-03-12 [PTadmin] Official Update 2003-01
+0 !HISTORY 2005-05-15 [guyvivan] Use 1-8chrd.dat primitive and made BFC'ed CCW
+0 !HISTORY 2005-12-28 [PTadmin] Official Update 2005-01
+0 !HISTORY 2007-06-24 [PTadmin] Header formatted for Contributor Agreement
+0 !HISTORY 2008-07-01 [PTadmin] Official Update 2008-01
+0 !HISTORY 2021-03-25 [Sirio] Added adapter rings and rounded to four decimals
+0 !HISTORY 2021-06-20 [mkennedy] Rearranged faces to reduce polygons
+0 !HISTORY 2021-12-20 [MagFors] Reshaped the hole
+0 !HISTORY 2022-03-06 [PTadmin] Official Update 2022-02
+
+
+1 16 0 0 0 1 0 0 0 1 0 0 0 1 axl5hol9.dat
+1 16 0 1 0 1 0 0 0 1 0 0 0 1 axl5hol9.dat
+1 16 0 0 0 1 0 0 0 1 0 0 0 1 axl5ho10.dat
+1 16 0 1 0 1 0 0 0 -1 0 0 0 -1 axl5ho10.dat
+
+1 16 5.80115 .5 1 0 0 -.19885 -.5 0 0 0 1 1 rect3.dat
+1 16 -5.80115 .5 1 0 0 .19885 -.5 0 0 0 1 1 rect3.dat
+1 16 -5.80115 .5 -1 0 0 .19885 -.5 0 0 0 -1 -1 rect3.dat
+1 16 5.80115 .5 -1 0 0 -.19885 -.5 0 0 0 -1 -1 rect3.dat
+5 24 6 0 0 6 1 0 5.6023 0 2 5.6023 0 -2
+5 24 -6 0 0 -6 1 0 -5.6023 0 -2 -5.6023 0 2
+
+4 16 4 1 2 5.6023 1 2 5.6023 0 2 4 0 2
+4 16 4 1 2 4 0 2 2.5 0 2.5 2.5 1 2.5
+4 16 2.5 1 2.5 2.5 0 2.5 2 0 4 2 1 4
+4 16 2 1 4 2 0 4 2 0 5.6023 2 1 5.6023
+4 16 -2 1 4 -2 1 5.6023 -2 0 5.6023 -2 0 4
+4 16 -2 1 4 -2 0 4 -2.5 0 2.5 -2.5 1 2.5
+4 16 -2.5 1 2.5 -2.5 0 2.5 -4 0 2 -4 1 2
+4 16 -4 1 2 -4 0 2 -5.6023 0 2 -5.6023 1 2
+4 16 -5.6023 1 -2 -5.6023 0 -2 -4 0 -2 -4 1 -2
+4 16 -4 1 -2 -4 0 -2 -2.5 0 -2.5 -2.5 1 -2.5
+4 16 -2.5 1 -2.5 -2.5 0 -2.5 -2 0 -4 -2 1 -4
+4 16 -2 1 -4 -2 0 -4 -2 0 -5.6023 -2 1 -5.6023
+4 16 2 1 -5.6023 2 0 -5.6023 2 0 -4 2 1 -4
+4 16 2 1 -4 2 0 -4 2.5 0 -2.5 2.5 1 -2.5
+4 16 2.5 1 -2.5 2.5 0 -2.5 4 0 -2 4 1 -2
+4 16 4 1 -2 4 0 -2 5.6023 0 -2 5.6023 1 -2
+5 24 4 1 2 4 0 2 5.6023 1 2 2.5 1 2.5
+5 24 2.5 1 2.5 2.5 0 2.5 2 1 4 4 1 2
+5 24 2 1 4 2 0 4 2.5 1 2.5 2 1 5.6023
+5 24 -2 1 4 -2 0 4 -2 1 5.6023 -2.5 1 2.5
+5 24 -2.5 1 2.5 -2.5 0 2.5 -2 1 4 -4 1 2
+5 24 -4 1 2 -4 0 2 -2.5 1 2.5 -5.6023 1 2
+5 24 -4 1 -2 -4 0 -2 -5.6023 1 -2 -2.5 1 -2.5
+5 24 -2.5 1 -2.5 -2.5 0 -2.5 -4 1 -2 -2 1 -4
+5 24 -2 1 -4 -2 0 -4 -2.5 1 -2.5 -2 1 -5.6023
+5 24 2 1 -4 2 0 -4 2 1 -5.6023 2.5 1 -2.5
+5 24 2.5 1 -2.5 2.5 0 -2.5 4 1 -2 2 1 -4
+5 24 4 1 -2 4 0 -2 5.6023 1 -2 2.5 1 -2.5
+
+0 // Adapter rings
+1 16 0 0 0 6 0 0 0 1 0 0 0 6 1-16chrd.dat
+1 16 0 0 0 -6 0 0 0 1 0 0 0 6 1-16chrd.dat
+1 16 0 0 0 -6 0 0 0 1 0 0 0 -6 1-16chrd.dat
+1 16 0 0 0 6 0 0 0 1 0 0 0 -6 1-16chrd.dat
+
+1 16 0 1 0 6 0 0 0 -1 0 0 0 6 1-16chrd.dat
+1 16 0 1 0 -6 0 0 0 -1 0 0 0 6 1-16chrd.dat
+1 16 0 1 0 -6 0 0 0 -1 0 0 0 -6 1-16chrd.dat
+1 16 0 1 0 6 0 0 0 -1 0 0 0 -6 1-16chrd.dat

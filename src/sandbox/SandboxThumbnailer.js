@@ -18,13 +18,16 @@ const THUMB_SIZE = 64
  *  - `renderer.render(scene, camera)` → `canvas.toDataURL('image/png')`
  */
 export class SandboxThumbnailer {
-  constructor({ cellSize, layerHeight, partsBasePath = '/model/parts/' } = {}) {
+  constructor({ cellSize, layerHeight, partsBasePath = '/model/ldraw/' } = {}) {
     this.cellSize = cellSize
     this.layerHeight = layerHeight
-    this.partLoader = new LDrawPartLoader({ cellSize, layerHeight, partsBasePath })
+    // Renders through an offscreen WebGLRenderer → conditional line
+    // material must be the WebGL flavour.
+    this.partLoader = new LDrawPartLoader({ cellSize, layerHeight, partsBasePath, rendererKind: 'webgl' })
 
     this.cache = new Map()
     this._inflight = new Map()
+    this._queue = Promise.resolve()
 
     this._renderer = null
     this._scene = null
@@ -67,14 +70,27 @@ export class SandboxThumbnailer {
     if (this.cache.has(partNumber)) return this.cache.get(partNumber)
     if (this._inflight.has(partNumber)) return this._inflight.get(partNumber)
 
-    const promise = (async () => {
-      this._ensureSetup()
+    // Serialize part loading: three's LDrawLoader re-parses shared
+    // subparts (stud.dat etc.) when many models build concurrently,
+    // which pegs the main thread at 100%+ CPU for minutes. Parsing one
+    // at a time reuses the loader's internal caches and stays smooth.
+    const job = this._queue.then(() => this._renderThumbnail(partNumber))
+    // Keep the queue alive even when a job fails.
+    this._queue = job.then(() => {}, () => {})
 
-      const asset = await this.partLoader.loadPart(partNumber).catch((err) => {
-        console.warn(`[Thumbnailer] Failed to load ${partNumber}:`, err)
-        return null
-      })
-      if (!asset) return null
+    this._inflight.set(partNumber, job)
+    job.finally(() => this._inflight.delete(partNumber))
+    return job
+  }
+
+  async _renderThumbnail(partNumber) {
+    this._ensureSetup()
+
+    const asset = await this.partLoader.loadPart(partNumber).catch((err) => {
+      console.warn(`[Thumbnailer] Failed to load ${partNumber}:`, err)
+      return null
+    })
+    if (!asset) return null
 
       const mesh = new Mesh(asset.geometry, new MeshBasicMaterial({ color: new Color(0xfec101) }))
       this._scene.add(mesh)
@@ -106,14 +122,6 @@ export class SandboxThumbnailer {
 
       this.cache.set(partNumber, dataUrl)
       return dataUrl
-    })()
-
-    this._inflight.set(partNumber, promise)
-    try {
-      return await promise
-    } finally {
-      this._inflight.delete(partNumber)
-    }
   }
 
   /**

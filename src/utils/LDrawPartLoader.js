@@ -1,7 +1,15 @@
 import * as THREE from 'three/webgpu'
 import { LDrawLoader } from 'three/addons/loaders/LDrawLoader.js'
+import { LDrawConditionalLineMaterial as LDrawConditionalLineNodeMaterial } from 'three/addons/materials/LDrawConditionalLineNodeMaterial.js'
+import { LDrawConditionalLineMaterial } from 'three/addons/materials/LDrawConditionalLineMaterial.js'
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js'
 import { getPartEntry } from '../assets/manifests/partsCatalog.js'
+
+// Module-level parse serialization: three's LDrawLoader shares
+// module-scope temporaries, so two loader instances parsing at once
+// interleave and corrupt each other (symptom: loads never settle).
+// Every parse across ALL instances funnels through this chain.
+let parseQueue = Promise.resolve()
 
 /**
  * Lazy LDraw part loader.
@@ -19,11 +27,12 @@ import { getPartEntry } from '../assets/manifests/partsCatalog.js'
  *  - `footprint`, `height`: measured dimensions in cells / layers
  */
 export class LDrawPartLoader {
-  constructor({ cellSize, layerHeight, partsBasePath = '/model/parts/', finish = null } = {}) {
+  constructor({ cellSize, layerHeight, partsBasePath = '/model/ldraw/', finish = null, rendererKind = 'webgpu' } = {}) {
     this.cellSize = cellSize
     this.layerHeight = layerHeight
     this.partsBasePath = partsBasePath
     this.finish = finish
+    this.rendererKind = rendererKind
     this.cache = new Map()
     this.loading = new Map()
     this._loader = null
@@ -33,6 +42,14 @@ export class LDrawPartLoader {
     if (!this._loader) {
       this._loader = new LDrawLoader()
       this._loader.setPartsLibraryPath(this.partsBasePath)
+      // three r185+: the conditional-line material class must be injected
+      // or addDefaultMaterials() throws inside FileLoader's onLoad (which
+      // the loader swallows, hanging every part load forever).
+      this._loader.setConditionalLineMaterial(
+        this.rendererKind === 'webgl'
+          ? LDrawConditionalLineMaterial
+          : LDrawConditionalLineNodeMaterial
+      )
     }
     return this._loader
   }
@@ -86,8 +103,20 @@ export class LDrawPartLoader {
       throw new Error(`[LDrawPartLoader] Unknown part number: ${partNumber}`)
     }
 
+    // Serialize the actual parse across all loader instances.
+    const parseJob = parseQueue.then(() => this._parseIsolated(partNumber))
+    parseQueue = parseJob.then(() => {}, () => {})
+    return parseJob
+  }
+
+  async _parseIsolated(partNumber) {
+    const entry = getPartEntry(partNumber)
+    if (!entry) {
+      throw new Error(`[LDrawPartLoader] Unknown part number: ${partNumber}`)
+    }
+
     const loader = this._getLoader()
-    const url = `${this.partsBasePath}${partNumber}.dat`
+    const url = `${this.partsBasePath}parts/${partNumber}.dat`
     const group = await loader.loadAsync(url)
 
     const merged = this._mergeGroup(group)
@@ -96,26 +125,26 @@ export class LDrawPartLoader {
     }
 
     merged.computeBoundingBox()
+
+    // LDraw geometry is in LDU (20 LDU = 1 stud pitch). Convert the
+    // whole geometry to world units first: 1 stud = cellSize.
+    const LDU_PER_STUD = 20
+    const lduToWorld = this.cellSize / LDU_PER_STUD
+    merged.scale(lduToWorld, lduToWorld, lduToWorld)
+
+    merged.computeBoundingBox()
     const bbox = merged.boundingBox
-    const measured = {
-      widthCells: Math.max(1, Math.round(bbox.max.x / this.cellSize)),
-      depthCells: Math.max(1, Math.round(bbox.max.z / this.cellSize)),
-      heightLayers: Math.max(1, Math.round(bbox.max.y / this.layerHeight))
-    }
 
     // Translate to origin (LDraw parts may be off-center)
     const center = new THREE.Vector3()
     bbox.getCenter(center)
     merged.translate(-center.x, -bbox.min.y, -center.z)
 
-    // Normalize XZ footprint to match the build grid pitch.
-    // We bake the XZ scale directly into the geometry so the InstancedMesh
-    // can reuse identity matrices for X/Z position.
-    const desiredWidth = measured.widthCells * this.cellSize
-    const desiredDepth = measured.depthCells * this.cellSize
-    const scaleX = desiredWidth / Math.max(0.0001, bbox.max.x - bbox.min.x)
-    const scaleZ = desiredDepth / Math.max(0.0001, bbox.max.z - bbox.min.z)
-    merged.scale(scaleX, 1, scaleZ)
+    const measured = {
+      widthCells: Math.max(1, Math.round((bbox.max.x - bbox.min.x) / this.cellSize)),
+      depthCells: Math.max(1, Math.round((bbox.max.z - bbox.min.z) / this.cellSize)),
+      heightLayers: Math.max(1, Math.round((bbox.max.y - bbox.min.y) / this.layerHeight))
+    }
 
     // Drop any materials from the original meshes — instance color drives
     // the final hue, so a neutral MeshStandardNodeMaterial is sufficient.

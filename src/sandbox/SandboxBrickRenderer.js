@@ -17,13 +17,14 @@ const SELECT_LIGHT_OFFSET = 0.18
  * small brightness offset so it stands out from the rest.
  */
 export class SandboxBrickRenderer {
-  constructor({ grid, scene }) {
+  constructor({ grid, scene, rendererKind = 'webgpu' }) {
     this.grid = grid
     this.scene = scene
     this.partLoader = new LDrawPartLoader({
       cellSize: grid.cellSize,
       layerHeight: grid.layerHeight,
-      partsBasePath: '/model/parts/'
+      partsBasePath: '/model/ldraw/',
+      rendererKind: String(rendererKind).includes('webgl') ? 'webgl' : 'webgpu'
     })
 
     this.entries = new Map()        // partNumber → { mesh, material, byId, capacity }

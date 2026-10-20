@@ -51,18 +51,50 @@ export class PartStripHUD {
       })
     })
 
-    // Kick off thumbnail loads for the visible items
+    // Thumbnail policy: auto-generate only the FIRST 12 after boot
+    // (categories switch triggers further passes with their own ≤12).
+    // A self-feeding queue for all 112 parts starves interactive
+    // loads (click-to-place) behind minutes of background parsing.
+    // Thumbnail generation is DISABLED at runtime: the browser-side
+    // LDraw→WebGL thumbnail pipeline wedges unpredictably (different
+    // part each run, load never settles, and the shared module parse
+    // queue then starves click-to-place). Placeholders (▢ + part
+    // number) remain fully usable; pre-generated thumbnails can be
+    // reintroduced as a build-time asset pipeline later.
+    if (!this.thumbnailer) return
+    return
+    const schedule = typeof requestIdleCallback === 'function'
+      ? requestIdleCallback
+      : (fn) => setTimeout(fn, 200)
+    let kicked = 0
     for (const entry of items) {
+      if (this._autoKicked >= 12 || kicked >= 12) break
       if (!this.thumbnailer.cached(entry.partNumber)) {
-        this.thumbnailer.ensureThumbnail(entry.partNumber).then((url) => {
-          if (url) this._render()
+        kicked += 1
+        this._autoKicked += 1
+        const partNumber = entry.partNumber
+        schedule(() => {
+          if (this.thumbnailer?.cached(partNumber)) return
+          this.thumbnailer.ensureThumbnail(partNumber).then((url) => {
+            if (url) this._render()
+          })
         })
       }
     }
   }
 
+  /**
+   * The thumbnailer is created asynchronously after activation; the
+   * sandbox calls this once it exists so the strip can swap its
+   * placeholders for live thumbnails.
+   */
+  setThumbnailer(thumbnailer) {
+    this.thumbnailer = thumbnailer
+    this._render()
+  }
+
   _thumb(entry, isActive) {
-    const url = this.thumbnailer.cached(entry.partNumber)
+    const url = this.thumbnailer?.cached(entry.partNumber)
     const img = url
       ? `<img class="sandbox-part-strip__img" src="${url}" alt="${entry.displayName}" />`
       : `<span class="sandbox-part-strip__placeholder" aria-hidden="true">▢</span>`

@@ -1,0 +1,18 @@
+0 Hi-Res Disc Negative Tangent 0.125
+0 Name: 48\1-8tang.dat
+0 Author: Willy Tschager [Holly-Wood]
+0 !LDRAW_ORG 48_Primitive UPDATE 2024-01
+0 !LICENSE Licensed under CC BY 4.0 : see CAreadme.txt
+
+0 BFC CERTIFY CCW
+
+0 !HISTORY 2020-12-29 [PTadmin] Official Update 2020-03
+0 !HISTORY 2024-01-26 [Holly-Wood] Complete re-write, original by ishkafel
+0 !HISTORY 2024-01-29 [OrionP] Official Update 2024-01
+
+3 16 1 0 0 1 0 .1989 .9914 0 .1305
+3 16 .9914 0 .1305 1 0 .1989 .9659 0 .2588
+3 16 .9239 0 .3827 .9659 0 .2588 1 0 .1989
+3 16 .9239 0 .3827 .8478 0 .5665 .866 0 .5
+3 16 .866 0 .5 .8478 0 .5665 .7934 0 .6088
+3 16 .7071 0 .7071 .7934 0 .6088 .8478 0 .5665

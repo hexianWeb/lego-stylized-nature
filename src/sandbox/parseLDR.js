@@ -72,11 +72,13 @@ const fileCache = new Map()
 
 async function fetchPart(filename) {
   if (fileCache.has(filename)) return fileCache.get(filename)
-  const cleaned = filename.replace(/^parts\//, '').replace(/^[ps]\//, '').replace(/\.dat$/i, '')
+  const normalized = filename.replace(/\\/g, '/')
+  const cleaned = normalized.replace(/^parts\//, '').replace(/^[ps]\//, '').replace(/\.dat$/i, '')
   const candidates = [
-    `parts/${cleaned}.dat`,
-    `parts/s/${cleaned}.dat`,
-    filename
+    `ldraw/parts/${cleaned}.dat`,
+    `ldraw/parts/s/${cleaned}.dat`,
+    `ldraw/p/${cleaned}.dat`,
+    `ldraw/${normalized}`
   ]
   for (const path of candidates) {
     try {

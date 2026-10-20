@@ -1,0 +1,36 @@
+0 Bar Handle Attachment with 2 Open Sides
+0 Name: phandle2.dat
+0 Author: Magnus Forsberg [MagFors]
+0 !LDRAW_ORG Primitive UPDATE 2024-02
+0 !LICENSE Licensed under CC BY 4.0 : see CAreadme.txt
+
+0 BFC CERTIFY CCW
+
+0 !HISTORY 2024-01-29 [OrionP] Official Update 2024-01
+0 !HISTORY 2024-03-23 [OrionP] Updated ring primitives
+0 !HISTORY 2024-03-24 [OrionP] Official Update 2024-02
+
+1 16 0 0 7.8015 0 0 3 0 1 0 -2.1985 0 0 rect2p.dat
+1 16 0 -.1481 5.5732 3 0 0 0 1 .1481 0 0 .0298 rect3.dat
+5 24 3 -.2962 5.5434 -3 -.2962 5.5434 3 0 5.603 3 -2.2426 4.2426
+1 16 -3 2 0 0 6 0 -6 0 0 0 0 6 3-16cylo.dat
+1 16 -3 2 0 0 6 0 -6 0 0 0 0 -6 2-4cylo.dat
+1 16 0 8 5 0 0 3 0 -1 0 5 0 0 rect2p.dat
+
+1 16 3 2 0 0 -1 0 4 0 0 0 0 4 1-4ndis.dat
+1 16 3 2 0 0 -1 0 0 0 -4 4 0 0 1-16tang.dat
+1 16 3 2 0 0 -1 0 2 0 0 0 0 -2 2-4ring2.dat
+1 16 3 2 0 0 -1 0 -2 0 0 0 0 2 3-16ring2.dat
+4 16 3 8 10 3 0 10 3 2 4 3 6 4
+4 16 3 8 10 3 6 4 3 6 0 3 8 0
+4 16 3 0 5.603 3 -.2962 5.5434 3 .4692 3.6956 3 1.2044 4
+4 16 3 1.2044 4 3 2 4 3 0 10 3 0 5.603
+
+1 16 -3 2 0 0 1 0 4 0 0 0 0 4 1-4ndis.dat
+1 16 -3 2 0 0 1 0 0 0 -4 4 0 0 1-16tang.dat
+1 16 -3 2 0 0 1 0 2 0 0 0 0 -2 2-4ring2.dat
+1 16 -3 2 0 0 1 0 -2 0 0 0 0 2 3-16ring2.dat
+4 16 -3 2 4 -3 0 10 -3 8 10 -3 6 4
+4 16 -3 6 0 -3 6 4 -3 8 10 -3 8 0
+4 16 -3 .4692 3.6956 -3 -.2962 5.5434 -3 0 5.603 -3 1.2044 4
+4 16 -3 0 10 -3 2 4 -3 1.2044 4 -3 0 5.603

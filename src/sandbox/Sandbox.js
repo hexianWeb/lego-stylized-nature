@@ -14,6 +14,7 @@ import { HistoryStack } from './HistoryStack.js'
 import { partsCatalog as baseCatalog } from '../assets/manifests/partsCatalog.js'
 import { BONUS_PARTS } from './missions.js'
 import { SANDBOX_ALL_MISSIONS_COMPLETE_EVENT, SANDBOX_PARTS_UNLOCKED_EVENT } from './SandboxScene.js'
+import { CONTROLS_LOCK_EVENT, CONTROLS_UNLOCK_EVENT } from '../world/world.js'
 import { exportToLDR } from './exportLDR.js'
 import { parseLDRWithDebug } from './parseLDR.js'
 import { ShapeController } from './shapes/ShapeController.js'
@@ -69,6 +70,16 @@ export class Sandbox {
     else this._deactivate()
   }
 
+  /**
+   * Called by `Experience.init()` once the renderer, world and camera
+   * exist. Performs the INITIAL activation for whatever mode the URL
+   * hash selected (sandbox by default) — the ModeManager only emits on
+   * hash *changes*, so without this the sandbox never boots.
+   */
+  init() {
+    this._handleModeChanged(this.modeManager.get())
+  }
+
   _buildRuntimeCatalog() {
     const map = {}
     for (const partNumber of this.unlockedPartNumbers) {
@@ -89,6 +100,7 @@ export class Sandbox {
   _activate() {
     if (this.active) return
     this.active = true
+    eventBus.emit(CONTROLS_LOCK_EVENT)
 
     // If the global watchdog forced 2D mode while we were waiting for
     // init, the experience's renderer may still be a Three.js object;
@@ -125,7 +137,11 @@ export class Sandbox {
     })
     this.group.add(this.ruler.group)
 
-    this.brickRenderer = new SandboxBrickRenderer({ grid: this.grid, scene: this.group })
+    this.brickRenderer = new SandboxBrickRenderer({
+      grid: this.grid,
+      scene: this.group,
+      rendererKind: this.experience?.renderer?.kind
+    })
     this.group.add(this.brickRenderer.group)
 
     // Defer thumbnailer (creates WebGLRenderer) so a slow WebGL context
@@ -135,6 +151,7 @@ export class Sandbox {
         cellSize: this.grid.cellSize,
         layerHeight: this.grid.layerHeight
       })
+      this.partStripHUD?.setThumbnailer(this.thumbnailer)
     })
 
     this.achievementManager = new SandboxAchievementManager()
@@ -209,7 +226,7 @@ export class Sandbox {
       history: this.history,
       onUndoTo: (target) => {
         this.history.undoUntil(target)
-        this.state.setSelected(null)
+        this.sceneState.setSelected(null)
         this.brickRenderer.setSelected(null)
         this.sceneState.syncPlacements(this.brickRenderer.listPlacements())
       },
@@ -236,6 +253,7 @@ export class Sandbox {
   _deactivate() {
     if (!this.active) return
     this.active = false
+    eventBus.emit(CONTROLS_UNLOCK_EVENT)
     eventBus.off(SANDBOX_ALL_MISSIONS_COMPLETE_EVENT, this._onAllMissionsComplete)
     this.view2D?.dispose()
 

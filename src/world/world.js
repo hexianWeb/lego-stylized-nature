@@ -1,5 +1,12 @@
 import * as THREE from 'three/webgpu'
 import { worldConfig } from './WorldConfig.js'
+
+/**
+ * Emitted on the global bus while the sandbox (or any overlay UI) owns
+ * the keyboard; the world pauses aircraft input while locked.
+ */
+export const CONTROLS_LOCK_EVENT = 'controls:lock'
+export const CONTROLS_UNLOCK_EVENT = 'controls:unlock'
 import BiomeRegistry from './biomes/BiomeRegistry.js'
 import BiomeBlender from './biomes/BiomeBlender.js'
 import BiomeMaskGenerator from './biomes/BiomeMaskGenerator.js'

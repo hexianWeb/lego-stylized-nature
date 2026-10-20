@@ -1,0 +1,35 @@
+0 Plate  2 x  2 Round with Axlehole
+0 Name: 4032a.dat
+0 Author: James Jessiman
+0 !LDRAW_ORG Part UPDATE 2022-02
+0 !LICENSE Licensed under CC BY 4.0 : see CAreadme.txt
+
+0 BFC CERTIFY CCW
+
+0 !HISTORY 2004-03-25 [westrate] Added stud10, replaced quads with primitives, BFCed
+0 !HISTORY 2004-11-06 [PTadmin] Official Update 2004-04
+0 !HISTORY 2007-06-30 [PTadmin] Header formatted for Contributor Agreement
+0 !HISTORY 2008-07-01 [PTadmin] Official Update 2008-01
+0 !HISTORY 2010-01-30 [mikeheide] optimized axlehole
+0 !HISTORY 2010-01-31 [PTadmin] Renamed from 4032
+0 !HISTORY 2010-12-31 [PTadmin] Official Update 2010-03
+0 !HISTORY 2022-01-02 [MagFors] Reshaped axlehole, removed surface bleeding
+0 !HISTORY 2022-03-06 [PTadmin] Official Update 2022-02
+
+
+1 16 0 0 0 1 0 0 0 1 0 0 0 1 s\4032s01.dat
+1 16 0 0 0 0 0 1 0 1 0 -1 0 0 s\4032s01.dat
+1 16 0 0 0 -1 0 0 0 1 0 0 0 -1 s\4032s01.dat
+1 16 0 0 0 0 0 -1 0 1 0 1 0 0 s\4032s01.dat
+1 16 0 4 0 1 0 0 0 -1 0 0 0 1 stud4a.dat
+1 16 0 4 0 8 0 0 0 1 0 0 0 8 4-4edge.dat
+1 16 0 4 0 8 0 0 0 -1 0 0 0 8 4-4ndis.dat
+1 16 0 4 0 1 0 0 0 1 0 0 0 1 axlehol3.dat
+1 16 0 0 0 1 0 0 0 4 0 0 0 1 axl5hol8.dat
+1 16 0 0 0 1 0 0 0 1 0 0 0 1 axl5ho10.dat
+1 16 0 4 0 0 0 1 0 -1 0 1 0 0 axl5ho10.dat
+1 16 0 0 0 1 0 0 0 1 0 0 0 1 axlehol2.dat
+1 16 0 0 0 1 0 0 0 1 0 0 0 1 axl5hol9.dat
+1 16 0 4 0 1 0 0 0 1 0 0 0 1 axl5hol9.dat
+1 16 0 0 0 6 0 0 0 1 0 0 0 6 4-4ndis.dat
+1 16 0 0 0 1 0 0 0 1 0 0 0 1 stug10-2x2.dat
