@@ -87,6 +87,16 @@ export default class WorldCamera {
     this._syncFocusDistance()
   }
 
+  resetView(target) {
+    this.controls.reset()
+    this.trackballControls.reset()
+    this.controls.target.copy(target)
+    this._frustumHeight = 6.4
+    this._applyFrustumDistance(DEFAULT_VIEW_DIRECTION)
+    this._syncTrackballTarget()
+    this.controls.update()
+  }
+
   followTarget(target, delta, smoothing = 0) {
     const previousTarget = this.controls.target.clone()
     const nextTarget = target.clone()

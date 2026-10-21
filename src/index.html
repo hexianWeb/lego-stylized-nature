@@ -1,13 +1,16 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LEGO Flight Explorer</title>
+    <meta name="theme-color" content="#315c45">
+    <title>积木旷野 · LEGO Flight Explorer</title>
     <link rel="stylesheet" href="./style.css">
 </head>
 <body>
-    <canvas class="webgl"></canvas>
+    <canvas class="webgl" aria-label="积木旷野，使用 W A S D 或方向键驾驶，拖动旋转视角" tabindex="0"></canvas>
+    <div id="explorer-ui"></div>
+    <noscript>请启用 JavaScript，开始探索积木旷野。</noscript>
     <script type="module" src="./script.js"></script>
 </body>
 </html>

@@ -17,6 +17,7 @@ export default class AircraftInput {
   constructor(target = globalThis.window ?? null) {
     this.target = target
     this.keys = createEmptyKeys()
+    this.virtualKeys = createEmptyKeys()
     this.isAttached = false
 
     this._onKeyDown = event => this.handleKeyDown(event)
@@ -51,10 +52,17 @@ export default class AircraftInput {
 
   clear() {
     this.keys = createEmptyKeys()
+    this.virtualKeys = createEmptyKeys()
+  }
+
+  setVirtualKey(code, pressed) {
+    if (CONTROL_CODES.includes(code)) {
+      this.virtualKeys[code] = Boolean(pressed)
+    }
   }
 
   getKeys() {
-    return { ...this.keys }
+    return Object.fromEntries(CONTROL_CODES.map(code => [code, this.keys[code] || this.virtualKeys[code]]))
   }
 
   dispose() {

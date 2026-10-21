@@ -14,6 +14,7 @@ import {
 } from './chunkCoordinates.js'
 import ChunkRenderSlot from './ChunkRenderSlot.js'
 import { CHUNK_TRANSITION_DEFAULTS } from './ChunkColumnTransition.js'
+import VoxelClouds from './VoxelClouds.js'
 
 export default class ChunkManager {
   constructor({
@@ -74,6 +75,11 @@ export default class ChunkManager {
     this.transitionDirection = { x: 0, z: 0 }
     this.bootstrapped = false
 
+    const cloudSettings = chunkConfig.clouds ?? chunkConfig.distantTerrain
+    this.voxelClouds = cloudSettings?.enabled === true
+      ? new VoxelClouds({ config, parentGroup })
+      : null
+
     for (const slot of this.slots) {
       slot.hide()
       this.parentGroup.add(slot.group)
@@ -81,6 +87,7 @@ export default class ChunkManager {
   }
 
   resetLoadedState() {
+    this.voxelClouds?.reset()
     for (const slot of this.slots) {
       slot.hide()
       slot.setPrefabsVisible?.(false)
@@ -612,9 +619,13 @@ export default class ChunkManager {
     if (placementEnabled && buildPrefabs) {
       this.buildPendingPrefabs(prefabActiveKeys, deadline)
     }
+    // Worker builds retain their cloud cover. The cloud renderer reads each
+    // column's existing reveal progress, so both effects share exactly one clock.
+    this.voxelClouds?.update(this.centerCoord, this.activeSlots)
   }
 
   refreshAOPreview(showOverlays = true) {
+    this.voxelClouds?.refresh(showOverlays)
     for (const slot of this.slots) {
       slot.updateInstanceColors()
       slot.setOverlaysVisible(showOverlays && slot.group.visible)
@@ -629,6 +640,7 @@ export default class ChunkManager {
   }
 
   dispose() {
+    this.voxelClouds?.dispose()
     this.buildWorkers?.terminate()
     this.buildWorkers = null
     this.inFlightBuilds.clear()

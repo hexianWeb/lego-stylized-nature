@@ -1,10 +1,12 @@
 import * as THREE from 'three/webgpu'
+import ExplorerAudio from '../audio/ExplorerAudio.js'
 import Debug from '../debug/Debug.js'
 import { createPerformancePanel } from '../debug/panels/PerformancePanel.js'
 import { createPostProcessingPanel } from '../debug/panels/PostProcessingPanel.js'
 import Renderer from '../renderer/Renderer.js'
 import Sizes from '../systems/Sizes.js'
 import Time from '../systems/Time.js'
+import ExplorerUI from '../ui/ExplorerUI.js'
 import Resources from '../utils/Resources.js'
 import WorldCamera from '../world/camera.js'
 import Environment from '../world/environment.js'
@@ -35,6 +37,9 @@ export default class Experience {
 
     this.resources = new Resources()
     this.world = new World(this)
+    this.audio = new ExplorerAudio(this)
+    const uiRoot = document.getElementById('explorer-ui')
+    this.ui = uiRoot ? new ExplorerUI(uiRoot, this) : null
 
     /** @type {(() => void) | null} */
     this._unsubscribeResize = null
@@ -66,6 +71,7 @@ export default class Experience {
     const started = performance.now()
     this.renderer.attachPipeline(this.scene, this.worldCamera.instance)
     await this.renderer.init()
+    this.ui?.setStage('正在收集积木与树木…')
     const rendererReady = performance.now()
     this.initTimings.rendererMs = rendererReady - started
     await this.resources.ready
@@ -80,6 +86,7 @@ export default class Experience {
     const environmentReady = performance.now()
     this.initTimings.environmentMs = environmentReady - resourcesReady
     this.world.build()
+    this.ui?.setStage('正在点亮这片旷野…')
     const worldReady = performance.now()
     this.initTimings.worldMs = worldReady - environmentReady
 
@@ -116,6 +123,8 @@ export default class Experience {
         )
       }
     }
+    this.audio?.setReady()
+    this.ui?.setReady()
   }
 
   resize() {
@@ -137,6 +146,8 @@ export default class Experience {
     this.time.update(timestamp)
     this.worldCamera.update()
     this.world.update()
+    this.audio?.update(timestamp)
+    this.ui?.update(timestamp)
     this.renderer.updatePostProcessingTime(this.time.getElapsed())
     this.renderer.render()
     if (this.debug.active) {
@@ -221,6 +232,8 @@ export default class Experience {
     this._unsubscribeResize?.()
     this._unsubscribeResize = null
 
+    this.ui?.dispose()
+    this.audio?.dispose()
     this.world.dispose()
     this.environment.dispose()
     this.worldCamera.dispose()

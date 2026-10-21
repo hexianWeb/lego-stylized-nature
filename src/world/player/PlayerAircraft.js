@@ -67,6 +67,7 @@ export default class PlayerAircraft {
     this.group.name = 'PlayerAircraft'
 
     this.enabled = false
+    this.paused = false
 
     this._missingAssetWarned = false
 
@@ -343,7 +344,7 @@ export default class PlayerAircraft {
   }
 
   update() {
-    if (!this.enabled) {
+    if (!this.enabled || this.paused) {
       return
     }
 
@@ -390,6 +391,30 @@ export default class PlayerAircraft {
 
       )
     }
+  }
+
+  setPaused(paused) {
+    this.paused = Boolean(paused)
+    this.input.clear()
+    if (this.paused) {
+      this.input.dispose()
+      this.experience.renderer.setSpeedLineOpacity(0)
+    }
+    else if (this.enabled) {
+      this.input.attach()
+    }
+  }
+
+  reset() {
+    const position = resolveInitialPosition(this.worldConfig)
+    this.state = createAircraftState({ position: [position[0], this.motionConfig.height, position[2]] })
+    this.attitudeState = createVisualAttitudeState()
+    this.input.clear()
+    this.wingAirflow?.clear()
+    this.speedLineOpacity = 0
+    this.experience.renderer.setSpeedLineOpacity(0)
+    this._applyTransform()
+    this._applyThrusterVisuals()
   }
 
   _updateSpeedLines(input, delta) {
