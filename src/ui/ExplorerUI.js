@@ -18,6 +18,23 @@ const BIOMES = {
 }
 const svg = name => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[name]}</svg>`
 const button = (action, icon, label, extra = '') => `<button type="button" class="icon-button" data-action="${action}" title="${label}" aria-label="${label}" ${extra}>${svg(icon)}</button>`
+const CLOUD_REVEAL_MS = 1800
+const CLOUD_PUFFS = [
+  ['16%', '24%', '46vw', '26vw', '-38vw', '-22vh'],
+  ['50%', '12%', '52vw', '24vw', '2vw', '-34vh'],
+  ['86%', '22%', '44vw', '26vw', '40vw', '-20vh'],
+  ['6%', '52%', '38vw', '30vw', '-44vw', '2vh'],
+  ['32%', '46%', '34vw', '22vw', '-26vw', '-4vh'],
+  ['70%', '48%', '34vw', '22vw', '28vw', '2vh'],
+  ['96%', '54%', '40vw', '28vw', '46vw', '6vh'],
+  ['18%', '80%', '46vw', '26vw', '-30vw', '32vh'],
+  ['52%', '88%', '54vw', '26vw', '4vw', '36vh'],
+  ['86%', '78%', '42vw', '24vw', '36vw', '30vh'],
+]
+const cloudVeilMarkup = () => {
+  const puffs = CLOUD_PUFFS.map(([x, y, w, h, dx, dy]) => `<span class="puff" style="--x:${x};--y:${y};--w:${w};--h:${h};--dx:${dx};--dy:${dy}"></span>`).join('')
+  return `<div class="cloud-veil" aria-hidden="true"><div class="cloud-sky"></div><div class="cloud-burst"></div><div class="cloud-field">${puffs}</div></div>`
+}
 
 export default class ExplorerUI {
   constructor(root, experience) {
@@ -70,6 +87,7 @@ export default class ExplorerUI {
         <button type="button" data-flight-code="KeyS" aria-label="后退">↓</button>
         <button type="button" data-flight-code="KeyD" aria-label="右转">↷</button>
       </div>
+      ${cloudVeilMarkup()}
       <div class="loading-card surface" role="status"><span class="eyebrow">A LITTLE WORLD, A BIG ADVENTURE</span><h2>旷野正在生长</h2><p data-stage>正在唤醒这片小世界…</p><div class="loading-track"><i></i></div></div>
       <div class="hud-toast surface" role="status" hidden></div>
       <dialog class="help-dialog surface" aria-labelledby="help-title">
@@ -113,9 +131,35 @@ export default class ExplorerUI {
     this.root.querySelector('[data-stage]').textContent = message
   }
 
+  playCloudReveal() {
+    const sky = this.root.querySelector('.cloud-sky')
+    const reduceMotion = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches
+    if (!sky || reduceMotion || this.ready) return Promise.resolve()
+    this.root.classList.add('is-revealing')
+    return new Promise((resolve) => {
+      let settled = false
+      const finish = () => {
+        if (settled) return
+        settled = true
+        sky.removeEventListener('animationend', onEnd)
+        clearTimeout(timer)
+        this._cancelReveal = null
+        resolve()
+      }
+      const onEnd = (event) => {
+        if (event.target === sky) finish()
+      }
+      const timer = setTimeout(finish, CLOUD_REVEAL_MS)
+      this._cancelReveal = finish
+      sky.addEventListener('animationend', onEnd)
+    })
+  }
+
   setReady() {
     this.ready = true
     this.root.classList.add('is-ready')
+    this.root.classList.remove('is-revealing')
+    this.root.querySelector('.cloud-veil')?.remove()
     for (const control of this.root.querySelectorAll('button[disabled]')) control.disabled = false
     if (!this.experience.world.playerAircraft?.enabled) {
       for (const control of this.root.querySelectorAll('[data-action="pause"], [data-action="home"], [data-flight-code]')) control.disabled = true
@@ -248,6 +292,7 @@ export default class ExplorerUI {
   }
 
   dispose() {
+    this._cancelReveal?.()
     this.events.abort()
     clearTimeout(this.toastTimer)
     if (this.dialog.open) this.dialog.close()

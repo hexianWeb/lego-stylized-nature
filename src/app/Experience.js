@@ -63,7 +63,7 @@ export default class Experience {
     this.disposed = false
   }
 
-  async init() {
+  async init({ deferReady = false } = {}) {
     if (this.disposed) {
       throw new Error('[Experience] Already disposed')
     }
@@ -115,8 +115,56 @@ export default class Experience {
       this.worldCamera.debuggerInit(this.debug)
       this.world.debuggerInit(this.debug)
     }
+    if (!deferReady) {
+      this.audio?.setReady()
+      this.ui?.setReady()
+    }
+  }
+
+  /**
+   * Call after start(). The first live frames stay behind the clouds,
+   * then the veil breaks open and flight controls are released.
+   */
+  async present() {
+    if (this.disposed) {
+      return
+    }
     this.audio?.setReady()
-    this.ui?.setReady()
+    if (!this.ui) {
+      return
+    }
+
+    const player = this.world.playerAircraft
+    if (player?.enabled) {
+      player.input.clear()
+      player.input.dispose()
+    }
+
+    this.ui.setStage('即将穿出云层…')
+    await new Promise((resolve) => {
+      const timer = setTimeout(() => {
+        this._cancelPresent = null
+        resolve()
+      }, 1500)
+      this._cancelPresent = () => {
+        clearTimeout(timer)
+        this._cancelPresent = null
+        resolve()
+      }
+    })
+    if (this.disposed) {
+      return
+    }
+
+    await this.ui.playCloudReveal()
+    if (this.disposed) {
+      return
+    }
+
+    if (player?.enabled && !player.paused) {
+      player.input.attach()
+    }
+    this.ui.setReady()
   }
 
   resize() {
@@ -217,6 +265,7 @@ export default class Experience {
       return
     }
     this.disposed = true
+    this._cancelPresent?.()
     if (this.renderer.initialized) {
       this.renderer.instance.setAnimationLoop(null)
     }

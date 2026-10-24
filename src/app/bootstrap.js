@@ -11,8 +11,9 @@ export async function bootstrap(canvas) {
   }
 
   try {
-    await experience.init()
+    await experience.init({ deferReady: true })
     experience.start()
+    await experience.present()
   }
   catch (err) {
     experience.dispose()
