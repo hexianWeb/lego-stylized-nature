@@ -2,19 +2,16 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import * as THREE from 'three/webgpu'
 import Renderer from '../src/renderer/Renderer.js'
-import { worldConfig } from '../src/world/WorldConfig.js'
 
 test('disabled postprocessing renders the scene directly without a pipeline', () => {
   const scene = { name: 'scene' }
   const camera = { name: 'camera' }
   const calls = []
   const renderer = Object.create(Renderer.prototype)
-  renderer.postProcessingEnabled = worldConfig.postProcessing.enabled !== false
+  renderer.postProcessingEnabled = false
   renderer.instance = { render: (...args) => calls.push(args) }
   renderer.renderPipeline = null
-  renderer.tiltShiftEffect = null
 
-  assert.equal(renderer.postProcessingEnabled, false)
   renderer.attachPipeline(scene, camera)
   renderer.render()
 
@@ -63,17 +60,15 @@ test('renderer disposal cancels preparation before backend resources are release
   assert.deepEqual(calls, ['cancel', 'pipeline', 'backend'])
 })
 
-test('reattaching and disposing the pipeline releases ScenePass and blur without SMAA', () => {
+test('reattaching and disposing the pipeline releases the scene pass without SMAA', () => {
   const previousImage = globalThis.Image
   globalThis.Image = class Image {}
   const renderer = Object.create(Renderer.prototype)
   renderer.postProcessingEnabled = true
-  renderer.tiltShiftConfig = { ...worldConfig.postProcessing.tiltShift }
-  renderer.speedLinesConfig = structuredClone(worldConfig.postProcessing.speedLines)
   renderer.instance = { toneMapping: THREE.ACESFilmicToneMapping }
   try {
     renderer.attachPipeline(new THREE.Scene(), new THREE.PerspectiveCamera())
-    const output = renderer.outputNodes.tiltShiftEnabled
+    const output = renderer.renderPipeline.outputNode
     assert.equal(output.isRenderOutputNode, true)
     assert.equal(output.outputColorSpace, THREE.SRGBColorSpace)
     assert.equal(output.getToneMapping(), THREE.NoToneMapping)
@@ -106,8 +101,8 @@ test('reattaching and disposing the pipeline releases ScenePass and blur without
     renderer.attachPipeline(new THREE.Scene(), new THREE.PerspectiveCamera())
     renderer.dispose()
     renderer.dispose()
-    assert.equal(disposals.length, 2)
-    assert.equal(new Set(disposals).size, 2)
+    assert.equal(disposals.length, 1)
+    assert.equal(new Set(disposals).size, 1)
     assert.deepEqual(renderer.pipelineNodes, [])
   } finally {
     if (previousImage === undefined) delete globalThis.Image

@@ -5,21 +5,13 @@ import PlayerAircraft from '../src/world/player/PlayerAircraft.js'
 
 function createExperience({ asset = createAsset(), config = {} } = {}) {
   let followCall = null
-  let speedLineOpacity = 0
   return {
     resources: {
       items: {
         playerAircraftModel: asset
       }
     },
-    renderer: {
-      setSpeedLineOpacity(value) {
-        speedLineOpacity = value
-      },
-      get speedLineOpacity() {
-        return speedLineOpacity
-      }
-    },
+    renderer: {},
     time: {
       _elapsed: 0,
       getDelta() {

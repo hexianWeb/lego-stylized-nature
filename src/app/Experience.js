@@ -2,7 +2,6 @@ import * as THREE from 'three/webgpu'
 import ExplorerAudio from '../audio/ExplorerAudio.js'
 import Debug from '../debug/Debug.js'
 import { createPerformancePanel } from '../debug/panels/PerformancePanel.js'
-import { createPostProcessingPanel } from '../debug/panels/PostProcessingPanel.js'
 import Renderer from '../renderer/Renderer.js'
 import Sizes from '../systems/Sizes.js'
 import Time from '../systems/Time.js'
@@ -115,13 +114,6 @@ export default class Experience {
       this.environment.debuggerInit(this.debug)
       this.worldCamera.debuggerInit(this.debug)
       this.world.debuggerInit(this.debug)
-      if (this.renderer.postProcessingEnabled) {
-        createPostProcessingPanel(
-          this.debug,
-          worldConfig,
-          this.renderer.postProcessingController,
-        )
-      }
     }
     this.audio?.setReady()
     this.ui?.setReady()
@@ -148,7 +140,6 @@ export default class Experience {
     this.world.update()
     this.audio?.update(timestamp)
     this.ui?.update(timestamp)
-    this.renderer.updatePostProcessingTime(this.time.getElapsed())
     this.renderer.render()
     if (this.debug.active) {
       this.performance.frameMs = this.time.getDelta() * 1000

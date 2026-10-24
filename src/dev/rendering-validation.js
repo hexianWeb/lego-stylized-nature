@@ -79,7 +79,6 @@ async function disposeAndRecord(e, name) {
 
 document.querySelector('#run').addEventListener('click', async () => {
   const ppEnabled = worldConfig.postProcessing.enabled
-  const tiltEnabled = worldConfig.postProcessing.tiltShift.enabled
   const brick = sources.find(s => s.name === 'brick2x2Model')
   const noise = sources.find(s => s.name === 'waterNoiseTexture')
   const brickPath = brick.path
@@ -130,12 +129,6 @@ document.querySelector('#run').addEventListener('click', async () => {
       post.world.playerAircraft.input.dispose()
       await frames(post)
       assert(post.renderer.renderPipeline.needsUpdate === false, 'Pipeline did not render')
-      post.renderer.setTiltShiftEnabled(true)
-      post.renderer.render()
-      post.renderer.setTiltShiftEnabled(false)
-      assert(post.renderer.renderPipeline.needsUpdate === true, 'Toggle did not invalidate pipeline')
-      post.renderer.render()
-      assert(post.renderer.renderPipeline.needsUpdate === false, 'New output graph did not render')
       const targets = new Set()
       for (const node of post.renderer.pipelineNodes) {
         if (node.renderTarget)
@@ -144,16 +137,12 @@ document.querySelector('#run').addEventListener('click', async () => {
           targets.add(node._renderTargetEdges); targets.add(node._renderTargetWeights); targets.add(node._renderTargetBlend)
         }
       }
-      const blur = post.renderer.tiltShiftEffect.blurNode
-      targets.add(blur._horizontalRT); targets.add(blur._verticalRT)
-      if (blur.textureNode.isRTTNode)
-        targets.add(blur.textureNode.renderTarget)
       let freed = 0
       targets.forEach(target => target.addEventListener('dispose', () => freed++))
       post.renderer.attachPipeline(post.scene, post.worldCamera.instance)
       assert(freed === targets.size, 'Reattach leaked render targets')
       await frames(post)
-      record({ name: 'postprocessing-toggle-and-reattach', ownedTargets: targets.size, disposedTargets: freed })
+      record({ name: 'postprocessing-reattach', ownedTargets: targets.size, disposedTargets: freed })
       await disposeAndRecord(post, 'postprocessing-experience-disposal')
     }
     finally { post.dispose() }
@@ -190,7 +179,6 @@ document.querySelector('#run').addEventListener('click', async () => {
     brick.path = brickPath
     noise.path = noisePath
     worldConfig.postProcessing.enabled = ppEnabled
-    worldConfig.postProcessing.tiltShift.enabled = tiltEnabled
     document.querySelector('#run').disabled = false
   }
 })

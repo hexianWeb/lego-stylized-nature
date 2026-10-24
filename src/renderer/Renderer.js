@@ -13,13 +13,6 @@ import {
 import * as THREE from 'three/webgpu'
 import { installObjectResourceCleanup } from './installObjectResourceCleanup.js'
 import { installPrefabRenderPreparation } from './installPrefabRenderPreparation.js'
-import { createSpeedLinesEffect } from './postprocessing/createSpeedLinesEffect.js'
-import { createTiltShiftEffect } from './postprocessing/createTiltShiftEffect.js'
-import {
-  normalizeSpeedLinesConfig,
-  SPEED_LINES_DEFAULTS,
-} from './postprocessing/speedLinesConfig.js'
-import { TILT_SHIFT_DEFAULTS } from './postprocessing/tiltShiftConfig.js'
 
 // dist is scaled so screen corners sit near 1.0 (~sqrt(2)/2 * 1.42)
 const VIGNETTE_INNER = 0.22
@@ -49,25 +42,7 @@ export default class Renderer {
    *   canvas: HTMLCanvasElement,
    *   trackTimestamp?: boolean,
    *   postProcessing?: {
-   *     enabled?: boolean,
-   *     tiltShift?: {
-   *       enabled?: boolean,
-   *       focusCenter?: number,
-   *       focusWidth?: number,
-   *       falloff?: number,
-   *       blurStrength?: number
-   *     },
-   *     speedLines?: {
-   *       enabled?: boolean,
-   *       color?: { r?: number, g?: number, b?: number },
-   *       density?: number,
-   *       speed?: number,
-   *       thickness?: number,
-   *       minRadius?: number,
-   *       maxRadius?: number,
-   *       randomness?: number,
-   *       opacity?: number
-   *     }
+   *     enabled?: boolean
    *   }
    * }} options
    */
@@ -87,41 +62,15 @@ export default class Renderer {
     this.instance.info.autoReset = false
 
     this.postProcessingEnabled = postProcessing.enabled !== false
-    this.tiltShiftConfig
-      = postProcessing.tiltShift ?? { ...TILT_SHIFT_DEFAULTS }
-    this.speedLinesConfig = normalizeSpeedLinesConfig(
-      postProcessing.speedLines ?? SPEED_LINES_DEFAULTS,
-    )
 
     /** @type {THREE.RenderPipeline | null} */
     this.renderPipeline = null
-    this.tiltShiftEffect = null
-    this.speedLinesEffect = null
-    this.outputNodes = null
     this.scene = null
     this.camera = null
     this.pipelineNodes = []
     this.initialized = false
     this.disposed = false
     this.prefabPreparation = null
-
-    this.postProcessingController = Object.freeze({
-      setTiltShiftEnabled: (enabled) => {
-        this.setTiltShiftEnabled(enabled)
-      },
-      syncTiltShift: (config) => {
-        this.syncTiltShift(config)
-      },
-      setSpeedLinesEnabled: (enabled) => {
-        this.setSpeedLinesEnabled(enabled)
-      },
-      setSpeedLineOpacity: (opacity) => {
-        this.setSpeedLineOpacity(opacity)
-      },
-      syncSpeedLines: (config) => {
-        this.syncSpeedLines(config)
-      },
-    })
   }
 
   /**
@@ -140,28 +89,10 @@ export default class Renderer {
     const scenePass = pass(scene, camera)
     this.pipelineNodes.push(scenePass)
     const sceneColor = scenePass.getTextureNode('output')
-    this.speedLinesEffect = createSpeedLinesEffect(
-      sceneColor,
-      this.speedLinesConfig,
-    )
-    this.tiltShiftEffect = createTiltShiftEffect(
-      this.speedLinesEffect.outputNode,
-      this.tiltShiftConfig,
-    )
-    this.pipelineNodes.push(this.tiltShiftEffect)
-
-    this.outputNodes = {
-      tiltShiftEnabled: this.createFinalOutput(
-        this.tiltShiftEffect.enabledOutput,
-      ),
-      tiltShiftDisabled: this.createFinalOutput(
-        this.tiltShiftEffect.disabledOutput,
-      ),
-    }
 
     this.renderPipeline = new THREE.RenderPipeline(this.instance)
     this.renderPipeline.outputColorTransform = false
-    this.setTiltShiftEnabled(this.tiltShiftConfig.enabled)
+    this.renderPipeline.outputNode = this.createFinalOutput(sceneColor)
   }
 
   createFinalOutput(sceneColor) {
@@ -169,59 +100,6 @@ export default class Renderer {
     const graded = applyToyGrade(color.rgb)
     const vignetted = vec4(graded.mul(applyVignette()), color.a)
     return renderOutput(vignetted, THREE.NoToneMapping, THREE.SRGBColorSpace)
-  }
-
-  setTiltShiftEnabled(enabled) {
-    const nextEnabled = enabled === true
-    this.tiltShiftConfig.enabled = nextEnabled
-
-    if (!this.renderPipeline || !this.outputNodes) {
-      return
-    }
-
-    const nextOutput = nextEnabled
-      ? this.outputNodes.tiltShiftEnabled
-      : this.outputNodes.tiltShiftDisabled
-    if (this.renderPipeline.outputNode !== nextOutput) {
-      this.renderPipeline.outputNode = nextOutput
-      this.renderPipeline.needsUpdate = true
-    }
-  }
-
-  syncTiltShift(config = {}) {
-    Object.assign(this.tiltShiftConfig, config)
-    this.tiltShiftEffect?.sync(this.tiltShiftConfig)
-  }
-
-  setSpeedLinesEnabled(enabled) {
-    this.speedLinesConfig.enabled = enabled === true
-    this.speedLinesEffect?.setEnabled(enabled)
-  }
-
-  setSpeedLineOpacity(opacity) {
-    const nextOpacity = THREE.MathUtils.clamp(opacity, 0, 1)
-    this.speedLinesConfig.opacity = nextOpacity
-    this.speedLinesEffect?.setOpacity(nextOpacity)
-  }
-
-  syncSpeedLines(config = {}) {
-    Object.assign(this.speedLinesConfig, config)
-    if (config.color) {
-      this.speedLinesConfig.color = {
-        ...this.speedLinesConfig.color,
-        ...config.color,
-      }
-    }
-    this.speedLinesEffect?.sync(this.speedLinesConfig)
-  }
-
-  /**
-   * @param {number} elapsedSec
-   */
-  updatePostProcessingTime(elapsedSec) {
-    if (this.speedLinesEffect) {
-      this.speedLinesEffect.uniforms.uTime.value = elapsedSec
-    }
   }
 
   async init() {
@@ -274,9 +152,6 @@ export default class Renderer {
   disposePipeline() {
     this.renderPipeline?.dispose()
     const nodes = new Set(this.pipelineNodes ?? [])
-    if (this.tiltShiftEffect) {
-      nodes.add(this.tiltShiftEffect)
-    }
     for (const node of nodes) {
       // r185's RTTNode inherits Node.dispose() without releasing these allocations.
       if (node.isRTTNode) {
@@ -286,10 +161,7 @@ export default class Renderer {
       node.dispose()
     }
     this.pipelineNodes = []
-    this.tiltShiftEffect = null
-    this.speedLinesEffect = null
     this.renderPipeline = null
-    this.outputNodes = null
   }
 
   dispose() {

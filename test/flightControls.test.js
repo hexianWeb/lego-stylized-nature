@@ -23,18 +23,17 @@ test('touch and keyboard presses release independently and blur clears both sour
 })
 
 function createPlayer() {
-  const speedLines = []
-  const experience = { renderer: { setSpeedLineOpacity: value => speedLines.push(value) } }
+  const experience = { renderer: {} }
   const player = new PlayerAircraft(experience, {
     inputTarget: new EventTarget(),
     config: { terrain: { width: 128, depth: 128, cellSize: 0.2 }, player: { aircraft: { enabled: false, height: 5.5 } } },
   })
   player.enabled = true
-  return { player, speedLines }
+  return player
 }
 
 test('pause freezes motion, drops held input and safely reconnects on resume', () => {
-  const { player, speedLines } = createPlayer()
+  const player = createPlayer()
   player.input.attach()
   player.input.setVirtualKey('KeyW', true)
   player.state.velocity.set(4, 0, 0)
@@ -44,7 +43,6 @@ test('pause freezes motion, drops held input and safely reconnects on resume', (
   assert.ok(player.state.position.equals(before))
   assert.equal(player.input.isAttached, false)
   assert.equal(player.input.getKeys().KeyW, false)
-  assert.equal(speedLines.at(-1), 0)
   player.setPaused(false)
   assert.equal(player.input.isAttached, true)
   assert.equal(player.input.getKeys().KeyW, false)
@@ -52,7 +50,7 @@ test('pause freezes motion, drops held input and safely reconnects on resume', (
 })
 
 test('returning home clears motion and trails while preserving an explicit pause', () => {
-  const { player, speedLines } = createPlayer()
+  const player = createPlayer()
   let cleared = 0
   player.wingAirflow = { clear() { cleared++ }, dispose() {} }
   player.state.position.set(-100, 5.5, 280)
@@ -68,6 +66,5 @@ test('returning home clears motion and trails while preserving an explicit pause
   assert.equal(player.state.angularVelocity, 0)
   assert.equal(player.paused, true)
   assert.equal(cleared, 1)
-  assert.equal(speedLines.at(-1), 0)
   player.dispose()
 })

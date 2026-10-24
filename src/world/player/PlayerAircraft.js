@@ -89,8 +89,6 @@ export default class PlayerAircraft {
 
     this.attitudeState = createVisualAttitudeState()
 
-    this.speedLineOpacity = 0
-
     this.visualRoot = null
     this.modelRoot = null
 
@@ -378,8 +376,6 @@ export default class PlayerAircraft {
 
     this._updateEngineFlames(this.experience.time.getElapsed())
 
-    this._updateSpeedLines(input, delta)
-
     if (this.cameraFollow.enabled) {
       this.experience.worldCamera.followTarget(
 
@@ -398,7 +394,6 @@ export default class PlayerAircraft {
     this.input.clear()
     if (this.paused) {
       this.input.dispose()
-      this.experience.renderer.setSpeedLineOpacity(0)
     }
     else if (this.enabled) {
       this.input.attach()
@@ -411,40 +406,8 @@ export default class PlayerAircraft {
     this.attitudeState = createVisualAttitudeState()
     this.input.clear()
     this.wingAirflow?.clear()
-    this.speedLineOpacity = 0
-    this.experience.renderer.setSpeedLineOpacity(0)
     this._applyTransform()
     this._applyThrusterVisuals()
-  }
-
-  _updateSpeedLines(input, delta) {
-    const speedRatio = computeSpeedRatio(this.state, this.motionConfig.maxSpeed)
-
-    const isThrusting = input.thrustInput > 0
-
-    const targetOpacity = THREE.MathUtils.clamp(
-
-      speedRatio * (isThrusting ? 0.85 : 0),
-
-      0,
-
-      0.85,
-
-    )
-
-    this.speedLineOpacity = THREE.MathUtils.damp(
-
-      this.speedLineOpacity,
-
-      targetOpacity,
-
-      10,
-
-      delta,
-
-    )
-
-    this.experience.renderer.setSpeedLineOpacity(this.speedLineOpacity)
   }
 
   debuggerInit(debug) {

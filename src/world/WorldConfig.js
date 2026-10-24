@@ -1,6 +1,4 @@
 import { STUD_SHADING_DEFAULTS } from '../materials/tsl/legoStudsConfig.js'
-import { SPEED_LINES_DEFAULTS } from '../renderer/postprocessing/speedLinesConfig.js'
-import { TILT_SHIFT_DEFAULTS } from '../renderer/postprocessing/tiltShiftConfig.js'
 import { BRICK_LOD_DEFAULTS } from './bricks/BrickLOD.js'
 import { createTerrainColorSettings } from './bricks/terrainColorScheme.js'
 import { CHUNK_TRANSITION_DEFAULTS } from './chunks/ChunkColumnTransition.js'
@@ -11,11 +9,6 @@ export const worldConfig = {
   landmarks: { ...LANDMARK_DEFAULTS },
   postProcessing: {
     enabled: true,
-    tiltShift: { ...TILT_SHIFT_DEFAULTS },
-    speedLines: {
-      ...SPEED_LINES_DEFAULTS,
-      color: { ...SPEED_LINES_DEFAULTS.color },
-    },
   },
   terrain: {
     width: 128,
@@ -132,10 +125,10 @@ export const worldConfig = {
         },
         turbulence: {
           enabled: true,
-          pitchAmplitude: 0.018,
-          rollAmplitude: 0.028,
-          yawAmplitude: 0.012,
-          verticalAmplitude: 0.022,
+          pitchAmplitude: 0.011,
+          rollAmplitude: 0.017,
+          yawAmplitude: 0.007,
+          verticalAmplitude: 0.013,
           frequency: 1.1,
           pitchFrequencyScale: 1,
           rollFrequencyScale: 1.35,

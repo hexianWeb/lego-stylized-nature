@@ -27,9 +27,6 @@ try {
   const target = new THREE.Vector3(site.worldX, site.baseY + 3.4, site.worldZ)
   worldCamera.instance.position.copy(target).add(new THREE.Vector3(10, 17, 34))
   worldCamera.lookAt(target)
-  // Keep the tall asset legible for inspection. The main game retains its
-  // configured tilt shift; this view still uses its scene/light/render pipeline.
-  experience.renderer.setTiltShiftEnabled(false)
   experience.start()
   const replay = document.querySelector('#replay-gate')
   const fly = document.querySelector('#fly-gate')
