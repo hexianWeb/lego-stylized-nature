@@ -13,6 +13,9 @@ dist
 !/test/prefabRenderPreparation.test.js
 !/test/treeMaterial.test.js
 !/test/voxelTerrainPlaceholder.test.js
+!/test/sunGatePlacement.test.js
+!/test/landmarkRenderer.test.js
+!/test/landmarkPipelineWarmup.test.js
 !/test/terrainMinimap.test.js
 !/test/flightControls.test.js
 !/test/explorerAudio.test.js

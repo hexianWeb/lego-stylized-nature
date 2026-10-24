@@ -4,6 +4,7 @@ export default [
 
   { name: 'brick2x2Model', type: 'gltfModel', path: 'model/terrain/legoBlock2x2.glb', required: true },
   { name: 'playerAircraftModel', type: 'gltfModel', path: 'model/player/fly.glb' },
+  { name: 'desertSunGateModel', type: 'gltfModel', path: 'model/landmarks/desert-sun-gate.glb', required: true },
 
   { name: 'waterBubbleModel', type: 'gltfModel', path: 'model/prefab/bubble.glb' },
 

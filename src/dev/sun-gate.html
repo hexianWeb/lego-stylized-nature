@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <base href="/">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>沙漠日轮门 · 积木旷野实景</title>
+  <link rel="stylesheet" href="/style.css">
+  <style>
+    .visit-tools { position: fixed; z-index: 25; top: 24px; left: 50%; transform: translateX(-50%); padding: 12px 18px; border-radius: 22px; display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; width: max-content; max-width: calc(100vw - 48px); color: #365445; }
+    .visit-tools h1 { flex-basis: 100%; text-align: center; margin: 0 0 2px; font-size: 15px; font-weight: 600; letter-spacing: 2px; }
+    .visit-tools a,.visit-tools button { font: inherit; font-size: 11px; color: inherit; border: 1px solid #ffffff55; border-radius: 20px; background: #ffffff17; padding: 6px 12px; text-decoration: none; cursor: pointer; }
+    #visit-status { flex-basis: 100%; font-size: 10px; text-align: center; opacity: .8; }
+    .visit-checks { position: fixed; left: 22px; bottom: 82px; z-index: 25; border-radius: 16px; padding: 10px 14px; font-size: 10px; color: #365445; max-width: 280px; }
+    .visit-checks summary { cursor: pointer; }
+    #visit-metrics { white-space: pre-wrap; margin: 10px 0 0; line-height: 1.7; }
+    body.clean-view .visit-tools, body.clean-view .visit-checks { display: none; }
+    @media (max-width: 1000px) { .visit-tools { top: 98px; } }
+  </style>
+</head>
+<body>
+  <canvas class="webgl" aria-label="沙漠日轮门实景，拖动旋转，滚轮缩放，WASD 驾驶" tabindex="0"></canvas>
+  <div id="explorer-ui"></div>
+  <nav class="visit-tools surface" aria-label="日轮门实景预览">
+    <h1>沙漠日轮门</h1>
+    <button id="replay-gate" disabled>重播入场</button>
+    <button id="fly-gate" disabled>开始飞行</button>
+    <button id="clean-view" disabled>纯净视图</button>
+    <a href="/">返回出发地</a>
+    <span id="visit-status" role="status">正在前往沙漠…</span>
+  </nav>
+  <details class="visit-checks surface"><summary>查看运行检查</summary><pre id="visit-metrics">等待世界就绪</pre></details>
+  <script type="module" src="/dev/sun-gate.js"></script>
+</body>
+</html>

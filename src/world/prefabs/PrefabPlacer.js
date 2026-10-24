@@ -1,5 +1,6 @@
 import * as THREE from 'three/webgpu'
 import { placementRandom01 } from '../../utils/random.js'
+import { isLandmarkReserved } from '../landmarks/landmarkPlacement.js'
 import { getTerrainIterationBounds } from '../terrain/terrainMapBounds.js'
 import { canPlacePrefab, createVariantEntries, makePrefabTransform, pickVariantIndex, samplePlacementDensity } from './placementRules.js'
 import { getPrefabCapacity } from './prefabCapacity.js'
@@ -87,9 +88,12 @@ export default class PrefabPlacer {
     const biomeRules = new Map()
     const seed = this.config.seed
     const bounds = getTerrainIterationBounds(terrainMap, this.config)
+    const landmarks = terrainMap.landmarks ?? []
 
     for (let localZ = 0; localZ < bounds.visibleDepth; localZ++) {
       for (let localX = 0; localX < bounds.visibleWidth; localX++) {
+        if (landmarks.length && isLandmarkReserved(localX, localZ, landmarks, this.config.terrain.cellSize))
+          continue
         const sampleX = bounds.halo + localX
         const sampleZ = bounds.halo + localZ
         const worldX = bounds.origin.x + localX

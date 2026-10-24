@@ -1,5 +1,6 @@
 import { createNoise2D } from 'simplex-noise'
 import { mulberry32 } from '../../utils/random.js'
+import { applyLandmarkTerraces, planSunGate } from '../landmarks/landmarkPlacement.js'
 import DesertSurfaceFeatureGenerator from './DesertSurfaceFeatureGenerator.js'
 import HeightField from './HeightField.js'
 import { heightShapers } from './heightShapers.js'
@@ -41,6 +42,7 @@ export default class TerrainGenerator {
       origin,
       visibleSize: size,
       halo,
+      chunk: true,
     })
   }
 
@@ -57,11 +59,11 @@ export default class TerrainGenerator {
       sampleDepth,
       biomeCells,
     )
-    const surfaceCells = this.surfaceClassifier.classify(heightField)
+    let surfaceCells = this.surfaceClassifier.classify(heightField)
     this.volcanoSurfaceFeatureGenerator.apply(biomeCells, surfaceCells)
     this.desertSurfaceFeatureGenerator.apply(biomeCells, surfaceCells)
 
-    return new TerrainMap({
+    const terrainMap = new TerrainMap({
       heightField,
       biomeCells,
       surfaceCells,
@@ -69,6 +71,17 @@ export default class TerrainGenerator {
       visibleSize: chunkMeta.visibleSize,
       halo: chunkMeta.halo,
     })
+    // Candidate validation uses untouched surfaces, including ponds and lava.
+    // Only accepted sites need a second classification after the platform edit.
+    terrainMap.landmarks = chunkMeta.chunk ? planSunGate(terrainMap, this.config) : []
+    if (terrainMap.landmarks.length) {
+      applyLandmarkTerraces(heightField, terrainMap.landmarks, chunkMeta.halo, this.config)
+      surfaceCells = this.surfaceClassifier.classify(heightField)
+      this.volcanoSurfaceFeatureGenerator.apply(biomeCells, surfaceCells)
+      this.desertSurfaceFeatureGenerator.apply(biomeCells, surfaceCells)
+      terrainMap.surfaceCells = surfaceCells
+    }
+    return terrainMap
   }
 
   generateHeightField(biomeCells) {

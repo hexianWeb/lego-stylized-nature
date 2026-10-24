@@ -119,6 +119,7 @@ export function packChunkBuild({ terrainMap, placements, aoValues }) {
     origin: { ...terrainMap.origin },
     visibleSize: terrainMap.visibleSize,
     halo: terrainMap.halo,
+    landmarks: (terrainMap.landmarks ?? []).map(site => ({ ...site })),
     biomeIds,
     heights,
     surfaceHeights,
@@ -220,15 +221,17 @@ export function unpackChunkBuild(packed) {
     }
   }
 
+  const terrainMap = new TerrainMap({
+    heightField,
+    biomeCells,
+    surfaceCells,
+    origin: packed.origin,
+    visibleSize: packed.visibleSize,
+    halo,
+  })
+  terrainMap.landmarks = (packed.landmarks ?? []).map(site => ({ ...site }))
   return {
-    terrainMap: new TerrainMap({
-      heightField,
-      biomeCells,
-      surfaceCells,
-      origin: packed.origin,
-      visibleSize: packed.visibleSize,
-      halo,
-    }),
+    terrainMap,
     placements,
     aoValues: packed.aoValues,
     timings: packed.timings ?? null,
