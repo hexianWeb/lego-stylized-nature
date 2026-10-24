@@ -21,11 +21,19 @@ const CUES = {
   ],
 }
 
-/** Quiet, locally synthesized flight and interface sounds. No files or permissions are needed. */
+const MUSIC_GAIN = 0.8
+const MUSIC_TRACKS = [
+  '/audio/Warm Adventure.mp3',
+  '/audio/Miniature Nature.mp3',
+]
+
+/** Flight ambience, interface cues, and a looping background playlist. */
 export default class ExplorerAudio {
   constructor(experience, options = {}) {
     this.experience = experience
     this.AudioContext = options.AudioContext ?? globalThis.AudioContext ?? globalThis.webkitAudioContext
+    this.fetch = options.fetch ?? globalThis.fetch?.bind(globalThis)
+    this.tracks = options.tracks ?? MUSIC_TRACKS
     this.eventTarget = options.eventTarget ?? globalThis.window
     this.document = options.document ?? globalThis.document
     this.userActivation = options.userActivation ?? globalThis.navigator?.userActivation
@@ -49,6 +57,10 @@ export default class ExplorerAudio {
     this._nodes = new Set()
     this._sources = new Set()
     this._voices = new Set()
+    this._musicBuffers = null
+    this._musicSource = null
+    this._musicLoading = false
+    this._musicAbort = new AbortController()
 
     this._onGesture = (event) => {
       if (!event.isTrusted || event.repeat || (event.type === 'pointerdown' && event.button > 0))
@@ -104,13 +116,14 @@ export default class ExplorerAudio {
         this._createGraph()
       const context = this.context
       this._unlockPromise = Promise.resolve(context.resume())
-        .then(() => {
+        .then(async () => {
           if (this.disposed || context !== this.context)
             return false
           this._syncOutput()
           this._lastMotionUpdate = -Infinity
           this.update(0)
-          return this.unlocked
+          await this._startPlaylist()
+          return this.context === context && this.unlocked
         })
         .catch(() => false)
         .finally(() => { this._unlockPromise = null })
@@ -172,6 +185,9 @@ export default class ExplorerAudio {
     this.effects = this._track(context.createGain())
     this.effects.gain.value = 0.8
     this.effects.connect(this.master)
+    this.music = this._track(context.createGain())
+    this.music.gain.value = MUSIC_GAIN
+    this.music.connect(this.master)
 
     this.engine = this._track(context.createOscillator())
     this.engine.type = 'sine'
@@ -325,7 +341,90 @@ export default class ExplorerAudio {
     oscillator.stop(end + 0.02)
   }
 
+  async _startPlaylist() {
+    if (this.disposed || !this.context || !this.fetch || this._musicSource || this._musicLoading || !this.tracks?.length)
+      return
+    const context = this.context
+    this._musicLoading = true
+    try {
+      const buffers = await this._loadTracks(context)
+      if (this.disposed || this.context !== context || this._musicSource || !buffers.length)
+        return
+      this._playTrack(0)
+    }
+    catch {
+      // A missing soundtrack must not affect flight or the interface.
+    }
+    finally {
+      this._musicLoading = false
+    }
+  }
+
+  async _loadTracks(context) {
+    if (this._musicBuffers)
+      return this._musicBuffers
+    const loaded = await Promise.all(this.tracks.map(async (path) => {
+      try {
+        const response = await this.fetch(encodeURI(path), { signal: this._musicAbort.signal })
+        if (!response?.ok || this.disposed || this.context !== context)
+          return null
+        const data = await response.arrayBuffer()
+        if (this.disposed || this.context !== context)
+          return null
+        return await context.decodeAudioData(data)
+      }
+      catch {
+        return null
+      }
+    }))
+    const buffers = loaded.filter(Boolean)
+    if (!this.disposed && this.context === context && buffers.length)
+      this._musicBuffers = buffers
+    return this.context === context ? buffers : []
+  }
+
+  _playTrack(index) {
+    const buffers = this._musicBuffers
+    if (!buffers?.length || this.disposed || !this.context || !this.music)
+      return
+    const next = index % buffers.length
+    const buffer = buffers[next]
+    if (!buffer)
+      return
+    this._stopMusic()
+    const source = this.context.createBufferSource()
+    source.buffer = buffer
+    source.connect(this.music)
+    source.onended = () => {
+      if (this._musicSource !== source)
+        return
+      this._musicSource = null
+      this._sources.delete(source)
+      try { source.disconnect() }
+      catch { /* The source may already have been released. */ }
+      this._playTrack(next + 1)
+    }
+    this._musicSource = source
+    this._start(source)
+  }
+
+  _stopMusic() {
+    const source = this._musicSource
+    if (!source)
+      return
+    this._musicSource = null
+    source.onended = null
+    try { source.stop() }
+    catch { /* An ended track has already stopped. */ }
+    try { source.disconnect() }
+    catch { /* The source may already have been released. */ }
+    this._sources.delete(source)
+  }
+
   _releaseGraph() {
+    this._stopMusic()
+    this._musicBuffers = null
+    this._musicLoading = false
     for (const voice of this._voices) {
       voice.oscillator.onended = null
       try { voice.oscillator.stop() }
@@ -346,7 +445,7 @@ export default class ExplorerAudio {
       void this.context.close().catch(() => {})
     this.context = null
     for (const field of [
-      'master', 'ambient', 'effects', 'engine', 'engineGain', 'harmonic',
+      'master', 'ambient', 'effects', 'music', 'engine', 'engineGain', 'harmonic',
       'harmonicGain', 'wind', 'windHighpass', 'windFilter', 'windGain',
     ])
       this[field] = null
@@ -356,6 +455,7 @@ export default class ExplorerAudio {
     if (this.disposed)
       return
     this.disposed = true
+    this._musicAbort.abort()
     clearTimeout(this._suspendTimer)
     this._suspendTimer = null
     this.eventTarget?.removeEventListener('pointerdown', this._onGesture, true)

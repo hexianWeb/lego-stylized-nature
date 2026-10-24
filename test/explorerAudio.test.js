@@ -55,7 +55,7 @@ class AudioNode {
   stop() { this.stopped = true }
 }
 
-function createAudio({ ready = true, active = false, muted = false, storageFails = false } = {}) {
+function createAudio({ ready = true, active = false, muted = false, storageFails = false, fetch } = {}) {
   const contexts = []
   class AudioContext {
     state = 'suspended'
@@ -79,6 +79,7 @@ function createAudio({ ready = true, active = false, muted = false, storageFails
     createBufferSource() { return this.createNode() }
     createBiquadFilter() { return this.createNode() }
     createBuffer(channels, size) { return { getChannelData: () => new Float32Array(size) } }
+    async decodeAudioData(data) { return data }
     async resume() { this.resumeCount++; this.state = 'running' }
     async suspend() { this.suspendCount++; this.state = 'suspended' }
     async close() { this.closeCount++; this.state = 'closed' }
@@ -108,7 +109,7 @@ function createAudio({ ready = true, active = false, muted = false, storageFails
     attitudeState: { leftThruster: 0.35, rightThruster: 0.35 },
   }
   const audio = new ExplorerAudio({ world: { playerAircraft: player } }, {
-    AudioContext, eventTarget: events, document, userActivation: activation, storage,
+    AudioContext, eventTarget: events, document, userActivation: activation, storage, fetch,
   })
   if (ready)
     audio.setReady()
@@ -232,6 +233,44 @@ test('short cues are bounded, finish cleanly, and disposal releases every node a
   assert.ok(voices.every(voice => voice.oscillator.stopped && voice.oscillator.disconnected && voice.gain.disconnected))
   assert.equal(audio.play('click'), false)
   assert.equal(await audio.unlock(), false)
+})
+
+test('background tracks play in order, loop, and continue while flight is paused', async () => {
+  const warm = { name: 'warm' }
+  const miniature = { name: 'miniature' }
+  const requested = []
+  const fetch = async (url) => {
+    requested.push(url)
+    const payload = url.endsWith('Warm%20Adventure.mp3') ? warm : miniature
+    return { ok: true, arrayBuffer: async () => payload }
+  }
+  const { audio, player } = createAudio({ active: true, fetch })
+  assert.equal(await audio.unlock(), true)
+  assert.deepEqual(requested, [
+    '/audio/Warm%20Adventure.mp3',
+    '/audio/Miniature%20Nature.mp3',
+  ])
+  assert.equal(audio.music.gain.value, 0.8)
+  assert.equal(audio._musicSource.buffer, warm)
+  assert.equal(audio._musicSource.started, true)
+
+  audio._musicSource.onended()
+  assert.equal(audio._musicSource.buffer, miniature)
+  audio._musicSource.onended()
+  assert.equal(audio._musicSource.buffer, warm)
+
+  player.paused = true
+  audio.update(200)
+  assert.equal(audio.ambient.gain.value, 0)
+  assert.equal(audio.music.gain.value, 0.8)
+
+  const playing = audio._musicSource
+  const ended = playing.onended
+  audio.dispose()
+  assert.equal(playing.stopped, true)
+  assert.equal(playing.onended, null)
+  ended()
+  assert.equal(audio.context, null)
 })
 
 test('an interrupted unlock cannot revive a disposed experience', async () => {
