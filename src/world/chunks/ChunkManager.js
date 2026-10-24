@@ -14,7 +14,7 @@ import {
 } from './chunkCoordinates.js'
 import ChunkRenderSlot from './ChunkRenderSlot.js'
 import { CHUNK_TRANSITION_DEFAULTS } from './ChunkColumnTransition.js'
-import VoxelClouds from './VoxelClouds.js'
+import VoxelTerrainPlaceholder from './VoxelTerrainPlaceholder.js'
 
 export default class ChunkManager {
   constructor({
@@ -75,9 +75,14 @@ export default class ChunkManager {
     this.transitionDirection = { x: 0, z: 0 }
     this.bootstrapped = false
 
-    const cloudSettings = chunkConfig.clouds ?? chunkConfig.distantTerrain
-    this.voxelClouds = cloudSettings?.enabled === true
-      ? new VoxelClouds({ config, parentGroup })
+    const placeholderSettings = chunkConfig.placeholder ?? chunkConfig.clouds ?? chunkConfig.distantTerrain
+    this.terrainPlaceholder = placeholderSettings?.enabled === true
+      ? new VoxelTerrainPlaceholder({
+          config, parentGroup,
+          biomeRegistry: biomeRegistry ?? terrainGenerator.biomeRegistry,
+          biomeMaskGenerator: terrainGenerator.biomeMaskGenerator,
+          colorResolver: brickColorResolver,
+        })
       : null
 
     for (const slot of this.slots) {
@@ -87,7 +92,7 @@ export default class ChunkManager {
   }
 
   resetLoadedState() {
-    this.voxelClouds?.reset()
+    this.terrainPlaceholder?.reset()
     for (const slot of this.slots) {
       slot.hide()
       slot.setPrefabsVisible?.(false)
@@ -619,13 +624,13 @@ export default class ChunkManager {
     if (placementEnabled && buildPrefabs) {
       this.buildPendingPrefabs(prefabActiveKeys, deadline)
     }
-    // Worker builds retain their cloud cover. The cloud renderer reads each
-    // column's existing reveal progress, so both effects share exactly one clock.
-    this.voxelClouds?.update(this.centerCoord, this.activeSlots)
+    // Worker builds retain their coarse cover; both renderers share the same
+    // column clock so placeholder boxes dissolve as detailed terrain rises.
+    this.terrainPlaceholder?.update(this.centerCoord, this.activeSlots)
   }
 
   refreshAOPreview(showOverlays = true) {
-    this.voxelClouds?.refresh(showOverlays)
+    this.terrainPlaceholder?.refresh(showOverlays)
     for (const slot of this.slots) {
       slot.updateInstanceColors()
       slot.setOverlaysVisible(showOverlays && slot.group.visible)
@@ -640,7 +645,7 @@ export default class ChunkManager {
   }
 
   dispose() {
-    this.voxelClouds?.dispose()
+    this.terrainPlaceholder?.dispose()
     this.buildWorkers?.terminate()
     this.buildWorkers = null
     this.inFlightBuilds.clear()

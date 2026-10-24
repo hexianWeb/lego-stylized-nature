@@ -1,40 +1,39 @@
 import * as THREE from 'three/webgpu'
-import { random01 } from '../../utils/random.js'
+import { createNoise2D } from 'simplex-noise'
+import { mulberry32, random01 } from '../../utils/random.js'
+import BiomeMaskGenerator from '../biomes/BiomeMaskGenerator.js'
+import BiomeRegistry from '../biomes/BiomeRegistry.js'
+import BiomeBlender from '../biomes/BiomeBlender.js'
+import BrickColorResolver from '../bricks/BrickColorResolver.js'
+import { heightShapers } from '../terrain/heightShapers.js'
 import { getChunkWindowCoords, getRenderChunkKey } from './chunkCoordinates.js'
 
 const clamp01 = value => Math.max(0, Math.min(1, value))
 const smoothstep = value => value * value * (3 - 2 * value)
-// Broad, thin base; two uneven puffs; one offset crown. The deliberate silhouette
-// stays readable at a distance instead of filling every cell with noisy voxels.
-const CLOUD_PROFILE = [
-  [-1, 0, -1], [0, 0, -1], [1, 0, -1],
-  [-3, 0, 0], [-2, 0, 0], [-1, 0, 0], [0, 0, 0], [1, 0, 0], [2, 0, 0], [3, 0, 0],
-  [-1, 0, 1], [0, 0, 1], [1, 0, 1],
-  [-1, 1, -1], [0, 1, -1], [-2, 1, 0], [-1, 1, 0], [0, 1, 0], [2, 1, 0], [-1, 1, 1], [0, 1, 1],
-  [-1, 2, 0], [0, 2, 0], [2, 2, 0], [-1, 3, 0],
-]
 
-/** A fixed instance pool of cloud banks, dissolved by the terrain's own column clock. */
-export default class VoxelClouds {
-  constructor({ config, parentGroup }) {
+/** Coarse biome-colored boxes, dissolved by the detailed terrain's column clock. */
+export default class VoxelTerrainPlaceholder {
+  constructor({ config, parentGroup, biomeRegistry = new BiomeRegistry(), biomeMaskGenerator = new BiomeMaskGenerator(config), colorResolver = null }) {
     this.config = config
     this.parentGroup = parentGroup
-    const settings = config.chunks.clouds ?? config.chunks.distantTerrain ?? {}
+    this.biomeRegistry = biomeRegistry
+    this.biomeMaskGenerator = biomeMaskGenerator
+    this.colorResolver = colorResolver?.resolveColor ? colorResolver : new BrickColorResolver({
+      config, biomeRegistry, biomeBlender: new BiomeBlender(biomeRegistry),
+    })
+    const settings = config.chunks.placeholder ?? config.chunks.clouds ?? config.chunks.distantTerrain ?? {}
     this.chunkSize = config.chunks.size
     this.windowRadius = config.chunks.windowRadius ?? 1
     const configuredRadius = Number.isFinite(settings.radius) ? Math.floor(settings.radius) : 3
     this.radius = Math.max(this.windowRadius + 1, Math.min(5, configuredRadius))
-    const chunkWorldSize = this.chunkSize * config.terrain.cellSize
-    this.anchorSpacing = chunkWorldSize / 2
-    this.voxelSize = chunkWorldSize / 13.5
-    this.maxCloudRadius = this.voxelSize * 4.2
+    this.cellSpan = Math.max(1, Math.min(this.chunkSize, Math.floor(Number.isFinite(settings.cellSpan) ? settings.cellSpan : 12)))
+    this.voxelSize = this.cellSpan * config.terrain.cellSize
+    this.heightStep = config.terrain.layerHeight * 6
     this.cache = new Map()
     this.centerCoord = null
     this.activeSlots = null
     this.visible = true
     this.background = new THREE.Color('#6aca97')
-    this.lightColor = new THREE.Color('#ffffff')
-    this.shadowColor = new THREE.Color('#f1f7fc')
 
     this.geometry = new THREE.BoxGeometry(1, 1, 1)
     const normals = this.geometry.getAttribute('normal')
@@ -43,17 +42,15 @@ export default class VoxelClouds {
     for (let index = 0; index < normals.count; index++) {
       const y = normals.getY(index)
       const x = normals.getX(index)
-      // Cool sides and undersides make the stepped volumes read like clouds,
-      // even without shadow maps or the world's green environmental lighting.
-      faceColor.set(y > 0 ? '#f7feff' : y < 0 ? '#91bad0' : x > 0 ? '#b6d7e6' : x < 0 ? '#d9eef5' : '#c7e3ef')
+      // Neutral face shading keeps the actual biome palette legible from every side.
+      faceColor.setScalar(y > 0 ? 1 : y < 0 ? 0.45 : x > 0 ? 0.65 : x < 0 ? 0.82 : 0.74)
       faceColor.toArray(faceColors, index * 3)
     }
     this.geometry.setAttribute('color', new THREE.BufferAttribute(faceColors, 3))
     this.material = new THREE.MeshBasicMaterial({ vertexColors: true, toneMapped: false })
-    const anchorsPerAxis = Math.ceil((chunkWorldSize + 2 * this.maxCloudRadius) / this.anchorSpacing + 0.12) + 1
-    this.capacity = (this.radius * 2 + 1) ** 2 * anchorsPerAxis ** 2 * CLOUD_PROFILE.length
+    this.capacity = (this.radius * 2 + 1) ** 2 * Math.ceil(this.chunkSize / this.cellSpan) ** 2
     this.mesh = new THREE.InstancedMesh(this.geometry, this.material, this.capacity)
-    this.mesh.name = 'VoxelClouds'
+    this.mesh.name = 'VoxelTerrainPlaceholder'
     this.mesh.count = 0
     this.mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage)
     this.mesh.castShadow = false
@@ -61,59 +58,57 @@ export default class VoxelClouds {
     parentGroup.add(this.mesh)
   }
 
-  createCloud(anchorX, anchorZ) {
-    const seed = this.config.seed + 52817
-    const unit = this.voxelSize * (0.86 + random01(anchorX, anchorZ, seed) * 0.22)
-    const variant = Math.floor(random01(anchorX, anchorZ, seed + 1) * 3)
-    const rotation = Math.floor(random01(anchorX, anchorZ, seed + 2) * 4)
-    const centerX = (anchorX + 0.5 + (random01(anchorX, anchorZ, seed + 3) - 0.5) * 0.12) * this.anchorSpacing
-    const centerZ = (anchorZ + 0.5 + (random01(anchorX, anchorZ, seed + 4) - 0.5) * 0.12) * this.anchorSpacing
-    const { layerHeight, maxHeight } = this.config.terrain
-    const baseHeight = maxHeight * layerHeight * 0.28 + (0.2 + random01(anchorX, anchorZ, seed + 5) * 0.7) * this.voxelSize
-    const cloudId = `${anchorX}:${anchorZ}`
-    const voxels = []
-    CLOUD_PROFILE.forEach(([profileX, layer, profileZ], index) => {
-      if (variant === 1 && (layer === 3 || (layer === 2 && profileX === 2))) return
-      let x = variant === 2 ? -profileX : profileX
-      let z = profileZ
-      for (let turn = 0; turn < rotation; turn++) [x, z] = [-z, x]
-      const noise = random01(anchorX, anchorZ, seed + 83 + index * 37)
-      voxels.push({
-        cloudId,
-        x: centerX + x * unit,
-        y: baseHeight + (layer === 0 ? 0 : 0.88 + (layer - 1) * 0.95) * unit,
-        z: centerZ + z * unit,
-        size: unit * 1.02,
-        sizeY: unit * (layer === 0 ? 0.84 : 1.02),
-        sizeZ: unit * 1.02,
-        tint: 0.9 + random01(anchorX, anchorZ, seed + 6) * 0.1,
-        dissolveStart: 0.07 + noise * 0.2,
-        dissolveEnd: 0.77 + random01(anchorX, anchorZ, seed + index * 117) * 0.2,
-        driftX: (noise - 0.5) * unit * 0.4,
-        driftZ: (random01(anchorX, anchorZ, seed + index * 61) - 0.5) * unit * 0.4,
+  sampleHeight(x, z, biomeCell) {
+    if (this.noiseSeed !== this.config.seed) {
+      this.noise2D = createNoise2D(mulberry32(this.config.seed))
+      this.noiseSeed = this.config.seed
+    }
+    const terrain = this.config.terrain
+    let height = terrain.waterLevel
+    // Sample the same height functions as TerrainGenerator, only at coarse centers.
+    for (const [biomeId, weight] of Object.entries(biomeCell.weights)) {
+      if (weight <= 0) continue
+      const params = this.biomeRegistry.get(biomeId).terrain.shape
+      height += weight * heightShapers[params.type]({
+        x, z, noise2D: this.noise2D, terrain, params, site: biomeCell.sites?.[biomeId],
       })
-    })
-    return voxels
+    }
+    return Math.max(0, Math.min(terrain.maxHeight, Math.floor(height)))
   }
 
   createChunk(coord) {
-    const { cellSize } = this.config.terrain
-    const span = this.chunkSize * cellSize
-    const minX = coord.x * span
-    const minZ = coord.z * span
-    const minAnchorX = Math.ceil((minX - this.maxCloudRadius) / this.anchorSpacing - 0.56)
-    const maxAnchorX = Math.floor((minX + span + this.maxCloudRadius) / this.anchorSpacing - 0.44)
-    const minAnchorZ = Math.ceil((minZ - this.maxCloudRadius) / this.anchorSpacing - 0.56)
-    const maxAnchorZ = Math.floor((minZ + span + this.maxCloudRadius) / this.anchorSpacing - 0.44)
+    const { cellSize, layerHeight } = this.config.terrain
+    const originX = coord.x * this.chunkSize
+    const originZ = coord.z * this.chunkSize
+    const context = this.biomeMaskGenerator.createSamplingContext()
     const voxels = []
-    for (let z = minAnchorZ; z <= maxAnchorZ; z++) {
-      for (let x = minAnchorX; x <= maxAnchorX; x++) {
-        for (const voxel of this.createCloud(x, z)) {
-          if (voxel.x < minX || voxel.x >= minX + span || voxel.z < minZ || voxel.z >= minZ + span) continue
-          const cellX = Math.min(this.chunkSize - 1, Math.floor((voxel.x - minX) / cellSize))
-          const cellZ = Math.min(this.chunkSize - 1, Math.floor((voxel.z - minZ) / cellSize))
-          voxels.push({ ...voxel, cell: cellZ * this.chunkSize + cellX })
-        }
+    for (let z = 0; z < this.chunkSize; z += this.cellSpan) {
+      for (let x = 0; x < this.chunkSize; x += this.cellSpan) {
+        const endX = Math.min(this.chunkSize, x + this.cellSpan)
+        const endZ = Math.min(this.chunkSize, z + this.cellSpan)
+        const sampleX = originX + Math.floor((x + endX) / 2)
+        const sampleZ = originZ + Math.floor((z + endZ) / 2)
+        const biomeCell = this.biomeMaskGenerator.getCellBiome(sampleX, sampleZ, context)
+        const height = this.sampleHeight(sampleX, sampleZ, biomeCell)
+        const top = Math.max(this.heightStep, Math.round((height + 1) * layerHeight / this.heightStep) * this.heightStep)
+        const noise = random01(sampleX, sampleZ, this.config.seed + 52817)
+        voxels.push({
+          x: (originX + (x + endX) / 2) * cellSize,
+          y: (top - this.heightStep) / 2,
+          z: (originZ + (z + endZ) / 2) * cellSize,
+          size: (endX - x) * cellSize,
+          sizeY: top + this.heightStep,
+          sizeZ: (endZ - z) * cellSize,
+          sample: { x: sampleX, y: height, z: sampleZ, biomeCell, surfaceCell: { height }, layer: 'surface' },
+          // Wait for the trailing edge of this large box: all covered columns
+          // have begun rising before its cover contracts, in either direction.
+          cells: [z * this.chunkSize + x, z * this.chunkSize + endX - 1,
+            (endZ - 1) * this.chunkSize + x, (endZ - 1) * this.chunkSize + endX - 1],
+          dissolveStart: 0.07 + noise * 0.12,
+          dissolveEnd: 0.85 + noise * 0.12,
+          driftX: (noise - 0.5) * this.voxelSize * 0.1,
+          driftZ: (random01(sampleX, sampleZ, this.config.seed + 271) - 0.5) * this.voxelSize * 0.1,
+        })
       }
     }
     return { coord: { ...coord }, voxels, start: 0, mode: null }
@@ -180,7 +175,8 @@ export default class VoxelClouds {
     const transition = slot?.columnTransition
     for (let index = 0; index < chunk.voxels.length; index++) {
       const voxel = chunk.voxels[index]
-      const progress = slot ? transition?.progress[voxel.cell] ?? 1 : 0
+      const progress = !slot ? 0 : transition?.progress
+        ? Math.min(...voxel.cells.map(cell => transition.progress[cell])) : 1
       const dissolve = smoothstep(clamp01((progress - voxel.dissolveStart) / (voxel.dissolveEnd - voxel.dissolveStart)))
       const scale = voxel.size * (1 - dissolve)
       const offset = (chunk.start + index) * 16
@@ -189,7 +185,7 @@ export default class VoxelClouds {
       matrix[offset + 5] = (voxel.sizeY ?? voxel.size) * (1 - dissolve)
       matrix[offset + 10] = (voxel.sizeZ ?? voxel.size) * (1 - dissolve)
       matrix[offset + 12] = voxel.x + voxel.driftX * dissolve
-      matrix[offset + 13] = voxel.y + this.voxelSize * 0.7 * dissolve
+      matrix[offset + 13] = voxel.y + this.voxelSize * 0.15 * dissolve
       matrix[offset + 14] = voxel.z + voxel.driftZ * dissolve
       matrix[offset + 15] = 1
     }
@@ -210,8 +206,8 @@ export default class VoxelClouds {
     for (const chunk of this.cache.values()) {
       chunk.voxels.forEach((voxel, index) => {
         const distance = Math.max(Math.abs(voxel.x - centerX), Math.abs(voxel.z - centerZ))
-        const haze = smoothstep(clamp01((distance - inner) / (outer - inner))) * 0.42
-        color.copy(this.shadowColor).lerp(this.lightColor, voxel.tint).lerp(this.background, haze)
+        const haze = smoothstep(clamp01((distance - inner) / (outer - inner))) * 0.32
+        this.colorResolver.resolveColor(voxel.sample, color).lerp(this.background, haze)
         this.mesh.setColorAt(chunk.start + index, color)
       })
     }
@@ -221,6 +217,7 @@ export default class VoxelClouds {
 
   refresh(visible = true) {
     this.visible = visible
+    this.colorResolver.invalidatePalettes?.()
     if (this.centerCoord)
       this.updateColors()
     this.mesh.visible = visible && this.centerCoord !== null && (this.config.chunks.debugSpacing ?? 0) === 0

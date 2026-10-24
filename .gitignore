@@ -12,7 +12,7 @@ dist
 !/test/prefabReveal.test.js
 !/test/prefabRenderPreparation.test.js
 !/test/treeMaterial.test.js
-!/test/voxelClouds.test.js
+!/test/voxelTerrainPlaceholder.test.js
 !/test/terrainMinimap.test.js
 !/test/flightControls.test.js
 !/test/explorerAudio.test.js

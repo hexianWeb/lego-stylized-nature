@@ -82,8 +82,8 @@ export const worldConfig = {
     /** Must cover terrain AO sampleDistances (max 8) and placement neighbor lookups. */
     halo: 8,
     windowRadius: 1,
-    /** Voxel clouds cover unexplored chunks and dissolve as terrain columns rise. */
-    clouds: { enabled: true, radius: 3 },
+    /** Coarse biome-colored boxes cover pending chunks; cellSpan is in terrain cells. */
+    placeholder: { enabled: true, radius: 3, cellSpan: 12 },
     maxPendingBuildsPerFrame: 1,
     maxPrefabBuildsPerFrame: 1,
     /** Shared main-thread budget; individual chunk/prefab populations are atomic and may exceed it. */
