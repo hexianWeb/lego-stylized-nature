@@ -21,7 +21,7 @@ export default class VoxelTerrainPlaceholder {
     this.colorResolver = colorResolver?.resolveColor ? colorResolver : new BrickColorResolver({
       config, biomeRegistry, biomeBlender: new BiomeBlender(biomeRegistry),
     })
-    const settings = config.chunks.placeholder ?? config.chunks.clouds ?? config.chunks.distantTerrain ?? {}
+    const settings = config.chunks.placeholder ?? config.chunks.distantTerrain ?? {}
     this.chunkSize = config.chunks.size
     this.windowRadius = config.chunks.windowRadius ?? 1
     const configuredRadius = Number.isFinite(settings.radius) ? Math.floor(settings.radius) : 3
@@ -76,8 +76,37 @@ export default class VoxelTerrainPlaceholder {
     return Math.max(0, Math.min(terrain.maxHeight, Math.floor(height)))
   }
 
+  getTop(height) {
+    return Math.max(this.heightStep, Math.round((height + 1) * this.config.terrain.layerHeight / this.heightStep) * this.heightStep)
+  }
+
+  getBoxSpan(block) {
+    const origin = Math.floor(block / this.chunkSize) * this.chunkSize
+    const start = origin + Math.floor((block - origin) / this.cellSpan) * this.cellSpan
+    return [start, Math.min(origin + this.chunkSize, start + this.cellSpan)]
+  }
+
+  /** Highest box top (world Y) among the boxes overlapping a world-space XZ rectangle. */
+  getMaxTop(minX, minZ, maxX, maxZ) {
+    const { cellSize } = this.config.terrain
+    const context = this.biomeMaskGenerator.createSamplingContext()
+    let top = this.heightStep
+    for (let z = Math.floor(minZ / cellSize); z <= Math.floor(maxZ / cellSize);) {
+      const [startZ, endZ] = this.getBoxSpan(z)
+      for (let x = Math.floor(minX / cellSize); x <= Math.floor(maxX / cellSize);) {
+        const [startX, endX] = this.getBoxSpan(x)
+        const sampleX = Math.floor((startX + endX) / 2)
+        const sampleZ = Math.floor((startZ + endZ) / 2)
+        top = Math.max(top, this.getTop(this.sampleHeight(sampleX, sampleZ, this.biomeMaskGenerator.getCellBiome(sampleX, sampleZ, context))))
+        x = endX
+      }
+      z = endZ
+    }
+    return top
+  }
+
   createChunk(coord) {
-    const { cellSize, layerHeight } = this.config.terrain
+    const { cellSize } = this.config.terrain
     const originX = coord.x * this.chunkSize
     const originZ = coord.z * this.chunkSize
     const context = this.biomeMaskGenerator.createSamplingContext()
@@ -90,7 +119,7 @@ export default class VoxelTerrainPlaceholder {
         const sampleZ = originZ + Math.floor((z + endZ) / 2)
         const biomeCell = this.biomeMaskGenerator.getCellBiome(sampleX, sampleZ, context)
         const height = this.sampleHeight(sampleX, sampleZ, biomeCell)
-        const top = Math.max(this.heightStep, Math.round((height + 1) * layerHeight / this.heightStep) * this.heightStep)
+        const top = this.getTop(height)
         const noise = random01(sampleX, sampleZ, this.config.seed + 52817)
         voxels.push({
           x: (originX + (x + endX) / 2) * cellSize,

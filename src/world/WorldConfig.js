@@ -79,6 +79,8 @@ export const worldConfig = {
     windowRadius: 1,
     /** Coarse biome-colored boxes cover pending chunks; cellSpan is in terrain cells. */
     placeholder: { enabled: true, radius: 3, cellSpan: 12 },
+    /** A continuous band of brick-sized clouds over the placeholder, bandBoxes boxes wide around loaded terrain. */
+    clouds: { enabled: true, bandBoxes: 2 },
     maxPendingBuildsPerFrame: 1,
     maxPrefabBuildsPerFrame: 1,
     /** Shared main-thread budget; individual chunk/prefab populations are atomic and may exceed it. */
