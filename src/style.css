@@ -23,6 +23,7 @@ button svg { width: 20px; height: 20px; }
     --muted: #506b60;
     position: fixed;
     inset: 0;
+    overflow: hidden;
     pointer-events: none;
     user-select: none;
     z-index: 5;

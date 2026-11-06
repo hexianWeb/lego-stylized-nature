@@ -1,4 +1,5 @@
 import Experience from './Experience.js'
+import { attachPlatform } from './platform.js'
 
 /**
  * @param {HTMLCanvasElement} canvas
@@ -11,9 +12,12 @@ export async function bootstrap(canvas) {
   }
 
   try {
+    const platform = await attachPlatform(experience)
+    platform.reportLoading()
     await experience.init({ deferReady: true })
     experience.start()
     await experience.present()
+    platform.reportLoaded()
   }
   catch (err) {
     experience.dispose()

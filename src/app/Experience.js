@@ -60,7 +60,32 @@ export default class Experience {
     }
     this.initTimings = {}
     this._gpuTimingPending = false
+    this.platformPaused = false
+    /** @type {(() => void) | null} */
+    this._unregisterPlatform = null
     this.disposed = false
+  }
+
+  /**
+   * Host pause freezes simulation and presentation. The in-game pause button
+   * still only stops the aircraft, and both states stay visible to the platform.
+   */
+  setPlatformPaused(paused) {
+    this.platformPaused = Boolean(paused)
+    if (this.platformPaused) {
+      this.world.playerAircraft?.setPaused(true)
+      this.audio?.update(performance.now())
+      return
+    }
+    if (this.ui) {
+      this.ui.syncPause()
+      return
+    }
+    this.world.playerAircraft?.setPaused(false)
+  }
+
+  isSimulationPaused() {
+    return this.platformPaused || this.world.playerAircraft?.paused === true
   }
 
   async init({ deferReady = false } = {}) {
@@ -184,6 +209,9 @@ export default class Experience {
   update(timestamp) {
     const started = this.debug.active ? performance.now() : 0
     this.time.update(timestamp)
+    if (this.platformPaused) {
+      return
+    }
     this.worldCamera.update()
     this.world.update()
     this.audio?.update(timestamp)
@@ -265,6 +293,8 @@ export default class Experience {
       return
     }
     this.disposed = true
+    this._unregisterPlatform?.()
+    this._unregisterPlatform = null
     this._cancelPresent?.()
     if (this.renderer.initialized) {
       this.renderer.instance.setAnimationLoop(null)

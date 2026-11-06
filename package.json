@@ -13,6 +13,7 @@
     "simplex-noise": "^4.0.3",
     "three": "^0.185.0",
     "tweakpane": "^4.0.5",
-    "vite": "^5.4.10"
+    "vite": "^5.4.10",
+    "zaohua-platform-sdk": "file:./vendor/zaohua-platform-sdk"
   }
 }

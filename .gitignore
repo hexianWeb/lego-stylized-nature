@@ -20,3 +20,8 @@ dist
 !/test/terrainMinimap.test.js
 !/test/flightControls.test.js
 !/test/explorerAudio.test.js
+dist/
+.game-builder/state/
+.game-builder/covers/
+.game-builder/artifacts/
+.game-builder/reference/
