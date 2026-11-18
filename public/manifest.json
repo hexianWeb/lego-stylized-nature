@@ -1,0 +1,17 @@
+{
+  "name": "Lego Sandbox",
+  "short_name": "Lego",
+  "description": "A minimalist browser-based Lego building toy with 100 real LDraw parts.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#0a0d12",
+  "theme_color": "#0a0d12",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "type": "image/svg+xml",
+      "sizes": "any"
+    }
+  ]
+}

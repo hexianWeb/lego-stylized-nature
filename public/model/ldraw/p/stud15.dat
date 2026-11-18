@@ -1,0 +1,33 @@
+0 Stud Truncated Laterally Straight 40D for Round  2 x  2 Parts
+0 Name: stud15.dat
+0 Author: Willy Tschager [Holly-Wood]
+0 !LDRAW_ORG Primitive UPDATE 2024-05
+0 !LICENSE Licensed under CC BY 4.0 : see CAreadme.txt
+
+0 BFC CERTIFY CCW
+
+0 !HISTORY 2011-12-29 [PTadmin] Official Update 2011-02
+0 !HISTORY 2020-06-28 [PTadmin] Official Update 2020-01
+0 !HISTORY 2024-02-21 [Holly-Wood] Complete re-write, original by Brickaneer
+0 !HISTORY 2024-06-30 [OrionP] Official Update 2024-05
+
+1 16 0 -4 0 0 0 -6 0 4 0 6 0 0 3-4cylc.dat
+
+2 24 0 -4 6 1.9388 -4 5.6145
+2 24 1.9388 0 5.6145 0 0 6
+4 16 1.9388 -4 5.6145 1.9388 0 5.6145 0 0 6 0 -4 6
+
+2 24 1.9388 0 5.6145 1.9388 -4 5.6145
+2 24 1.9388 0 5.6145 5.6145 0 1.9388
+2 24 1.9388 -4 5.6145 5.6145 -4 1.9388
+4 16 1.9388 -4 5.6145 5.6145 -4 1.9388 5.6145 0 1.9388 1.9388 0 5.6145
+
+2 24 5.6145 0 1.9388 5.6145 -4 1.9388
+2 24 5.6145 0 1.9388 6 0 0
+2 24 5.6145 -4 1.9388 6 -4 0
+4 16 5.6145 -4 1.9388 6 -4 0 6 0 0 5.6145 0 1.9388
+
+3 16 6 -4 0 0 -4 6 0 -4 0
+4 16 0 -4 6 6 -4 0 5.6145 -4 1.9388 1.9388 -4 5.6145
+5 24 6 -4 0 6 0 0 5.6145 -4 1.9388 5.5434 0 -2.2962
+5 24 0 -4 6 0 0 6 1.9388 -4 5.6145 -2.2962 0 5.5434

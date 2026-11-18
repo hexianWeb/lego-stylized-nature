@@ -1,10 +1,26 @@
-import Experience from './Experience.js'
-import { attachPlatform } from './platform.js'
+import { MODES, currentModeFromHash } from '../utils/mode.js'
+import { bootstrapSandbox } from './bootstrapSandbox.js'
 
 /**
+ * Route to the experience matching the URL hash:
+ * - `#sandbox` (or `#build`) → brick-building sandbox
+ * - default / `#play` → explorer showcase
+ *
  * @param {HTMLCanvasElement} canvas
  */
 export async function bootstrap(canvas) {
+  const mode = currentModeFromHash()
+  if (mode === MODES.SANDBOX || mode === MODES.BUILD) {
+    await bootstrapSandbox(canvas)
+    return
+  }
+
+  const { default: Experience } = await import('./Experience.js')
+  const { attachPlatform } = await import('./platform.js')
+
+  // The sandbox loading overlay is not used on the explorer route.
+  document.getElementById('sandbox-loading')?.classList.add('is-hidden')
+
   const experience = new Experience(canvas)
 
   if (import.meta.env.DEV && typeof window !== 'undefined') {

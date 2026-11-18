@@ -18,9 +18,39 @@ import {
   vec4,
 } from 'three/tsl'
 import * as THREE from 'three/webgpu'
+import { MeshStandardMaterial } from 'three'
 import { normalizeStudShadingConfig } from './legoStudsConfig.js'
 
-export function createLegoMaterial({ studs = null, studShading = {} } = {}) {
+// When the sandbox falls back to a plain WebGLRenderer, node materials are
+// replaced with a MeshStandardMaterial carrying the classic brick look.
+const useWebGLFallback = () => typeof window !== 'undefined' && window.__sandbox_use_webgl === true
+
+const WEBGL_FALLBACK_DEFAULTS = {
+  metalness: 0.0,
+  roughness: 0.38,
+  clearcoat: 0.3,
+  clearcoatRoughness: 0.22,
+  envMapIntensity: 0.5,
+  sheen: 0.15,
+  sheenRoughness: 0.6,
+}
+
+function createWebGLFallbackMaterial(options = {}) {
+  const merged = { ...WEBGL_FALLBACK_DEFAULTS, ...options }
+  const material = new MeshStandardMaterial()
+  material.metalness = merged.metalness
+  material.roughness = merged.roughness
+  material.envMapIntensity = merged.envMapIntensity
+  if (merged.colorTint !== undefined) {
+    material.color = new THREE.Color(merged.colorTint)
+  }
+  return material
+}
+
+export function createLegoMaterial({ studs = null, studShading = {}, ...rest } = {}) {
+  if (useWebGLFallback()) {
+    return createWebGLFallbackMaterial(rest)
+  }
   const material = new THREE.MeshPhysicalNodeMaterial()
   material.metalness = 0.0
   material.roughness = 0.36

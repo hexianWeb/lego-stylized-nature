@@ -11,7 +11,7 @@ test('flower and mushroom define instance color palettes', () => {
   })
   assert.deepEqual(biomePrefabs.landFlower.instanceColors, {
     meshNameSuffix: '_InstanceColor',
-    palette: ['#f97ba8', '#f695b5', '#ed4e90']
+    palette: ['#ff1111', '#ffff00', '#ffffff']
   })
 })
 

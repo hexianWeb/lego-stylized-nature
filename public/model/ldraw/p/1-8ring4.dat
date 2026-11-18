@@ -1,0 +1,17 @@
+0 Ring  4 x 0.125
+0 Name: 1-8ring4.dat
+0 Author: Willy Tschager [Holly-Wood]
+0 !LDRAW_ORG Primitive UPDATE 2024-01
+0 !LICENSE Licensed under CC BY 4.0 : see CAreadme.txt
+
+0 BFC CERTIFY CCW
+
+0 !HISTORY 2005-12-28 [PTadmin] Official Update 2005-01
+0 !HISTORY 2007-06-22 [PTadmin] Header formatted for Contributor Agreement
+0 !HISTORY 2008-07-01 [PTadmin] Official Update 2008-01
+0 !HISTORY 2024-01-14 [Holly-Wood] Complete regeneration, original by guyvivan
+0 !HISTORY 2024-01-29 [OrionP] Official Update 2024-01
+
+4 16 5 0 0 4.6195 0 1.9135 3.6956 0 1.5308 4 0 0
+4 16 4.6195 0 1.9135 3.5355 0 3.5355 2.8284 0 2.8284 3.6956 0 1.5308
+0 // Build by LDPartEditor (PrimGen 2.X)

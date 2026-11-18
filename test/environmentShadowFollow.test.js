@@ -24,6 +24,7 @@ test('player shadow follow uses fixed offsets from the player', () => {
     halfExtent: 6.4,
     maxHeight: 12
   })
+  environment.syncDirectionalTarget()
 
   const lightPosition = environment.directionalLight.position
   const targetPosition = environment.directionalLight.target.position

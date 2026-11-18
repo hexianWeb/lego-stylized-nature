@@ -1,0 +1,20 @@
+0 ~Plate  1 x  8 without Front Face
+0 Name: s\3460s01.dat
+0 Author: Massimo Maso [Sirio]
+0 !LDRAW_ORG Subpart UPDATE 2024-01
+0 !LICENSE Licensed under CC BY 4.0 : see CAreadme.txt
+
+0 BFC CERTIFY CCW
+
+0 !HISTORY 2024-01-29 [OrionP] Official Update 2024-01
+
+
+1 16 0 4 0 1 0 0 0 -1 0 0 0 1 stug3-1x7.dat
+0 BFC INVERTNEXT
+1 16 0 8 0 76 0 0 0 -4 0 0 0 6 box5.dat
+4 16 80 8 10 76 8 6 -76 8 6 -80 8 10
+4 16 -80 8 10 -76 8 6 -76 8 -6 -80 8 -10
+4 16 -80 8 -10 -76 8 -6 76 8 -6 80 8 -10
+4 16 80 8 -10 76 8 -6 76 8 6 80 8 10
+1 16 0 8 0 80 0 0 0 -8 0 0 0 10 box4t.dat
+1 16 0 0 0 1 0 0 0 1 0 0 0 1 stug-1x8.dat

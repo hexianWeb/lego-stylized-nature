@@ -14,6 +14,7 @@ test('followTarget moves camera and controls target by the same delta', () => {
       updateCount += 1
     }
   }
+  camera.trackballControls = { target: new THREE.Vector3(10, 0, 10) }
 
   camera.followTarget(new THREE.Vector3(14, 0, 10), 0.1, 10)
 
@@ -33,6 +34,7 @@ test('followTarget snaps when smoothing is zero or less', () => {
     target: new THREE.Vector3(10, 0, 10),
     update() {}
   }
+  camera.trackballControls = { target: new THREE.Vector3(10, 0, 10) }
 
   camera.followTarget(new THREE.Vector3(14, 0, 12), 0.1, 0)
 

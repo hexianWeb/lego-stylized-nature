@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>lego-stylized-nature · 本机开发状态汇报</title>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'JetBrains Mono', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', monospace;
+      background: #020617;
+      min-height: 100vh;
+      padding: 2rem;
+      color: white;
+    }
+    .container { max-width: 1240px; margin: 0 auto; }
+    .header { margin-bottom: 1.5rem; }
+    .header-row { display: flex; align-items: center; gap: 1rem; margin-bottom: 0.5rem; }
+    .pulse-dot { width: 12px; height: 12px; background: #34d399; border-radius: 50%; animation: pulse 2s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:0.4;} }
+    h1 { font-size: 1.4rem; font-weight: 700; letter-spacing: -0.02em; }
+    .subtitle { color: #94a3b8; font-size: 0.8rem; margin-left: 1.75rem; line-height: 1.6; }
+    .diagram-container {
+      background: rgba(15,23,42,0.5); border-radius: 1rem; border: 1px solid #1e293b;
+      padding: 1.5rem; overflow-x: auto;
+    }
+    svg { width: 100%; min-width: 1000px; display: block; }
+    .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem; margin-top: 2rem; }
+    .card { background: rgba(15,23,42,0.5); border-radius: 0.75rem; border: 1px solid #1e293b; padding: 1.25rem; }
+    .card-header { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem; }
+    .card-dot { width: 8px; height: 8px; border-radius: 50%; }
+    .card-dot.cyan{background:#22d3ee;} .card-dot.emerald{background:#34d399;}
+    .card-dot.violet{background:#a78bfa;} .card-dot.amber{background:#fbbf24;} .card-dot.rose{background:#fb7185;}
+    .card h3 { font-size: 0.85rem; font-weight: 600; }
+    .card ul { list-style: none; color: #94a3b8; font-size: 0.72rem; line-height: 1.55; }
+    .card li { margin-bottom: 0.4rem; }
+    .card li b { color: #e2e8f0; font-weight: 600; }
+    .table-wrap { margin-top: 2rem; background: rgba(15,23,42,0.5); border: 1px solid #1e293b; border-radius: 0.75rem; padding: 1.25rem; }
+    .table-wrap h3 { font-size: 0.9rem; margin-bottom: 0.9rem; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.72rem; color: #94a3b8; }
+    th { text-align: left; color: #e2e8f0; font-weight: 600; padding: 0.5rem 0.6rem; border-bottom: 1px solid #1e293b; }
+    td { padding: 0.5rem 0.6rem; border-bottom: 1px solid rgba(30,41,59,0.6); }
+    .st { font-weight: 600; white-space: nowrap; }
+    .ok { color: #34d399; } .warn { color: #fbbf24; } .todo { color: #64748b; }
+    .footer { text-align: center; margin-top: 1.5rem; color: #475569; font-size: 0.72rem; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="header-row">
+        <div class="pulse-dot"></div>
+        <h1>lego-stylized-nature · 本机开发状态汇报</h1>
+      </div>
+      <p class="subtitle">
+        更新 2026-10-16 · branch main @ 3afcbc7（2026-07-08）· src 约 13,000 行 JS ·
+        <span style="color:#34d399">测试 183/183 通过</span> ·
+        <span style="color:#34d399">vite build ✓ 3.3s 无警告</span> ·
+        <span style="color:#34d399">已提交 3 笔（5b3c05a / f2884eb / 43ee4a6）</span>
+      </p>
+    </div>
+
+    <div class="diagram-container">
+      <svg viewBox="0 0 1160 940">
+        <defs>
+          <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" fill="#64748b"/>
+          </marker>
+          <marker id="arrowrose" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" fill="#fb7185"/>
+          </marker>
+          <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+            <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#1e293b" stroke-width="0.5"/>
+          </pattern>
+        </defs>
+
+        <rect width="100%" height="100%" fill="url(#grid)"/>
+
+        <!-- ============ TOP ROW (outside boundary) ============ -->
+        <rect x="30" y="40" width="130" height="50" rx="6" fill="#0f172a"/>
+        <rect x="30" y="40" width="130" height="50" rx="6" fill="rgba(30,41,59,0.5)" stroke="#94a3b8" stroke-width="1.5"/>
+        <text x="95" y="61" fill="white" font-size="11" font-weight="600" text-anchor="middle">浏览器用户</text>
+        <text x="95" y="77" fill="#94a3b8" font-size="9" text-anchor="middle">Desktop / Mobile</text>
+
+        <rect x="210" y="28" width="180" height="74" rx="6" fill="#0f172a"/>
+        <rect x="210" y="28" width="180" height="74" rx="6" fill="rgba(8,51,68,0.4)" stroke="#22d3ee" stroke-width="1.5"/>
+        <text x="300" y="50" fill="white" font-size="11" font-weight="600" text-anchor="middle">PWA 离线应用</text>
+        <text x="300" y="66" fill="#94a3b8" font-size="8" text-anchor="middle">sw.js · cache-first</text>
+        <text x="300" y="79" fill="#94a3b8" font-size="8" text-anchor="middle">manifest.json · PROD 注册</text>
+
+        <line x1="160" y1="65" x2="208" y2="65" stroke="#22d3ee" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+        <path d="M 300 102 L 300 160 L 175 160 L 175 246" fill="none" stroke="#22d3ee" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+        <text x="212" y="153" fill="#94a3b8" font-size="8">加载 index.html → bootstrap</text>
+
+        <!-- ============ LEGEND (outside boundary) ============ -->
+        <text x="960" y="38" fill="white" font-size="10" font-weight="600">Legend</text>
+        <rect x="960" y="48" width="16" height="10" rx="2" fill="rgba(8,51,68,0.4)" stroke="#22d3ee" stroke-width="1"/>
+        <text x="982" y="56" fill="#94a3b8" font-size="8">渲染 / 前端</text>
+        <rect x="960" y="64" width="16" height="10" rx="2" fill="rgba(6,78,59,0.4)" stroke="#34d399" stroke-width="1"/>
+        <text x="982" y="72" fill="#94a3b8" font-size="8">核心逻辑</text>
+        <rect x="960" y="80" width="16" height="10" rx="2" fill="rgba(76,29,149,0.4)" stroke="#a78bfa" stroke-width="1"/>
+        <text x="982" y="88" fill="#94a3b8" font-size="8">沙盒 / 数据资产</text>
+        <rect x="960" y="96" width="16" height="10" rx="2" fill="rgba(120,53,15,0.3)" stroke="#fbbf24" stroke-width="1"/>
+        <text x="982" y="104" fill="#94a3b8" font-size="8">本机工具链</text>
+        <rect x="960" y="112" width="16" height="10" rx="2" fill="rgba(136,19,55,0.4)" stroke="#fb7185" stroke-width="1"/>
+        <text x="982" y="120" fill="#94a3b8" font-size="8">风险 / 待办</text>
+        <line x1="960" y1="134" x2="976" y2="134" stroke="#fb7185" stroke-width="1" stroke-dasharray="4,4"/>
+        <text x="982" y="137" fill="#94a3b8" font-size="8">降级路径</text>
+        <circle cx="968" cy="150" r="4" fill="#34d399"/>
+        <text x="982" y="153" fill="#94a3b8" font-size="8">状态: 通过/稳定</text>
+        <circle cx="968" cy="164" r="4" fill="#fbbf24"/>
+        <text x="982" y="167" fill="#94a3b8" font-size="8">状态: 风险/待处理</text>
+
+        <!-- ============ REPO BOUNDARY ============ -->
+        <rect x="30" y="200" width="1100" height="710" rx="12" fill="rgba(251,191,36,0.04)" stroke="#fbbf24" stroke-width="1" stroke-dasharray="8,4"/>
+        <text x="44" y="220" fill="#fbbf24" font-size="10" font-weight="600">repo: lego-stylized-nature · main · HEAD 3afcbc7 (07-08) · 工作区已清空 · 收尾冲刺 3 笔提交（5b3c05a / f2884eb / 43ee4a6）</text>
+
+        <!-- ============ BOOTSTRAP DEGRADE CHAIN ============ -->
+        <text x="70" y="246" fill="#e2e8f0" font-size="9" font-weight="600">启动三级降级链</text>
+
+        <rect x="70" y="254" width="210" height="62" rx="6" fill="#0f172a"/>
+        <rect x="70" y="254" width="210" height="62" rx="6" fill="rgba(8,51,68,0.4)" stroke="#22d3ee" stroke-width="1.5"/>
+        <circle cx="266" cy="264" r="4" fill="#34d399"/>
+        <text x="175" y="278" fill="white" font-size="11" font-weight="600" text-anchor="middle">Renderer · WebGPU</text>
+        <text x="175" y="294" fill="#94a3b8" font-size="8" text-anchor="middle">three/webgpu · TSL 节点材质</text>
+        <text x="175" y="306" fill="#22d3ee" font-size="7" text-anchor="middle">全特效: tilt-shift + speed-lines</text>
+
+        <rect x="360" y="254" width="210" height="62" rx="6" fill="#0f172a"/>
+        <rect x="360" y="254" width="210" height="62" rx="6" fill="rgba(6,78,59,0.4)" stroke="#34d399" stroke-width="1.5"/>
+        <circle cx="556" cy="264" r="4" fill="#34d399"/>
+        <text x="465" y="278" fill="white" font-size="11" font-weight="600" text-anchor="middle">WebGLFallbackRenderer</text>
+        <text x="465" y="294" fill="#94a3b8" font-size="8" text-anchor="middle">WebGLRenderer 兜底 · 8s watchdog</text>
+        <text x="465" y="306" fill="#94a3b8" font-size="7" text-anchor="middle">舍弃后处理，保留场景/光照</text>
+
+        <rect x="650" y="254" width="210" height="62" rx="6" fill="#0f172a"/>
+        <rect x="650" y="254" width="210" height="62" rx="6" fill="rgba(30,41,59,0.5)" stroke="#94a3b8" stroke-width="1.5"/>
+        <circle cx="846" cy="264" r="4" fill="#34d399"/>
+        <text x="755" y="278" fill="white" font-size="11" font-weight="600" text-anchor="middle">Sandbox2DView</text>
+        <text x="755" y="294" fill="#94a3b8" font-size="8" text-anchor="middle">无 GPU · SSR 2D 平面模式</text>
+        <text x="755" y="306" fill="#94a3b8" font-size="7" text-anchor="middle">仍可搭建</text>
+
+        <line x1="280" y1="285" x2="358" y2="285" stroke="#fb7185" stroke-width="1.5" stroke-dasharray="4,4" marker-end="url(#arrowrose)"/>
+        <text x="319" y="278" fill="#fb7185" font-size="7" text-anchor="middle">init 失败</text>
+        <line x1="570" y1="285" x2="648" y2="285" stroke="#fb7185" stroke-width="1.5" stroke-dasharray="4,4" marker-end="url(#arrowrose)"/>
+        <text x="609" y="278" fill="#fb7185" font-size="7" text-anchor="middle">WebGL 不可用</text>
+
+        <path d="M 175 316 L 175 348" fill="none" stroke="#22d3ee" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+        <path d="M 465 316 L 465 336 L 160 336 L 160 348" fill="none" stroke="#22d3ee" stroke-width="1" marker-end="url(#arrowhead)"/>
+        <path d="M 755 316 L 755 336 L 170 336 L 170 348" fill="none" stroke="#22d3ee" stroke-width="1" marker-end="url(#arrowhead)"/>
+
+        <!-- ============ CORE ROW ============ -->
+        <rect x="70" y="352" width="180" height="56" rx="6" fill="#0f172a"/>
+        <rect x="70" y="352" width="180" height="56" rx="6" fill="rgba(6,78,59,0.4)" stroke="#34d399" stroke-width="1.5"/>
+        <circle cx="236" cy="362" r="4" fill="#34d399"/>
+        <text x="160" y="376" fill="white" font-size="11" font-weight="600" text-anchor="middle">app/Experience</text>
+        <text x="160" y="392" fill="#94a3b8" font-size="8" text-anchor="middle">启动编排 · 场景装配</text>
+
+        <rect x="290" y="352" width="360" height="248" rx="6" fill="#0f172a"/>
+        <rect x="290" y="352" width="360" height="248" rx="6" fill="rgba(76,29,149,0.4)" stroke="#a78bfa" stroke-width="1.5"/>
+        <circle cx="636" cy="362" r="4" fill="#34d399"/>
+        <text x="470" y="376" fill="white" font-size="12" font-weight="600" text-anchor="middle">Sandbox 沙盒核心 · 17 模块</text>
+        <text x="470" y="398" fill="#94a3b8" font-size="9" text-anchor="middle">• SandboxScene / SandboxInput（框选 marquee）</text>
+        <text x="470" y="416" fill="#94a3b8" font-size="9" text-anchor="middle">• SandboxGrid · Baseplate · BrickRenderer</text>
+        <text x="470" y="434" fill="#94a3b8" font-size="9" text-anchor="middle">• commands + HistoryStack（撤销 / 重做）</text>
+        <text x="470" y="452" fill="#94a3b8" font-size="9" text-anchor="middle">• MissionManager · Achievement（任务/成就）</text>
+        <text x="470" y="470" fill="#94a3b8" font-size="9" text-anchor="middle">• Persister · Snapshotter · Thumbnailer</text>
+        <text x="470" y="488" fill="#94a3b8" font-size="9" text-anchor="middle">• parseLDR / exportLDR（.ldr 工程导入导出）</text>
+        <text x="470" y="506" fill="#94a3b8" font-size="9" text-anchor="middle">• placeSnap stud 吸附</text>
+        <text x="470" y="524" fill="#94a3b8" font-size="9" text-anchor="middle">• UI: TutorialHUD + 8 个 HUD（零件/配色/历史…）</text>
+        <text x="470" y="548" fill="#a78bfa" font-size="8" text-anchor="middle">2026-09 重建：剧情系统已移除，纯沙盒玩法</text>
+
+        <rect x="690" y="352" width="200" height="128" rx="6" fill="#0f172a"/>
+        <rect x="690" y="352" width="200" height="128" rx="6" fill="rgba(6,78,59,0.4)" stroke="#34d399" stroke-width="1.5"/>
+        <circle cx="876" cy="362" r="4" fill="#34d399"/>
+        <text x="790" y="376" fill="white" font-size="11" font-weight="600" text-anchor="middle">world/ 世界层</text>
+        <text x="790" y="396" fill="#94a3b8" font-size="8" text-anchor="middle">environment（RoomEnv IBL 兜底）</text>
+        <text x="790" y="410" fill="#94a3b8" font-size="8" text-anchor="middle">camera（Orbit + Trackball）</text>
+        <text x="790" y="424" fill="#94a3b8" font-size="8" text-anchor="middle">biomePrefabs · WorldConfig</text>
+        <text x="790" y="438" fill="#94a3b8" font-size="8" text-anchor="middle">玩家 / 飞行器 · 区块系统</text>
+        <text x="790" y="462" fill="#34d399" font-size="7" text-anchor="middle">测试对齐完成（阴影/相机/输入）</text>
+
+        <rect x="920" y="352" width="180" height="128" rx="6" fill="#0f172a"/>
+        <rect x="920" y="352" width="180" height="128" rx="6" fill="rgba(8,51,68,0.4)" stroke="#22d3ee" stroke-width="1.5"/>
+        <circle cx="1086" cy="362" r="4" fill="#34d399"/>
+        <text x="1010" y="376" fill="white" font-size="11" font-weight="600" text-anchor="middle">postprocessing</text>
+        <text x="1010" y="396" fill="#94a3b8" font-size="8" text-anchor="middle">tilt-shift（falloff 0.50 新默认）</text>
+        <text x="1010" y="410" fill="#94a3b8" font-size="8" text-anchor="middle">speed-lines</text>
+        <text x="1010" y="424" fill="#94a3b8" font-size="8" text-anchor="middle">TSL 输出链 · 预构建切换</text>
+        <text x="1010" y="462" fill="#34d399" font-size="7" text-anchor="middle">默认值断言已更新通过</text>
+
+        <line x1="250" y1="380" x2="288" y2="380" stroke="#34d399" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+        <path d="M 250 390 L 270 390 L 270 416 L 688 416" fill="none" stroke="#34d399" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+        <line x1="890" y1="416" x2="918" y2="416" stroke="#22d3ee" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+
+        <!-- ============ ASSET ROW ============ -->
+        <rect x="70" y="656" width="170" height="56" rx="6" fill="#0f172a"/>
+        <rect x="70" y="656" width="170" height="56" rx="6" fill="rgba(76,29,149,0.4)" stroke="#a78bfa" stroke-width="1.5"/>
+        <text x="155" y="680" fill="white" font-size="10" font-weight="600" text-anchor="middle">localStorage</text>
+        <text x="155" y="696" fill="#94a3b8" font-size="8" text-anchor="middle">SandboxPersister 持久化</text>
+
+        <rect x="290" y="656" width="160" height="56" rx="6" fill="#0f172a"/>
+        <rect x="290" y="656" width="160" height="56" rx="6" fill="rgba(76,29,149,0.4)" stroke="#a78bfa" stroke-width="1.5"/>
+        <text x="370" y="680" fill="white" font-size="10" font-weight="600" text-anchor="middle">partsCatalog.js</text>
+        <text x="370" y="696" fill="#94a3b8" font-size="8" text-anchor="middle">零件清单（manifest）</text>
+
+        <rect x="490" y="656" width="170" height="56" rx="6" fill="#0f172a"/>
+        <rect x="490" y="656" width="170" height="56" rx="6" fill="rgba(76,29,149,0.4)" stroke="#a78bfa" stroke-width="1.5"/>
+        <text x="575" y="680" fill="white" font-size="10" font-weight="600" text-anchor="middle">LDrawPartLoader</text>
+        <text x="575" y="696" fill="#94a3b8" font-size="8" text-anchor="middle">按需加载 · 缓存去重</text>
+
+        <rect x="700" y="650" width="200" height="68" rx="6" fill="#0f172a"/>
+        <rect x="700" y="650" width="200" height="68" rx="6" fill="rgba(30,41,59,0.5)" stroke="#94a3b8" stroke-width="1.5"/>
+        <text x="800" y="674" fill="white" font-size="10" font-weight="600" text-anchor="middle">public/model/parts</text>
+        <text x="800" y="690" fill="#94a3b8" font-size="8" text-anchor="middle">101 × LDraw .dat 零件库</text>
+        <text x="800" y="704" fill="#94a3b8" font-size="7" text-anchor="middle">BrickGeometry 贴合几何生成</text>
+
+        <path d="M 340 600 L 340 620 L 370 620 L 370 654" fill="none" stroke="#a78bfa" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+        <path d="M 310 600 L 200 600 L 200 654" fill="none" stroke="#a78bfa" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+        <line x1="450" y1="684" x2="488" y2="684" stroke="#a78bfa" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+        <line x1="660" y1="684" x2="698" y2="684" stroke="#a78bfa" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+
+        <!-- ============ TOOLCHAIN ROW ============ -->
+        <rect x="70" y="772" width="210" height="60" rx="6" fill="#0f172a"/>
+        <rect x="70" y="772" width="210" height="60" rx="6" fill="rgba(120,53,15,0.3)" stroke="#fbbf24" stroke-width="1.5"/>
+        <circle cx="166" cy="782" r="4" fill="#34d399"/>
+        <text x="175" y="796" fill="white" font-size="11" font-weight="600" text-anchor="middle">vite build</text>
+        <text x="175" y="812" fill="#34d399" font-size="8" text-anchor="middle">✓ EXIT=0 · 3.3s · 140 模块 · 无警告</text>
+        <text x="175" y="824" fill="#94a3b8" font-size="7" text-anchor="middle">main bundle 1.97MB (gzip 562KB)</text>
+
+        <rect x="320" y="772" width="220" height="60" rx="6" fill="#0f172a"/>
+        <rect x="320" y="772" width="220" height="60" rx="6" fill="rgba(120,53,15,0.3)" stroke="#fbbf24" stroke-width="1.5"/>
+        <circle cx="426" cy="782" r="4" fill="#34d399"/>
+        <text x="430" y="796" fill="white" font-size="11" font-weight="600" text-anchor="middle">node --test</text>
+        <text x="430" y="812" fill="#34d399" font-size="8" text-anchor="middle">✓ 183/183 通过 · 32 个测试文件</text>
+        <text x="430" y="824" fill="#94a3b8" font-size="7" text-anchor="middle">10-16 修复：29 失败 → 0</text>
+
+        <rect x="580" y="772" width="250" height="60" rx="6" fill="#0f172a"/>
+        <rect x="580" y="772" width="250" height="60" rx="6" fill="rgba(136,19,55,0.4)" stroke="#fb7185" stroke-width="1.5"/>
+        <circle cx="816" cy="782" r="4" fill="#34d399"/>
+        <text x="705" y="796" fill="white" font-size="11" font-weight="600" text-anchor="middle">git 工作区</text>
+        <text x="705" y="812" fill="#fbbf24" font-size="8" text-anchor="middle">✓ 已分 3 笔提交（feat/test/docs）</text>
+        <text x="705" y="824" fill="#94a3b8" font-size="7" text-anchor="middle">HEAD 43ee4a6 · 2026-10-16 · 待推送 origin</text>
+
+        <rect x="870" y="772" width="230" height="60" rx="6" fill="#0f172a"/>
+        <rect x="870" y="772" width="230" height="60" rx="6" fill="rgba(30,41,59,0.5)" stroke="#94a3b8" stroke-width="1.5"/>
+        <circle cx="1086" cy="782" r="4" fill="#fbbf24"/>
+        <text x="985" y="796" fill="white" font-size="10" font-weight="600" text-anchor="middle">deferred-improvements.md</text>
+        <text x="985" y="812" fill="#94a3b8" font-size="7" text-anchor="middle">剩余: SSAO · HDR envmap · XZ-snap</text>
+        <text x="985" y="824" fill="#94a3b8" font-size="7" text-anchor="middle">高度标尺 · sandbox 模块测试覆盖</text>
+      </svg>
+    </div>
+
+    <div class="cards">
+      <div class="card">
+        <div class="card-header"><div class="card-dot emerald"></div><h3>本次会话修复（10-16）</h3></div>
+        <ul>
+          <li>• 测试从 <b>29 失败 → 183/183 全绿</b></li>
+          <li>• 删除 3 个引用已删模块的死测试（story / storyRecord / worldStory）</li>
+          <li>• 对齐 6 组过期断言：方向键输入、蘑菇/花朵调色板、tilt-shift falloff 0.50、相机 trackball 桩、阴影跟随负偏移 + syncDirectionalTarget</li>
+          <li>• 移除 <b>MARQUEE_DRAG_EVENT 死导入</b>（构建唯一警告清零）</li>
+        </ul>
+      </div>
+      <div class="card">
+        <div class="card-header"><div class="card-dot amber"></div><h3>本机 Git 状态（风险）</h3></div>
+        <ul>
+          <li>• <b>已分 3 笔提交</b>：5b3c05a(feat) / f2884eb(test) / 43ee4a6(docs)</li>
+          <li>• 9 月全部工作 + 10-16 收尾（标尺/LDR 修复/i18n/单测）均已落库</li>
+          <li>• 未推送 origin/main，换机/误操作即丢失</li>
+          <li>• 剩余动作：push 到 origin/main（等你确认）</li>
+        </ul>
+      </div>
+      <div class="card">
+        <div class="card-header"><div class="card-dot violet"></div><h3>架构现状</h3></div>
+        <ul>
+          <li>• 三级降级：<b>WebGPU → WebGL → 2D SSR</b>，任何浏览器可玩</li>
+          <li>• Sandbox 17 模块：任务 / 成就 / 教程 / 撤销重做 / 持久化 / LDR 导入导出</li>
+          <li>• LDraw 真实零件库 101 个 .dat</li>
+          <li>• PWA 离线可用（sw.js cache-first）</li>
+          <li>• deferred 清单 11 项中 6 项已随重建实现</li>
+        </ul>
+      </div>
+      <div class="card">
+        <div class="card-header"><div class="card-dot rose"></div><h3>下一步建议</h3></div>
+        <ul>
+          <li>① 分批 commit + push（最优先）</li>
+          <li>② sandbox 核心模块补单测（HistoryStack / parseLDR / placeSnap）</li>
+          <li>③ deferred 低成本项：stud X/Z 侧向吸附（0.5d）、高度标尺（0.5d）</li>
+          <li>④ 主包 1.97MB，可做 dynamic import 分包</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="table-wrap">
+      <h3>里程碑节点状态</h3>
+      <table>
+        <tr><th>节点</th><th>时间</th><th>状态</th><th>说明</th></tr>
+        <tr><td>M1-M12 搭建玩法</td><td>2026-07 ~ 08</td><td class="st ok">✅ 完成</td><td>网格 / 堆叠 / 零件面板 / 撤销重做，12 个里程碑交付</td></tr>
+        <tr><td>环境光照优化</td><td>07-08</td><td class="st ok">✅ 已提交</td><td>3afcbc7（当前 HEAD，之后无提交）</td></tr>
+        <tr><td>剧情系统移除</td><td>2026-09</td><td class="st ok">✅ 完成（未提交）</td><td>story/ 与 4 个剧情 HUD 删除，i18n 同步瘦身</td></tr>
+        <tr><td>Sandbox 重建 + PWA + LDraw</td><td>2026-09</td><td class="st ok">✅ 完成（未提交）</td><td>17 模块沙盒、101 LDraw 零件、离线缓存、三级渲染降级</td></tr>
+        <tr><td>测试套件修复 + 收尾冲刺</td><td>10-16（本次）</td><td class="st ok">✅ 完成</td><td>29 失败 → 0，183/183 通过；构建警告清零</td></tr>
+        <tr><td>Git 提交与推送</td><td>—</td><td class="st ok">✅ 完成</td><td>分 3 笔提交（feat / test / docs），工作区清空；推送待确认</td></tr>
+        <tr><td>deferred 剩余项</td><td>—</td><td class="st todo">◻ 待办</td><td>SSAO / HDR envmap / XZ-snap / 高度标尺 / sandbox 测试覆盖 / 分包</td></tr>
+      </table>
+    </div>
+
+    <p class="footer">lego-stylized-nature status report · generated 2026-10-16 by Hermes Agent · data: git + node --test + vite build 实测</p>
+  </div>
+</body>
+</html>

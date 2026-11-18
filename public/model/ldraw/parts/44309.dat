@@ -1,0 +1,77 @@
+0 Tyre 22/ 30 x 30 ZR
+0 Name: 44309.dat
+0 Author: Marc Klein [marckl]
+0 !LDRAW_ORG Part UPDATE 2025-12
+0 !LICENSE Licensed under CC BY 4.0 : see CAreadme.txt
+
+0 BFC CERTIFY CCW
+
+0 !KEYWORDS 43.2 x 22 ZR, Brickowl 257622
+
+0 !HISTORY 2013-07-21 [PTadmin] Official Update 2013-01
+0 !HISTORY 2013-12-05 [cwdee] Correct description
+0 !HISTORY 2013-12-23 [PTadmin] Official Update 2013-02
+0 !HISTORY 2025-03-10 [Blechtaler] used prims
+0 !HISTORY 2025-11-30 [OrionP] Official Update 2025-11
+0 !HISTORY 2025-12-25 [OrionP] Minor header edits
+0 !HISTORY 2025-12-25 [OrionP] Official Update 2025-12
+
+1 16 0 0 0 -1 0 0 0 1 0 0 0 1 s\44309s01.dat
+1 16 0 0 0 0 -1 0 1 0 0 0 0 1 s\44309s01.dat
+1 16 0 0 0 0 -1 0 -1 0 0 0 0 1 s\44309s01.dat
+1 16 0 0 0 -1 0 0 0 -1 0 0 0 1 s\44309s01.dat
+1 16 0 0 0 1 0 0 0 -1 0 0 0 1 s\44309s01.dat
+1 16 0 0 0 0 1 0 -1 0 0 0 0 1 s\44309s01.dat
+1 16 0 0 0 0 1 0 1 0 0 0 0 1 s\44309s01.dat
+1 16 0 0 0 1 0 0 0 1 0 0 0 1 s\44309s01.dat
+1 16 0 0 0 -1 0 0 0 1 0 0 0 -1 s\44309s01.dat
+1 16 0 0 0 0 -1 0 1 0 0 0 0 -1 s\44309s01.dat
+1 16 0 0 0 0 -1 0 -1 0 0 0 0 -1 s\44309s01.dat
+1 16 0 0 0 -1 0 0 0 -1 0 0 0 -1 s\44309s01.dat
+1 16 0 0 0 1 0 0 0 -1 0 0 0 -1 s\44309s01.dat
+1 16 0 0 0 0 1 0 -1 0 0 0 0 -1 s\44309s01.dat
+1 16 0 0 0 0 1 0 1 0 0 0 0 -1 s\44309s01.dat
+1 16 0 0 0 1 0 0 0 1 0 0 0 -1 s\44309s01.dat
+
+0 // Inside
+0 BFC INVERTNEXT
+1 16 0 0 26.6333 3.8 0 0 0 0 3.8 0 -.6333 0 48\4-4con10.dat
+0 BFC INVERTNEXT
+1 16 0 0 27 2.2 0 0 0 0 2.2 0 -.3667 0 48\4-4con19.dat
+0 BFC INVERTNEXT
+1 16 0 0 26 38 0 0 0 0 38 0 -5 0 48\4-4cylo.dat
+1 16 0 0 21 2 0 0 0 0 2 0 -1 0 48\4-4ring18.dat
+1 16 0 0 21 2 0 0 0 0 2 0 -1 0 48\4-4ring17.dat
+0 BFC INVERTNEXT
+1 16 0 0 21 34 0 0 0 0 34 0 -6 0 48\4-4cylo.dat
+1 16 0 0 15 2 0 0 0 0 2 0 1 0 48\4-4ring17.dat
+1 16 0 0 15 6 0 0 0 0 6 0 1 0 48\4-4ring6.dat
+1 16 0 0 15 42 0 0 0 0 42 0 8 0 48\4-4cylo.dat
+1 16 0 0 23 6 0 0 0 0 6 0 1 0 48\4-4ring7.dat
+0 BFC INVERTNEXT
+1 16 0 0 23 48 0 0 0 0 48 0 -46 0 48\4-4cylo.dat
+1 16 0 0 -23 6 0 0 0 0 6 0 -1 0 48\4-4ring7.dat
+1 16 0 0 -15 42 0 0 0 0 42 0 -8 0 48\4-4cylo.dat
+1 16 0 0 -15 6 0 0 0 0 6 0 -1 0 48\4-4ring6.dat
+1 16 0 0 -15 2 0 0 0 0 2 0 -1 0 48\4-4ring17.dat
+0 BFC INVERTNEXT
+1 16 0 0 -21 34 0 0 0 0 34 0 6 0 48\4-4cylo.dat
+1 16 0 0 -21 2 0 0 0 0 2 0 1 0 48\4-4ring17.dat
+1 16 0 0 -21 2 0 0 0 0 2 0 1 0 48\4-4ring18.dat
+0 BFC INVERTNEXT
+1 16 0 0 -26 38 0 0 0 0 38 0 5 0 48\4-4cylo.dat
+0 BFC INVERTNEXT
+1 16 0 0 -27 2.2 0 0 0 0 2.2 0 .3667 0 48\4-4con19.dat
+0 BFC INVERTNEXT
+1 16 0 0 -26.6333 3.8 0 0 0 0 3.8 0 .6333 0 48\4-4con10.dat
+
+0 // Outside
+1 16 0 0 6 54 0 0 0 0 54 0 8 0 48\4-4cylo.dat
+1 16 0 0 6 2 0 0 0 0 2 0 1 0 48\4-4ring26.dat
+1 16 0 0 4 52 0 0 0 0 52 0 2 0 48\4-4cylo.dat
+1 16 0 0 4 2 0 0 0 0 2 0 -1 0 48\4-4ring26.dat
+1 16 0 0 4 54 0 0 0 0 54 0 -8 0 48\4-4cylo.dat
+1 16 0 0 -4 2 0 0 0 0 2 0 1 0 48\4-4ring26.dat
+1 16 0 0 -4 52 0 0 0 0 52 0 -2 0 48\4-4cylo.dat
+1 16 0 0 -6 2 0 0 0 0 2 0 -1 0 48\4-4ring26.dat
+1 16 0 0 -6 54 0 0 0 0 54 0 -8 0 48\4-4cylo.dat

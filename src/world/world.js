@@ -1,5 +1,13 @@
 import * as THREE from 'three/webgpu'
 import { createAOPanel } from '../debug/panels/AOPanel.js'
+
+/**
+ * Emitted on the global bus while the sandbox (or any overlay UI) owns
+ * the keyboard; the world pauses aircraft input while locked.
+ */
+export const CONTROLS_LOCK_EVENT = 'controls:lock'
+export const CONTROLS_UNLOCK_EVENT = 'controls:unlock'
+
 import { createBiomePanel } from '../debug/panels/BiomePanel.js'
 import { createChunksPanel } from '../debug/panels/ChunksPanel.js'
 import { createMaterialPanel } from '../debug/panels/MaterialPanel.js'
@@ -30,6 +38,7 @@ import LayeredTerrainBuilder from './terrain/LayeredTerrainBuilder.js'
 import TerrainGenerator from './terrain/TerrainGenerator.js'
 import { worldConfig } from './WorldConfig.js'
 import WorldMaterials from './WorldMaterials.js'
+import { eventBus } from '../utils/event-bus.js'
 
 export default class World {
   /**
@@ -69,6 +78,13 @@ export default class World {
     this.landmarkAssets = null
     this.landmarkRenderer = null
     this.disposed = false
+    this.controlsLocked = false
+    this._onControlsLock = () => {
+      this.controlsLocked = true
+    }
+    this._onControlsUnlock = () => {
+      this.controlsLocked = false
+    }
   }
 
   addSystem(system) {
@@ -185,6 +201,9 @@ export default class World {
     }
 
     this.regenerate()
+
+    eventBus.on(CONTROLS_LOCK_EVENT, this._onControlsLock)
+    eventBus.on(CONTROLS_UNLOCK_EVENT, this._onControlsUnlock)
   }
 
   regenerate() {
@@ -329,6 +348,9 @@ export default class World {
 
   update() {
     for (const child of this.children) {
+      if (child === this.playerAircraft && this.controlsLocked) {
+        continue
+      }
       child.update?.()
     }
     this.landmarkRenderer?.update(this.experience.time.getDelta(), true)
@@ -428,6 +450,8 @@ export default class World {
     if (this.disposed)
       return
     this.disposed = true
+    eventBus.off(CONTROLS_LOCK_EVENT, this._onControlsLock)
+    eventBus.off(CONTROLS_UNLOCK_EVENT, this._onControlsUnlock)
     this.experience.renderer?.releaseSceneObjects?.(this.group)
     this.prefabWarmup?.dispose()
     this.prefabWarmup = null
