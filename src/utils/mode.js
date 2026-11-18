@@ -31,8 +31,9 @@ function modeFromHash(hash) {
   if (flags.has('build')) return MODES.BUILD
   if (flags.has('sandbox')) return MODES.SANDBOX
   if (flags.has('play')) return MODES.SHOWCASE
-  // V2: default is sandbox when no hash
-  return MODES.SANDBOX
+  // No hash: the explorer showcase is the default experience; the sandbox
+  // is opt-in via `#sandbox`.
+  return MODES.SHOWCASE
 }
 
 /**

@@ -7,7 +7,6 @@ import {
   getCameraWorldBounds,
   getChunkBounds,
   getChunkWindowCoords,
-  getPlayerPrefabWindowCoords,
   getPrefetchChunkCoord,
   getRenderChunkCoord,
   getRenderChunkKey,
@@ -108,29 +107,6 @@ test('builds stable chunk window coords with cardinal neighbors before diagonals
 
   assert.deepEqual(getChunkWindowCoords({ x: -2, z: 3 }, 1)[0], { x: -2, z: 3 })
   assert.equal(getChunkWindowCoords({ x: -2, z: 3 }, 1).length, 9)
-})
-
-test('builds player prefab 2x2 window from local chunk half', () => {
-  assert.deepEqual(getPlayerPrefabWindowCoords({ x: 32, z: 32 }, 32), [
-    { x: 0, z: 0 },
-    { x: 1, z: 0 },
-    { x: 0, z: 1 },
-    { x: 1, z: 1 }
-  ])
-
-  assert.deepEqual(getPlayerPrefabWindowCoords({ x: 48, z: 48 }, 32), [
-    { x: 1, z: 1 },
-    { x: 2, z: 1 },
-    { x: 1, z: 2 },
-    { x: 2, z: 2 }
-  ])
-
-  assert.deepEqual(getPlayerPrefabWindowCoords({ x: -1, z: -17 }, 32), [
-    { x: -1, z: -2 },
-    { x: 0, z: -2 },
-    { x: -1, z: -1 },
-    { x: 0, z: -1 }
-  ])
 })
 
 test('computes padded chunk world bounds', () => {

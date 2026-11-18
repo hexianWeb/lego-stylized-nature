@@ -17,7 +17,7 @@ export const DEFAULT_WING_AIRFLOW_CONFIG = {
     wingHalfWidth: 0.78,
     outwardOffset: 0.12,
     backOffset: -0.10,
-    upOffset: 0.03
+    upOffset: 0.03,
   },
   sampleLife: 0.56,
   emitInterval: 0.034,
@@ -36,7 +36,7 @@ export const DEFAULT_WING_AIRFLOW_CONFIG = {
   pulseStrength: 0.01,
   color: '#f7fbff',
   additive: false,
-  showAnchors: false
+  showAnchors: false,
 }
 
 function positiveNumber(value, fallback) {
@@ -81,7 +81,7 @@ export function normalizeWingAirflowConfig(config = {}) {
       wingHalfWidth: positiveNumber(anchors.wingHalfWidth, defaults.anchors.wingHalfWidth),
       outwardOffset: clampNonNegative(anchors.outwardOffset, defaults.anchors.outwardOffset),
       backOffset: Number.isFinite(anchors.backOffset) ? anchors.backOffset : defaults.anchors.backOffset,
-      upOffset: Number.isFinite(anchors.upOffset) ? anchors.upOffset : defaults.anchors.upOffset
+      upOffset: Number.isFinite(anchors.upOffset) ? anchors.upOffset : defaults.anchors.upOffset,
     },
     sampleLife: positiveNumber(config.sampleLife, defaults.sampleLife),
     emitInterval: positiveNumber(config.emitInterval, defaults.emitInterval),
@@ -100,7 +100,7 @@ export function normalizeWingAirflowConfig(config = {}) {
     pulseStrength: nonNegativeNumber(config.pulseStrength, defaults.pulseStrength),
     color: normalizeColor(config.color, defaults.color),
     additive: config.additive === true,
-    showAnchors: config.showAnchors === true
+    showAnchors: config.showAnchors === true,
   }
 }
 
@@ -125,7 +125,7 @@ export function canConnectAirflowSamples(tangentA, tangentB, breakAngleDeg) {
 
 export function computeAirflowHalfWidth(config, { age = 0, speedRatio = 0 } = {}) {
   const life = clamp01(age / config.sampleLife)
-  const bell = Math.pow(Math.max(0, Math.sin(Math.PI * life)), config.bellPower)
+  const bell = Math.max(0, Math.sin(Math.PI * life)) ** config.bellPower
   const widthScale = THREE.MathUtils.lerp(config.tipWidthRatio, 1, bell)
   return config.width * widthScale * (0.72 + clamp01(speedRatio) * 0.28) * 0.5
 }
@@ -294,7 +294,7 @@ function createRibbonMesh(name, config, texture) {
     opacity: config.opacity,
     depthWrite: false,
     side: THREE.DoubleSide,
-    blending: config.additive ? THREE.AdditiveBlending : THREE.NormalBlending
+    blending: config.additive ? THREE.AdditiveBlending : THREE.NormalBlending,
   })
 
   const mesh = new THREE.Mesh(geometry, material)
@@ -312,7 +312,7 @@ function createAnchorMarker(name, config) {
     color: config.color,
     transparent: true,
     opacity: 0.75,
-    depthWrite: false
+    depthWrite: false,
   })
   const marker = new THREE.Mesh(geometry, material)
   marker.name = name
@@ -327,7 +327,8 @@ function writePosition(array, vertexIndex, position, tangent, camera, halfWidth)
 
   if (tmpV5.lengthSq() <= 1e-8) {
     tmpV5.set(0, 1, 0)
-  } else {
+  }
+  else {
     tmpV5.normalize()
   }
 
@@ -339,7 +340,8 @@ function writePosition(array, vertexIndex, position, tangent, camera, halfWidth)
 
   if (tmpV6.lengthSq() <= 1e-8) {
     tmpV6.set(1, 0, 0)
-  } else {
+  }
+  else {
     tmpV6.normalize()
   }
 
@@ -391,7 +393,7 @@ function writeRibbonQuad(side, runtime, quadIndex, idx0, idx1, camera, config) {
 function getRibbonRuntime(mesh) {
   return {
     positionArray: mesh.geometry.getAttribute('position').array,
-    uvArray: mesh.geometry.getAttribute('uv').array
+    uvArray: mesh.geometry.getAttribute('uv').array,
   }
 }
 
@@ -442,7 +444,7 @@ function resolveAnchor(parent, config, sideSign, target) {
   target.set(
     sideSign * (anchors.wingHalfWidth + anchors.outwardOffset),
     anchors.upOffset,
-    anchors.backOffset
+    anchors.backOffset,
   )
   return parent.localToWorld(target)
 }
@@ -528,20 +530,20 @@ export function createWingAirflowVFX(parent, rawConfig = {}) {
         position: leftAnchor,
         tangent: tmpV4,
         speedRatio,
-        delta
+        delta,
       })
       right.maybeEmit({
         position: rightAnchor,
         tangent: tmpV4,
         speedRatio,
-        delta
+        delta,
       })
       api.clampSamples()
 
       const opacity = resolveAirflowOpacity(config, {
         speedRatio,
         thrustInput: input.thrustInput ?? 0,
-        elapsed
+        elapsed,
       })
       updateRibbonMaterial(leftMesh, config, opacity)
       updateRibbonMaterial(rightMesh, config, opacity)
@@ -582,7 +584,7 @@ export function createWingAirflowVFX(parent, rawConfig = {}) {
       texture?.dispose()
       root.clear()
       api.disposed = true
-    }
+    },
   }
 
   return api

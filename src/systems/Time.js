@@ -7,30 +7,30 @@ import { Timer } from 'three/webgpu'
  * after {@link connectDocument}.
  */
 export default class Time {
-    constructor() {
-        this.timer = new Timer()
-    }
+  constructor() {
+    this.timer = new Timer()
+  }
 
-    connectDocument(document) {
-        this.timer.connect(document)
-    }
+  connectDocument(document) {
+    this.timer.connect(document)
+  }
 
-    /**
-     * @param {number} [timestamp] ms, from setAnimationFrame callback when available
-     */
-    update(timestamp) {
-        this.timer.update(timestamp)
-    }
+  /**
+   * @param {number} [timestamp] ms, from setAnimationFrame callback when available
+   */
+  update(timestamp) {
+    this.timer.update(timestamp)
+  }
 
-    getDelta() {
-        return this.timer.getDelta()
-    }
+  getDelta() {
+    return this.timer.getDelta()
+  }
 
-    getElapsed() {
-        return this.timer.getElapsed()
-    }
+  getElapsed() {
+    return this.timer.getElapsed()
+  }
 
-    dispose() {
-        this.timer.dispose()
-    }
+  dispose() {
+    this.timer.dispose()
+  }
 }

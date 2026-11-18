@@ -4,7 +4,7 @@ export function getTerrainIterationBounds(terrainMap, config) {
       halo: 0,
       visibleWidth: config.terrain.width,
       visibleDepth: config.terrain.depth,
-      origin: terrainMap.origin ?? { x: 0, z: 0 }
+      origin: terrainMap.origin ?? { x: 0, z: 0 },
     }
   }
 
@@ -16,6 +16,6 @@ export function getTerrainIterationBounds(terrainMap, config) {
     halo,
     visibleWidth,
     visibleDepth,
-    origin: terrainMap.origin ?? { x: 0, z: 0 }
+    origin: terrainMap.origin ?? { x: 0, z: 0 },
   }
 }

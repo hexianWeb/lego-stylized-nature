@@ -4,7 +4,8 @@ export default class SurfaceClassifier {
   }
 
   classify(heightField) {
-    const { width, depth, waterLevel } = this.config.terrain
+    const { waterLevel } = this.config.terrain
+    const { width, depth } = heightField
     const cells = []
 
     for (let z = 0; z < depth; z++) {

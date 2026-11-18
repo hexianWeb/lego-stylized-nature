@@ -1,82 +1,120 @@
+import { syncLegoStudShading } from '../../materials/tsl/legoMaterial.js'
+import { STUD_SHADING_DEFAULTS, STUD_SHADING_RANGES } from '../../materials/tsl/legoStudsConfig.js'
+
 export function createMaterialPanel(
-    debug,
-    config,
-    { legoMaterial, waterMaterial },
-    onRegenerate = null
+  debug,
+  config,
+  { legoMaterial, waterMaterial, lavaMaterial },
+  onRegenerate = null,
 ) {
-    const folder = debug.addFolder({ title: 'Materials', expanded: false })
-    if (!folder) {
-        return
-    }
+  const folder = debug.addFolder({ title: 'Materials', expanded: false })
+  if (!folder) {
+    return
+  }
 
-    const waterToggle = folder.addBinding(config.water, 'enableWater', { label: 'Water' })
-    if (onRegenerate) {
-        waterToggle.on('change', onRegenerate)
-    }
+  const waterToggle = folder.addBinding(config.water, 'enableWater', { label: 'Water' })
+  if (onRegenerate) {
+    waterToggle.on('change', onRegenerate)
+    folder.addBinding(config.water, 'castShadow', { label: 'Water shadows' })
+      .on('change', onRegenerate)
+  }
 
-    if (legoMaterial) {
-        const legoFolder = folder.addFolder({ title: 'Lego Brick', expanded: true })
-        legoFolder.addBinding(legoMaterial, 'roughness', { min: 0, max: 1, step: 0.01, label: 'roughness' })
-        legoFolder.addBinding(legoMaterial, 'clearcoat', { min: 0, max: 1, step: 0.01, label: 'clearcoat' })
-        legoFolder.addBinding(legoMaterial, 'clearcoatRoughness', { min: 0, max: 1, step: 0.01, label: 'clearcoatRoughness' })
-        legoFolder.addBinding(legoMaterial, 'envMapIntensity', { min: 0, max: 2, step: 0.05, label: 'envIntensity' })
-        legoFolder.addBinding(legoMaterial, 'sheen', { min: 0, max: 1, step: 0.01, label: 'sheen' })
-        legoFolder.addBinding(legoMaterial, 'sheenRoughness', { min: 0, max: 1, step: 0.01, label: 'sheenRoughness' })
-        legoFolder.addBinding(legoMaterial, 'metalness', { min: 0, max: 1, step: 0.01, label: 'metalness' })
+  if (legoMaterial) {
+    const legoFolder = folder.addFolder({ title: 'Lego Brick', expanded: true })
+    legoFolder.addBinding(legoMaterial, 'roughness', { min: 0, max: 1, step: 0.01, label: 'roughness' })
+    legoFolder.addBinding(legoMaterial, 'clearcoat', { min: 0, max: 1, step: 0.01, label: 'clearcoat' })
+    legoFolder.addBinding(legoMaterial, 'clearcoatRoughness', { min: 0, max: 1, step: 0.01, label: 'clearcoatRoughness' })
+    legoFolder.addBinding(legoMaterial, 'envMapIntensity', { min: 0, max: 2, step: 0.05, label: 'envIntensity' })
+    legoFolder.addBinding(legoMaterial, 'sheen', { min: 0, max: 1, step: 0.01, label: 'sheen' })
+    legoFolder.addBinding(legoMaterial, 'sheenRoughness', { min: 0, max: 1, step: 0.01, label: 'sheenRoughness' })
+    legoFolder.addBinding(legoMaterial, 'metalness', { min: 0, max: 1, step: 0.01, label: 'metalness' })
+    const studs = legoMaterial.userData.studs
+    if (studs) {
+      config.terrain ??= {}
+      const settings = config.terrain.studShading ??= { ...STUD_SHADING_DEFAULTS }
+      const studFolder = legoFolder.addFolder({ title: 'Stud Detail', expanded: true })
+      const syncStuds = () => {
+        Object.assign(settings, syncLegoStudShading(legoMaterial, settings))
+        debug.ui?.refresh()
+      }
+      syncStuds()
+      studFolder.addBinding(settings, 'enabled', { label: 'Enabled' }).on('change', syncStuds)
+      const labels = {
+        strength: 'Strength',
+        radiusScale: 'Radius scale',
+        topBrighten: 'Top brighten',
+        shadow: 'Contact shadow',
+        shadowWidth: 'Shadow width',
+        rimWidth: 'Rim width',
+        tilt: 'Rim tilt',
+        fadeStart: 'Fade start',
+        fadeEnd: 'Fade end',
+      }
+      for (const [key, range] of Object.entries(STUD_SHADING_RANGES))
+        studFolder.addBinding(settings, key, { ...range, label: labels[key] }).on('change', syncStuds)
+      studFolder.addButton({ title: 'Reset defaults' }).on('click', () => {
+        Object.assign(settings, STUD_SHADING_DEFAULTS)
+        syncStuds()
+      })
     }
+  }
 
-    if (waterMaterial) {
-        const waterFolder = folder.addFolder({
-            title: 'Water',
-            expanded: true
+  if (waterMaterial) {
+    const waterFolder = folder.addFolder({
+      title: 'Water',
+      expanded: true,
+    })
+    const waterConfig = config.water
+
+    for (const key of [
+      'textureScale',
+      'flowSpeed',
+      'flowStrength',
+      'flowVariance',
+    ]) {
+      waterFolder
+        .addBinding(waterConfig, key, {
+          min: key === 'textureScale' ? 0.05 : 0,
+          max: key === 'textureScale' ? 2 : key === 'flowSpeed' ? 2 : 1,
+          step: 0.01,
+          label: key,
         })
-        const waterConfig = config.water
-
-        for (const key of [
-            'textureScale',
-            'flowSpeed',
-            'flowStrength',
-            'flowVariance'
-        ]) {
-            waterFolder
-                .addBinding(waterConfig, key, {
-                    min: key === 'textureScale' ? 0.05 : 0,
-                    max: key === 'textureScale' ? 2 : key === 'flowSpeed' ? 2 : 1,
-                    step: 0.01,
-                    label: key
-                })
-                .on('change', ({ value }) => {
-                    const uniformName =
-                        key === 'textureScale'
-                            ? 'uTextureScale'
-                            : key === 'flowSpeed'
-                              ? 'uFlowSpeed'
-                              : key === 'flowStrength'
-                                ? 'uFlowStrength'
-                                : 'uFlowVariance'
-                    const uniform =
-                        waterMaterial.userData.uniforms[uniformName]
-                    if (uniform) {
-                        uniform.value = value
-                    }
-                })
-        }
-
-        for (const key of [
-            'roughness',
-            'clearcoat',
-            'clearcoatRoughness'
-        ]) {
-            waterFolder
-                .addBinding(waterConfig, key, {
-                    min: 0,
-                    max: 1,
-                    step: 0.01,
-                    label: key
-                })
-                .on('change', ({ value }) => {
-                    waterMaterial[key] = value
-                })
-        }
+        .on('change', ({ value }) => {
+          const uniformName
+            = key === 'textureScale'
+              ? 'uTextureScale'
+              : key === 'flowSpeed'
+                ? 'uFlowSpeed'
+                : key === 'flowStrength'
+                  ? 'uFlowStrength'
+                  : 'uFlowVariance'
+          const uniform
+            = waterMaterial.userData.uniforms[uniformName]
+          if (uniform) {
+            uniform.value = value
+          }
+        })
     }
+
+    for (const key of [
+      'roughness',
+      'clearcoat',
+      'clearcoatRoughness',
+    ]) {
+      waterFolder
+        .addBinding(waterConfig, key, {
+          min: 0,
+          max: 1,
+          step: 0.01,
+          label: key,
+        })
+        .on('change', ({ value }) => {
+          for (const material of [waterMaterial, lavaMaterial]) {
+            if (material) {
+              material[key] = value
+            }
+          }
+        })
+    }
+  }
 }

@@ -15,10 +15,12 @@ test('flower and mushroom define instance color palettes', () => {
   })
 })
 
-test('mushroom uses only its first model', () => {
+test('mushroom uses its builder', () => {
   assert.deepEqual(biomePrefabs.landMushroom.variants, [
-    { source: 'landMushroom1Model', weight: 0.5 }
+    { builder: 'mushroom', weight: 0.5 }
   ])
+  assert.equal(sources.some((source) =>
+    source.name === 'landMushroom1Model' || source.path === 'model/prefab/mushroom_1.glb'), false)
 })
 
 test('redundant mushroom sources and files are removed', () => {

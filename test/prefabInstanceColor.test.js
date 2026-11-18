@@ -63,9 +63,10 @@ test('clones and whitens source material without mutating it', () => {
 
 test('reuses instance color material clone for the same source material', () => {
   const source = new THREE.MeshBasicMaterial({ color: '#cc2255' })
+  const cache = new Map()
 
-  const first = resolveInstanceColorMaterial(source)
-  const second = resolveInstanceColorMaterial(source)
+  const first = resolveInstanceColorMaterial(source, cache)
+  const second = resolveInstanceColorMaterial(source, cache)
 
   assert.equal(second, first)
 })

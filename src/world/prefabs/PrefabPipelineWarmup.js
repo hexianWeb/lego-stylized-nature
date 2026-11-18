@@ -1,20 +1,20 @@
 import * as THREE from 'three/webgpu'
-import { resolvePrefabMaterial } from './prefabMaterialTint.js'
-import { resolveTreeMaterial } from './treeMaterial.js'
+import { getPrefabCapacity } from './prefabCapacity.js'
+import { shouldCastPrefabShadow } from './prefabShadows.js'
 import {
   matchesInstanceColorMesh,
   normalizeInstanceColors,
-  resolveInstanceColorMaterial
 } from './prefabInstanceColor.js'
 
 const WARMUP_GROUP_NAME = 'PrefabPipelineWarmup'
 
-export function buildPrefabPipelineWarmupGroup({ prefabRegistry }) {
+export function buildPrefabPipelineWarmupGroup({ prefabRegistry, materials, config }) {
   const group = new THREE.Group()
   group.name = WARMUP_GROUP_NAME
 
   for (const [prefabId, prefabEntry] of Object.entries(prefabRegistry?.manifest ?? {})) {
     const variants = Array.isArray(prefabEntry.variants) ? prefabEntry.variants : []
+    const capacity = getPrefabCapacity(config, prefabEntry)
 
     variants.forEach((variant, variantIndex) => {
       const sourceScene = prefabRegistry.getVariantAsset?.(prefabId, variantIndex)?.scene
@@ -28,10 +28,10 @@ export function buildPrefabPipelineWarmupGroup({ prefabRegistry }) {
           return
         }
 
-        addWarmupMesh(group, child, child.material, 'source')
-        addTintWarmupMeshes(group, child, prefabEntry)
-        addTreeWarmupMeshes(group, child, prefabEntry)
-        addInstanceColorWarmupMesh(group, child, prefabEntry)
+        addWarmupMesh(group, child, child.material, 'source', capacity, prefabEntry)
+        addTintWarmupMeshes(group, child, prefabEntry, materials, capacity)
+        addTreeWarmupMeshes(group, child, prefabEntry, materials, capacity)
+        addInstanceColorWarmupMesh(group, child, prefabEntry, materials, capacity)
       })
     })
   }
@@ -43,50 +43,64 @@ export async function warmupPrefabPipelines({
   renderer,
   scene,
   camera,
-  prefabRegistry
+  prefabRegistry,
+  materials,
+  config,
+  renderFrame = null,
+  retainPipelines = false,
 }) {
   if (typeof renderer?.compileAsync !== 'function' || !scene || !camera || !prefabRegistry) {
     return { compiled: false, meshCount: 0 }
   }
 
-  const group = buildPrefabPipelineWarmupGroup({ prefabRegistry })
+  const group = buildPrefabPipelineWarmupGroup({ prefabRegistry, materials, config })
   const meshCount = countInstancedMeshes(group)
   if (meshCount === 0) {
     return { compiled: false, meshCount: 0 }
   }
 
   scene.add(group)
+  let compiled = false
   try {
     await renderer.compileAsync(scene, camera)
-  } finally {
+    // Exercise the actual target and shadow passes before the animation loop.
+    if (renderFrame) {
+      await renderFrame()
+    }
+    compiled = true
+  }
+  finally {
     scene.remove(group)
-    disposeWarmupGroup(group)
+    if (!compiled || !retainPipelines)
+      disposeWarmupGroup(group)
   }
 
-  return { compiled: true, meshCount }
+  // WebGPU releases unused pipeline cache entries with their RenderObjects.
+  // Keep these objects detached, owned by World until it is disposed.
+  return { compiled: true, meshCount, dispose: () => disposeWarmupGroup(group) }
 }
 
-function addTintWarmupMeshes(group, child, prefabEntry) {
+function addTintWarmupMeshes(group, child, prefabEntry, materials, capacity) {
   for (const tint of Object.values(prefabEntry.biomeTints ?? {})) {
-    addWarmupMesh(group, child, resolvePrefabMaterial(child.material, tint), 'tint')
+    addWarmupMesh(group, child, materials.resolvePrefabMaterial(child.material, tint), 'tint', capacity, prefabEntry)
   }
 }
 
-function addTreeWarmupMeshes(group, child, prefabEntry) {
+function addTreeWarmupMeshes(group, child, prefabEntry, materials, capacity) {
   if (prefabEntry.category !== 'tree') {
     return
   }
 
   const biomeIds = getTreeWarmupBiomeIds(prefabEntry)
   for (const biomeId of biomeIds) {
-    const material = resolveTreeMaterial(child, biomeId)
+    const material = materials.resolveTreeMaterial(child, biomeId)
     if (material) {
-      addWarmupMesh(group, child, material, 'tree', { useInstanceColor: true })
+      addWarmupMesh(group, child, material, 'tree', capacity, prefabEntry, { useInstanceColor: true })
     }
   }
 }
 
-function addInstanceColorWarmupMesh(group, child, prefabEntry) {
+function addInstanceColorWarmupMesh(group, child, prefabEntry, materials, capacity) {
   const instanceColors = normalizeInstanceColors(prefabEntry.instanceColors)
   if (!instanceColors || !matchesInstanceColorMesh(child.name, instanceColors.meshNameSuffix)) {
     return
@@ -95,19 +109,24 @@ function addInstanceColorWarmupMesh(group, child, prefabEntry) {
   addWarmupMesh(
     group,
     child,
-    resolveInstanceColorMaterial(child.material),
+    materials.resolveInstanceColorMaterial(child.material),
     'instanceColor',
-    { color: instanceColors.palette[0] }
+    capacity,
+    prefabEntry,
+    { color: instanceColors.palette[0] },
   )
 }
 
-function addWarmupMesh(group, child, material, materialMode, { color = null, useInstanceColor = false } = {}) {
-  const mesh = new THREE.InstancedMesh(child.geometry, material, 1)
+function addWarmupMesh(group, child, material, materialMode, capacity, prefabEntry, { color = null, useInstanceColor = false } = {}) {
+  const mesh = new THREE.InstancedMesh(child.geometry, material, capacity)
   mesh.name = `PrefabPipelineWarmup:${materialMode}:${child.name || 'mesh'}`
   mesh.userData.prefabWarmupMaterialMode = materialMode
+  mesh.frustumCulled = false
+  mesh.castShadow = shouldCastPrefabShadow(prefabEntry)
+  mesh.receiveShadow = true
   mesh.setMatrixAt(0, new THREE.Matrix4())
   if (color || useInstanceColor) {
-    mesh.setColorAt(0, color ?? new THREE.Color(0xffffff))
+    mesh.setColorAt(0, color ?? new THREE.Color(0xFFFFFF))
     mesh.instanceColor.needsUpdate = true
   }
   mesh.instanceMatrix.needsUpdate = true

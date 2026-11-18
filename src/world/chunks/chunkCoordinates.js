@@ -1,7 +1,7 @@
 export function getRenderChunkCoord(worldBlockX, worldBlockZ, chunkSize) {
   return {
     x: Math.floor(worldBlockX / chunkSize),
-    z: Math.floor(worldBlockZ / chunkSize)
+    z: Math.floor(worldBlockZ / chunkSize),
   }
 }
 
@@ -10,14 +10,14 @@ export function getRenderChunkKey(coord) {
 }
 
 export function parseRenderChunkKey(key) {
-  const [x, z] = key.split(':').map((value) => Number.parseInt(value, 10))
+  const [x, z] = key.split(':').map(value => Number.parseInt(value, 10))
   return { x, z }
 }
 
 export function getRenderChunkOrigin(coord, chunkSize) {
   return {
     x: coord.x * chunkSize,
-    z: coord.z * chunkSize
+    z: coord.z * chunkSize,
   }
 }
 
@@ -26,7 +26,7 @@ export function getRenderChunkWorldPosition(coord, chunkSize, cellSize, debugSpa
 
   return {
     x: coord.x * pitch,
-    z: coord.z * pitch
+    z: coord.z * pitch,
   }
 }
 
@@ -37,7 +37,7 @@ export function getChunkWindowCoords(centerCoord, radius = 1) {
     for (let dx = -radius; dx <= radius; dx++) {
       coords.push({
         x: centerCoord.x + dx,
-        z: centerCoord.z + dz
+        z: centerCoord.z + dz,
       })
     }
   }
@@ -57,23 +57,6 @@ export function getChunkWindowCoords(centerCoord, radius = 1) {
   return coords
 }
 
-export function getPlayerPrefabWindowCoords(worldBlock, chunkSize) {
-  const centerCoord = getRenderChunkCoord(worldBlock.x, worldBlock.z, chunkSize)
-  const localX = worldBlock.x - centerCoord.x * chunkSize
-  const localZ = worldBlock.z - centerCoord.z * chunkSize
-  const xOffset = localX < chunkSize * 0.5 ? -1 : 1
-  const zOffset = localZ < chunkSize * 0.5 ? -1 : 1
-  const xCoords = [centerCoord.x, centerCoord.x + xOffset].sort((a, b) => a - b)
-  const zCoords = [centerCoord.z, centerCoord.z + zOffset].sort((a, b) => a - b)
-
-  return [
-    { x: xCoords[0], z: zCoords[0] },
-    { x: xCoords[1], z: zCoords[0] },
-    { x: xCoords[0], z: zCoords[1] },
-    { x: xCoords[1], z: zCoords[1] }
-  ]
-}
-
 export function getChunkBounds(coord, chunkSize, cellSize, padding = 0) {
   const origin = getRenderChunkOrigin(coord, chunkSize)
   const minX = origin.x * cellSize - padding
@@ -84,17 +67,17 @@ export function getChunkBounds(coord, chunkSize, cellSize, padding = 0) {
     minX,
     maxX: minX + size + padding * 2,
     minZ,
-    maxZ: minZ + size + padding * 2
+    maxZ: minZ + size + padding * 2,
   }
 }
 
 const BOUNDS_EPSILON = 1e-9
 
 export function boundsIntersect(a, b, epsilon = BOUNDS_EPSILON) {
-  return a.minX <= b.maxX + epsilon &&
-    a.maxX + epsilon >= b.minX &&
-    a.minZ <= b.maxZ + epsilon &&
-    a.maxZ + epsilon >= b.minZ
+  return a.minX <= b.maxX + epsilon
+    && a.maxX + epsilon >= b.minX
+    && a.minZ <= b.maxZ + epsilon
+    && a.maxZ + epsilon >= b.minZ
 }
 
 export function getCameraWorldBounds(camera, padding = 0) {
@@ -121,7 +104,7 @@ function getAxisAlignedOrthographicCameraBounds(camera, padding = 0) {
     minX: x - halfWidth - padding,
     maxX: x + halfWidth + padding,
     minZ: z - halfDepth - padding,
-    maxZ: z + halfDepth + padding
+    maxZ: z + halfDepth + padding,
   }
 }
 
@@ -148,14 +131,14 @@ function getProjectedOrthographicCameraBounds(camera, padding = 0) {
     projectOrthographicCornerToGround(cameraPosition, cameraRight, cameraUp, cameraForward, left, top),
     projectOrthographicCornerToGround(cameraPosition, cameraRight, cameraUp, cameraForward, right, top),
     projectOrthographicCornerToGround(cameraPosition, cameraRight, cameraUp, cameraForward, left, bottom),
-    projectOrthographicCornerToGround(cameraPosition, cameraRight, cameraUp, cameraForward, right, bottom)
+    projectOrthographicCornerToGround(cameraPosition, cameraRight, cameraUp, cameraForward, right, bottom),
   ]
 
   return {
-    minX: Math.min(...projectedCorners.map((corner) => corner.x)) - padding,
-    maxX: Math.max(...projectedCorners.map((corner) => corner.x)) + padding,
-    minZ: Math.min(...projectedCorners.map((corner) => corner.z)) - padding,
-    maxZ: Math.max(...projectedCorners.map((corner) => corner.z)) + padding
+    minX: Math.min(...projectedCorners.map(corner => corner.x)) - padding,
+    maxX: Math.max(...projectedCorners.map(corner => corner.x)) + padding,
+    minZ: Math.min(...projectedCorners.map(corner => corner.z)) - padding,
+    maxZ: Math.max(...projectedCorners.map(corner => corner.z)) + padding,
   }
 }
 
@@ -165,32 +148,32 @@ function projectOrthographicCornerToGround(
   cameraUp,
   cameraForward,
   localX,
-  localY
+  localY,
 ) {
   const corner = {
     x: cameraPosition.x + cameraRight.x * localX + cameraUp.x * localY,
     y: cameraPosition.y + cameraRight.y * localX + cameraUp.y * localY,
-    z: cameraPosition.z + cameraRight.z * localX + cameraUp.z * localY
+    z: cameraPosition.z + cameraRight.z * localX + cameraUp.z * localY,
   }
   const distanceToGround = -corner.y / cameraForward.y
 
   return {
     x: corner.x + cameraForward.x * distanceToGround,
-    z: corner.z + cameraForward.z * distanceToGround
+    z: corner.z + cameraForward.z * distanceToGround,
   }
 }
 
 export function toLocalCell(origin, worldBlockX, worldBlockZ) {
   return {
     x: worldBlockX - origin.x,
-    z: worldBlockZ - origin.z
+    z: worldBlockZ - origin.z,
   }
 }
 
 export function getWorldBlockFromPosition(worldX, worldZ, cellSize) {
   return {
     x: Math.floor(worldX / cellSize),
-    z: Math.floor(worldZ / cellSize)
+    z: Math.floor(worldZ / cellSize),
   }
 }
 
@@ -201,13 +184,15 @@ export function getPrefetchChunkCoord(activeCoord, localCell, chunkSize, thresho
 
   if (localCell.x < edge) {
     x -= 1
-  } else if (localCell.x >= chunkSize - edge) {
+  }
+  else if (localCell.x >= chunkSize - edge) {
     x += 1
   }
 
   if (localCell.z < edge) {
     z -= 1
-  } else if (localCell.z >= chunkSize - edge) {
+  }
+  else if (localCell.z >= chunkSize - edge) {
     z += 1
   }
 

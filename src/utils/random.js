@@ -45,7 +45,7 @@ export function pickWeighted(entries, randomValue) {
   let cursor = randomValue * total
   for (const entry of entries) {
     cursor -= entry.weight
-    if (cursor <= 0) {
+    if (entry.weight > 0 && cursor <= 0) {
       return entry.value
     }
   }

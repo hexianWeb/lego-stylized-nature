@@ -77,3 +77,58 @@ test('chunk render slot delays prefab build until requested and resets on repopu
   slot.ensurePrefabsBuilt()
   assert.equal(prefabBuilds, 2)
 })
+
+test('terrain, liquid pages and deferred prefabs follow the same column progress', (t) => {
+  const geometry = new THREE.BoxGeometry(0.8, 0.8, 0.8)
+  const material = new THREE.MeshBasicMaterial()
+  const meshes = []
+  function makeRenderer(height) {
+    const renderer = createRenderer()
+    const mesh = new THREE.InstancedMesh(geometry, material, 1)
+    mesh.setMatrixAt(0, new THREE.Matrix4().makeTranslation(0.5, height, 0.5))
+    renderer.group.add(mesh)
+    meshes.push(mesh)
+    return renderer
+  }
+  const terrain = makeRenderer(2)
+  const water = makeRenderer(3)
+  const lava = makeRenderer(4)
+  const prefab = createRenderer()
+  prefab.build = () => {
+    const mesh = new THREE.InstancedMesh(geometry, material, 1)
+    mesh.setMatrixAt(0, new THREE.Matrix4().makeTranslation(0.5, 5, 0.5))
+    prefab.group.add(mesh)
+    meshes.push(mesh)
+  }
+  const slot = new ChunkRenderSlot({
+    index: 0,
+    chunkSize: 2,
+    cellSize: 1,
+    terrainRenderer: terrain,
+    heightfieldAO: { build() {} },
+    waterRenderer: water,
+    lavaRenderer: lava,
+    prefabPlacer: prefab,
+  })
+  t.after(() => {
+    slot.dispose()
+    meshes.forEach(mesh => mesh.dispose())
+    geometry.dispose()
+    material.dispose()
+  })
+  slot.populate({ coord: { x: 0, z: 0 }, terrainMap: {}, placements: [], colorResolver: {} })
+  slot.startLoading({ x: 1, z: 0 }, { columnDuration: 1, waveDuration: 1, riseDistance: 2 })
+  slot.updateTransition(0.5)
+  slot.ensurePrefabsBuilt()
+  slot.setPrefabsVisible(true)
+
+  assert.deepEqual(meshes.map(mesh => mesh.instanceMatrix.array[5]), [0.5, 0.5, 0.5, 0.5])
+  assert.deepEqual(meshes.map(mesh => mesh.instanceMatrix.array[13]), [0, 0.5, 1, 1.5])
+  assert.equal(prefab.group.visible, true)
+  assert.equal(slot.group.visible, true)
+
+  slot.populate({ coord: { x: -1, z: 0 }, terrainMap: {}, placements: [], colorResolver: {} })
+  assert.equal(slot.columnTransition, null)
+  assert.deepEqual(meshes.map(mesh => mesh.instanceMatrix.array[13]), [2, 3, 4, 5])
+  assert.equal(prefab.group.visible, false)
+})

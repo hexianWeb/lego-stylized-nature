@@ -6,21 +6,22 @@ const CONTROL_CODES = [
   'ArrowUp',
   'ArrowDown',
   'ArrowLeft',
-  'ArrowRight'
+  'ArrowRight',
 ]
 
 function createEmptyKeys() {
-  return Object.fromEntries(CONTROL_CODES.map((code) => [code, false]))
+  return Object.fromEntries(CONTROL_CODES.map(code => [code, false]))
 }
 
 export default class AircraftInput {
   constructor(target = globalThis.window ?? null) {
     this.target = target
     this.keys = createEmptyKeys()
+    this.virtualKeys = createEmptyKeys()
     this.isAttached = false
 
-    this._onKeyDown = (event) => this.handleKeyDown(event)
-    this._onKeyUp = (event) => this.handleKeyUp(event)
+    this._onKeyDown = event => this.handleKeyDown(event)
+    this._onKeyUp = event => this.handleKeyUp(event)
     this._onBlur = () => this.clear()
   }
 
@@ -51,10 +52,17 @@ export default class AircraftInput {
 
   clear() {
     this.keys = createEmptyKeys()
+    this.virtualKeys = createEmptyKeys()
+  }
+
+  setVirtualKey(code, pressed) {
+    if (CONTROL_CODES.includes(code)) {
+      this.virtualKeys[code] = Boolean(pressed)
+    }
   }
 
   getKeys() {
-    return { ...this.keys }
+    return Object.fromEntries(CONTROL_CODES.map(code => [code, this.keys[code] || this.virtualKeys[code]]))
   }
 
   dispose() {

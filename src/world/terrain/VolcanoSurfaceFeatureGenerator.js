@@ -6,7 +6,7 @@ const DEFAULT_LAVA = {
   minVolcanoWeight: 0.65,
   poolCellScale: 18,
   poolEdgeWarp: 0.12,
-  maxSlope: 4
+  maxSlope: 4,
 }
 
 export default class VolcanoSurfaceFeatureGenerator {
@@ -59,9 +59,9 @@ export default class VolcanoSurfaceFeatureGenerator {
     }
 
     const volcanoWeight = biomeCell.weights.volcano ?? 0
-    return volcanoWeight >= lavaConfig.minVolcanoWeight &&
-      !surfaceCell.isWater &&
-      surfaceCell.slope <= lavaConfig.maxSlope
+    return volcanoWeight >= lavaConfig.minVolcanoWeight
+      && !surfaceCell.isWater
+      && surfaceCell.slope <= lavaConfig.maxSlope
   }
 
   isPoolCell(x, z, lavaConfig) {
@@ -100,7 +100,7 @@ export default class VolcanoSurfaceFeatureGenerator {
   }
 
   assignPoolHeights(surfaceCells, width, depth) {
-    const visited = Array.from({ length: depth }, () => Array(width).fill(false))
+    const visited = Array.from({ length: depth }, () => new Array(width).fill(false))
 
     for (let z = 0; z < depth; z++) {
       for (let x = 0; x < width; x++) {
@@ -147,7 +147,7 @@ export default class VolcanoSurfaceFeatureGenerator {
       [x + 1, z],
       [x - 1, z],
       [x, z + 1],
-      [x, z - 1]
+      [x, z - 1],
     ]
   }
 }

@@ -11,7 +11,10 @@ test('commonRock defines biome tint config for all current land biomes', () => {
     'autumnForest',
     'desert',
     'forest',
-    'volcano'
+    'meadow',
+    'snowForest',
+    'volcano',
+    'wetland'
   ])
 })
 
@@ -19,7 +22,9 @@ test('landGrass defines biome tint config for grass-hosting land biomes', () => 
   assert.deepEqual(Object.keys(biomePrefabs.landGrass.biomeTints).sort(), [
     'autumnForest',
     'desert',
-    'forest'
+    'forest',
+    'meadow',
+    'wetland'
   ])
 })
 

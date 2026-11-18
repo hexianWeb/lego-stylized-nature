@@ -33,7 +33,7 @@ export class WebGLFallbackRenderer {
     this.instance.toneMapping = ACESFilmicToneMapping
     this.instance.toneMappingExposure = 0.9
     this.instance.shadowMap.enabled = true
-    this.instance.shadowMap.type = PCFShadowMap ?? PCFSoftShadowMap
+    this.instance.shadowMap.type = PCFSoftShadowMap
     this.kind = 'webgl-fallback'
   }
 

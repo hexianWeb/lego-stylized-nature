@@ -1,26 +1,26 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Lego Sandbox</title>
-    <link rel="manifest" href="/manifest.json">
-    <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400..900&display=swap" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#315c45">
+    <title>积木旷野 · LEGO Flight Explorer</title>
     <link rel="stylesheet" href="./style.css">
+    <link rel="stylesheet" href="./sandbox.css">
 </head>
 <body>
+    <canvas class="webgl" aria-label="积木旷野，使用 W A S D 或方向键驾驶，拖动旋转视角" tabindex="0"></canvas>
+    <div id="explorer-ui"></div>
+    <!-- Sandbox-mode overlays (#sandbox); hidden on the explorer route. -->
     <p id="app-error" class="app-error" hidden></p>
-    <div class="sandbox-loading" id="sandbox-loading">
+    <div class="sandbox-loading is-hidden" id="sandbox-loading">
         <span>Loading sandbox</span>
         <span class="sandbox-loading__dot"></span>
         <span class="sandbox-loading__dot"></span>
         <span class="sandbox-loading__dot"></span>
     </div>
-    <canvas class="webgl"></canvas>
     <div class="line-box-overlay" aria-hidden="true"></div>
+    <noscript>请启用 JavaScript，开始探索积木旷野。</noscript>
     <script type="module" src="./script.js"></script>
 </body>
 </html>

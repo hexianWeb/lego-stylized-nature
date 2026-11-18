@@ -1,25 +1,27 @@
-import * as THREE from 'three/webgpu'
 import {
+  dot,
+  float,
+  Fn,
+  mix,
   pass,
   renderOutput,
-  Fn,
-  float,
   screenUV,
-  smoothstep
+  smoothstep,
+  vec3,
+  vec4,
 } from 'three/tsl'
-import { smaa } from 'three/addons/tsl/display/SMAANode.js'
-import { createTiltShiftEffect } from './postprocessing/createTiltShiftEffect.js'
-import { TILT_SHIFT_DEFAULTS } from './postprocessing/tiltShiftConfig.js'
-import { createSpeedLinesEffect } from './postprocessing/createSpeedLinesEffect.js'
-import {
-  SPEED_LINES_DEFAULTS,
-  normalizeSpeedLinesConfig
-} from './postprocessing/speedLinesConfig.js'
+import * as THREE from 'three/webgpu'
+import { installObjectResourceCleanup } from './installObjectResourceCleanup.js'
+import { installPrefabRenderPreparation } from './installPrefabRenderPreparation.js'
 
 // dist is scaled so screen corners sit near 1.0 (~sqrt(2)/2 * 1.42)
 const VIGNETTE_INNER = 0.22
 const VIGNETTE_OUTER = 0.92
-const VIGNETTE_AMOUNT = 0.2
+// Linear 0.6 converts to about sRGB 0.8, matching the previous corner darkening.
+const VIGNETTE_AMOUNT = 0.42
+const TOY_CONTRAST_STRENGTH = 0.18
+const TOY_SATURATION = 1.22
+const LUMA_WEIGHTS = vec3(0.2126, 0.7152, 0.0722)
 
 const applyVignette = Fn(() => {
   const dist = screenUV.sub(0.5).length().mul(1.42)
@@ -27,75 +29,53 @@ const applyVignette = Fn(() => {
   return float(1.0).sub(mask.mul(VIGNETTE_AMOUNT))
 })
 
+const applyToyGrade = Fn(([rgb]) => {
+  const clamped = rgb.clamp(0.0, 1.0)
+  const contrasted = mix(clamped, smoothstep(0.0, 1.0, clamped), TOY_CONTRAST_STRENGTH)
+  const luma = dot(contrasted, LUMA_WEIGHTS)
+  return mix(vec3(luma), contrasted, TOY_SATURATION).max(0.0)
+})
+
 export default class Renderer {
   /**
    * @param {{
    *   canvas: HTMLCanvasElement,
+   *   trackTimestamp?: boolean,
    *   postProcessing?: {
-   *     tiltShift?: {
-   *       enabled?: boolean,
-   *       focusCenter?: number,
-   *       focusWidth?: number,
-   *       falloff?: number,
-   *       blurStrength?: number
-   *     },
-   *     speedLines?: {
-   *       enabled?: boolean,
-   *       color?: { r?: number, g?: number, b?: number },
-   *       density?: number,
-   *       speed?: number,
-   *       thickness?: number,
-   *       minRadius?: number,
-   *       maxRadius?: number,
-   *       randomness?: number,
-   *       opacity?: number
-   *     }
+   *     enabled?: boolean
    *   }
    * }} options
    */
-  constructor({ canvas, postProcessing = {} }) {
+  constructor({ canvas, postProcessing = {}, trackTimestamp = false }) {
+    // Fail fast when WebGPU is unavailable so callers can take the
+    // WebGL-fallback path (sandbox mode) instead of hanging.
     if (typeof navigator !== 'undefined' && navigator.gpu === undefined) {
       throw new Error('navigator.gpu is undefined (no WebGPU support)')
     }
     this.instance = new THREE.WebGPURenderer({
       canvas,
-      forceWebGL: false
+      forceWebGL: false,
+      trackTimestamp,
+      antialias: true,
     })
     this.instance.outputColorSpace = THREE.SRGBColorSpace
     this.instance.toneMapping = THREE.ACESFilmicToneMapping
-    this.instance.toneMappingExposure = 0.9
+    this.instance.toneMappingExposure = 1.22
     this.instance.shadowMap.enabled = true
-    this.instance.shadowMap.type = THREE.BasicShadowMap
+    this.instance.shadowMap.type = THREE.PCFSoftShadowMap
+    // Count all scene, shadow and postprocessing passes in one game frame.
+    this.instance.info.autoReset = false
 
-    this.tiltShiftConfig =
-      postProcessing.tiltShift ?? { ...TILT_SHIFT_DEFAULTS }
-    this.speedLinesConfig = normalizeSpeedLinesConfig(
-      postProcessing.speedLines ?? SPEED_LINES_DEFAULTS
-    )
+    this.postProcessingEnabled = postProcessing.enabled !== false
 
     /** @type {THREE.RenderPipeline | null} */
     this.renderPipeline = null
-    this.tiltShiftEffect = null
-    this.speedLinesEffect = null
-    this.outputNodes = null
-
-    this.postProcessingController = Object.freeze({
-      setTiltShiftEnabled: (enabled) => {
-        this.setTiltShiftEnabled(enabled)
-      },
-      syncTiltShift: (config) => {
-        this.syncTiltShift(config)
-      },
-      setSpeedLinesEnabled: (enabled) => {
-        this.setSpeedLinesEnabled(enabled)
-      },
-      setSpeedLineOpacity: (opacity) => {
-        this.setSpeedLineOpacity(opacity)
-      },
-      syncSpeedLines: (config) => {
-        this.syncSpeedLines(config)
-      }
-    })
+    this.scene = null
+    this.camera = null
+    this.pipelineNodes = []
+    this.initialized = false
+    this.disposed = false
+    this.prefabPreparation = null
   }
 
   /**
@@ -103,87 +83,28 @@ export default class Renderer {
    * @param {THREE.Camera} camera
    */
   attachPipeline(scene, camera) {
-    this.tiltShiftEffect?.dispose()
-    this.renderPipeline?.dispose()
+    this.disposePipeline()
+    this.scene = scene
+    this.camera = camera
 
-    const scenePass = pass(scene, camera)
-    const sceneColor = scenePass.getTextureNode('output')
-    this.speedLinesEffect = createSpeedLinesEffect(
-      sceneColor,
-      this.speedLinesConfig
-    )
-    this.tiltShiftEffect = createTiltShiftEffect(
-      this.speedLinesEffect.outputNode,
-      this.tiltShiftConfig
-    )
-
-    this.outputNodes = {
-      tiltShiftEnabled: this.createFinalOutput(
-        this.tiltShiftEffect.enabledOutput
-      ),
-      tiltShiftDisabled: this.createFinalOutput(
-        this.tiltShiftEffect.disabledOutput
-      )
-    }
-
-    this.renderPipeline = new THREE.RenderPipeline(this.instance)
-    this.renderPipeline.outputColorTransform = false
-    this.setTiltShiftEnabled(this.tiltShiftConfig.enabled)
-  }
-
-  createFinalOutput(sceneColor) {
-    const color = renderOutput(sceneColor)
-    const vignetted = color.mul(applyVignette())
-    return smaa(vignetted)
-  }
-
-  setTiltShiftEnabled(enabled) {
-    const nextEnabled = enabled === true
-    this.tiltShiftConfig.enabled = nextEnabled
-
-    if (!this.renderPipeline || !this.outputNodes) {
+    if (!this.postProcessingEnabled) {
       return
     }
 
-    this.renderPipeline.outputNode = nextEnabled
-      ? this.outputNodes.tiltShiftEnabled
-      : this.outputNodes.tiltShiftDisabled
+    const scenePass = pass(scene, camera)
+    this.pipelineNodes.push(scenePass)
+    const sceneColor = scenePass.getTextureNode('output')
+
+    this.renderPipeline = new THREE.RenderPipeline(this.instance)
+    this.renderPipeline.outputColorTransform = false
+    this.renderPipeline.outputNode = this.createFinalOutput(sceneColor)
   }
 
-  syncTiltShift(config = {}) {
-    Object.assign(this.tiltShiftConfig, config)
-    this.tiltShiftEffect?.sync(this.tiltShiftConfig)
-  }
-
-  setSpeedLinesEnabled(enabled) {
-    this.speedLinesConfig.enabled = enabled === true
-    this.speedLinesEffect?.setEnabled(enabled)
-  }
-
-  setSpeedLineOpacity(opacity) {
-    const nextOpacity = THREE.MathUtils.clamp(opacity, 0, 1)
-    this.speedLinesConfig.opacity = nextOpacity
-    this.speedLinesEffect?.setOpacity(nextOpacity)
-  }
-
-  syncSpeedLines(config = {}) {
-    Object.assign(this.speedLinesConfig, config)
-    if (config.color) {
-      this.speedLinesConfig.color = {
-        ...this.speedLinesConfig.color,
-        ...config.color
-      }
-    }
-    this.speedLinesEffect?.sync(this.speedLinesConfig)
-  }
-
-  /**
-   * @param {number} elapsedSec
-   */
-  updatePostProcessingTime(elapsedSec) {
-    if (this.speedLinesEffect) {
-      this.speedLinesEffect.uniforms.uTime.value = elapsedSec
-    }
+  createFinalOutput(sceneColor) {
+    const color = renderOutput(sceneColor, this.instance.toneMapping, THREE.LinearSRGBColorSpace)
+    const graded = applyToyGrade(color.rgb)
+    const vignetted = vec4(graded.mul(applyVignette()), color.a)
+    return renderOutput(vignetted, THREE.NoToneMapping, THREE.SRGBColorSpace)
   }
 
   async init() {
@@ -197,6 +118,31 @@ export default class Renderer {
         5000
       ))
     ])
+    this.initialized = true
+    if (this.disposed) {
+      this.instance.dispose()
+      throw new Error('[Renderer] Disposed during initialization')
+    }
+    this.objectResourceCleanup = installObjectResourceCleanup(this.instance)
+    this.prefabPreparation = installPrefabRenderPreparation(this.instance)
+  }
+
+  releaseSceneObjects(group) {
+    this.prefabPreparation?.releaseGroup(group)
+    this.objectResourceCleanup?.releaseGroup(group)
+  }
+
+  async prepareVisiblePrefabs() {
+    // Rendering discovers the exact main and shadow RenderObjects. Preparing one
+    // pass may expose another, so drain until a complete render queues no work.
+    if (!this.prefabPreparation)
+      return
+    do {
+      await this.prefabPreparation.whenIdle()
+      if (this.disposed)
+        return
+      this.render()
+    } while (this.prefabPreparation.metrics.pending > 0)
   }
 
   /**
@@ -208,15 +154,44 @@ export default class Renderer {
   }
 
   render() {
-    this.renderPipeline.render()
+    this.instance.info?.reset()
+    if (this.postProcessingEnabled) {
+      this.renderPipeline.render()
+    }
+    else {
+      this.instance.render(this.scene, this.camera)
+    }
+  }
+
+  disposePipeline() {
+    this.renderPipeline?.dispose()
+    const nodes = new Set(this.pipelineNodes ?? [])
+    for (const node of nodes) {
+      // r185's RTTNode inherits Node.dispose() without releasing these allocations.
+      if (node.isRTTNode) {
+        node.renderTarget.dispose()
+        node._quadMesh.material.dispose()
+      }
+      node.dispose()
+    }
+    this.pipelineNodes = []
+    this.renderPipeline = null
   }
 
   dispose() {
-    this.tiltShiftEffect?.dispose()
-    this.renderPipeline?.dispose()
-    this.tiltShiftEffect = null
-    this.speedLinesEffect = null
-    this.renderPipeline = null
-    this.outputNodes = null
+    if (this.disposed) {
+      return
+    }
+    this.disposed = true
+    this.prefabPreparation?.dispose()
+    this.prefabPreparation = null
+    this.disposePipeline()
+    // r185's dispose() calls setAnimationLoop(), which initializes an unready renderer.
+    if (this.initialized) {
+      this.instance.dispose()
+    }
+    this.scene = null
+    this.camera = null
+    this.objectResourceCleanup = null
   }
 }

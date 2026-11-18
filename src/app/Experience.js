@@ -1,158 +1,316 @@
 import * as THREE from 'three/webgpu'
+import ExplorerAudio from '../audio/ExplorerAudio.js'
 import Debug from '../debug/Debug.js'
+import { createPerformancePanel } from '../debug/panels/PerformancePanel.js'
+import Renderer from '../renderer/Renderer.js'
+import Sizes from '../systems/Sizes.js'
+import Time from '../systems/Time.js'
+import ExplorerUI from '../ui/ExplorerUI.js'
 import Resources from '../utils/Resources.js'
 import WorldCamera from '../world/camera.js'
 import Environment from '../world/environment.js'
 import World from '../world/world.js'
-import Sizes from '../systems/Sizes.js'
-import Time from '../systems/Time.js'
-import Renderer from '../renderer/Renderer.js'
-import { WebGLFallbackRenderer } from '../renderer/WebGLFallbackRenderer.js'
 import { worldConfig } from '../world/WorldConfig.js'
-import { createPostProcessingPanel } from '../debug/panels/PostProcessingPanel.js'
-import { Sandbox } from '../sandbox/Sandbox.js'
 
 export default class Experience {
-    /**
-     * @param {HTMLCanvasElement} canvas
-     */
-    constructor(canvas) {
-        this.canvas = canvas
+  /**
+   * @param {HTMLCanvasElement} canvas
+   */
+  constructor(canvas) {
+    this.canvas = canvas
 
-        this.debug = new Debug()
-        this.sizes = new Sizes()
-        this.time = new Time()
-        this.renderer = new Renderer({
-            canvas,
-            postProcessing: worldConfig.postProcessing
-        })
+    this.debug = new Debug()
+    this.sizes = new Sizes()
+    this.time = new Time()
+    this.renderer = new Renderer({
+      canvas,
+      postProcessing: worldConfig.postProcessing,
+      trackTimestamp: this.debug.active,
+    })
 
-        this.scene = new THREE.Scene()
-        this.environment = new Environment(this.scene)
+    this.scene = new THREE.Scene()
+    this.environment = new Environment(this.scene)
 
-        this.worldCamera = new WorldCamera(canvas, this.sizes)
-        this.scene.add(this.worldCamera.instance)
+    this.worldCamera = new WorldCamera(canvas, this.sizes)
+    this.scene.add(this.worldCamera.instance)
 
-        this.resources = new Resources()
-        this.world = new World(this)
-        this.sandbox = new Sandbox({ experience: this })
+    this.resources = new Resources()
+    this.world = new World(this)
+    this.audio = new ExplorerAudio(this)
+    const uiRoot = document.getElementById('explorer-ui')
+    this.ui = uiRoot ? new ExplorerUI(uiRoot, this) : null
 
-        /** @type {(() => void) | null} */
-        this._unsubscribeResize = null
+    /** @type {(() => void) | null} */
+    this._unsubscribeResize = null
+    this.performance = {
+      frameMs: 0,
+      cpuMs: 0,
+      gpuMs: 0,
+      gpuTiming: 'unavailable',
+      drawCalls: 0,
+      triangles: 0,
+      geometries: 0,
+      textures: 0,
+      waterInstances: 0,
+      chunkBuildMs: 0,
+      prefabBuildMs: 0,
+      prefabPreparePending: 0,
+      prefabPrepareMaxSliceMs: 0,
+      prefabPrepareFailed: 0,
+    }
+    this.initTimings = {}
+    this._gpuTimingPending = false
+    this.platformPaused = false
+    /** @type {(() => void) | null} */
+    this._unregisterPlatform = null
+    this.disposed = false
+  }
+
+  /**
+   * Host pause freezes simulation and presentation. The in-game pause button
+   * still only stops the aircraft, and both states stay visible to the platform.
+   */
+  setPlatformPaused(paused) {
+    this.platformPaused = Boolean(paused)
+    if (this.platformPaused) {
+      this.world.playerAircraft?.setPaused(true)
+      this.audio?.update(performance.now())
+      return
+    }
+    if (this.ui) {
+      this.ui.syncPause()
+      return
+    }
+    this.world.playerAircraft?.setPaused(false)
+  }
+
+  isSimulationPaused() {
+    return this.platformPaused || this.world.playerAircraft?.paused === true
+  }
+
+  async init({ deferReady = false } = {}) {
+    if (this.disposed) {
+      throw new Error('[Experience] Already disposed')
+    }
+    const started = performance.now()
+    this.renderer.attachPipeline(this.scene, this.worldCamera.instance)
+    await this.renderer.init()
+    this.ui?.setStage('正在收集积木与树木…')
+    const rendererReady = performance.now()
+    this.initTimings.rendererMs = rendererReady - started
+    await this.resources.ready
+    const resourcesReady = performance.now()
+    this.initTimings.resourcesWaitMs = resourcesReady - rendererReady
+    this.resources.assertRequired()
+    this.environment.applyEnvironmentMap(
+      this.renderer.instance,
+      this.resources.items.studioEnvMap,
+    )
+    this.resources.release('studioEnvMap')
+    const environmentReady = performance.now()
+    this.initTimings.environmentMs = environmentReady - resourcesReady
+    this.world.build()
+    this.ui?.setStage('正在点亮这片旷野…')
+    const worldReady = performance.now()
+    this.initTimings.worldMs = worldReady - environmentReady
+
+    this.time.connectDocument(document)
+
+    this._unsubscribeResize = this.sizes.onResize(() => {
+      this.resize()
+    })
+
+    this.renderer.instance.setClearColor(this.environment.clearColor)
+    this.resize()
+    await this.world.warmupPrefabPipelines(
+      this.renderer.instance,
+      this.worldCamera.instance,
+      () => this.renderer.render(),
+    )
+    await this.renderer.prepareVisiblePrefabs?.()
+    this.initTimings.warmupMs = performance.now() - worldReady
+    this.initTimings.totalMs = performance.now() - started
+    if (this.disposed) {
+      throw new Error('[Experience] Disposed during initialization')
     }
 
-    async init() {
-        this.renderer.attachPipeline(this.scene, this.worldCamera.instance)
-        let useWebGL = false
-        try {
-            await this.renderer.init()
-        } catch (err) {
-            console.warn('[Experience] WebGPU init failed, falling back to WebGL:', err)
-            try { this.renderer.dispose?.() } catch (e) { /* ignore */ }
-            try {
-                this.renderer = new WebGLFallbackRenderer({ canvas: this.canvas })
-                this.renderer.attachPipeline(this.scene, this.worldCamera.instance)
-                useWebGL = true
-                if (typeof window !== 'undefined') {
-                    window.__sandbox_use_webgl = true
-                }
-            } catch (webglErr) {
-                console.warn('[Experience] WebGL fallback failed, switching to 2D SSR mode:', webglErr)
-                if (typeof window !== 'undefined') {
-                    window.__sandbox_2d_only = true
-                }
-                // Renderer is a no-op stub; the 2D grid renders below.
-                this.renderer = {
-                    instance: { setClearColor: () => {}, setSize: () => {}, setPixelRatio: () => {}, dispose: () => {} },
-                    attachPipeline: () => {},
-                    render: () => {},
-                    setSizeFromSizes: () => {},
-                    postProcessingController: { setTiltShiftEnabled: () => {}, setSpeedLinesEnabled: () => {} },
-                    kind: 'ssr-2d',
-                    dispose: () => {}
-                }
-            }
-        }
-        await this.resources.ready
-        if (!useWebGL && this.resources.items.studioEnvMap) {
-            this.environment.applyEnvironmentMap(
-                this.renderer.instance,
-                this.resources.items.studioEnvMap
-            )
-        } else {
-            this.environment.applyRoomEnvironment(this.renderer.instance)
-        }
-        this.world.build()
-        await this.sandbox.init()
+    if (this.debug.active) {
+      createPerformancePanel(this.debug, this)
+      this.environment.debuggerInit(this.debug)
+      this.worldCamera.debuggerInit(this.debug)
+      this.world.debuggerInit(this.debug)
+    }
+    if (!deferReady) {
+      this.audio?.setReady()
+      this.ui?.setReady()
+    }
+  }
 
-        this.time.connectDocument(document)
-
-        this._unsubscribeResize = this.sizes.onResize(() => {
-            this.resize()
-        })
-
-        if (this.renderer.instance?.setClearColor && this.environment.fogColor) {
-            this.renderer.instance.setClearColor(this.environment.fogColor.value)
-        }
-        this.resize()
-        if (!useWebGL) {
-            await this.world.warmupPrefabPipelines(
-                this.renderer.instance,
-                this.worldCamera.instance
-            )
-        }
-
-        if (this.debug.active && !useWebGL) {
-            this.environment.debuggerInit(this.debug)
-            this.worldCamera.debuggerInit(this.debug)
-            this.world.debuggerInit(this.debug)
-            createPostProcessingPanel(
-                this.debug,
-                worldConfig,
-                this.renderer.postProcessingController
-            )
-        }
+  /**
+   * Call after start(). The first live frames stay behind the clouds,
+   * then the veil breaks open and flight controls are released.
+   */
+  async present() {
+    if (this.disposed) {
+      return
+    }
+    this.audio?.setReady()
+    if (!this.ui) {
+      return
     }
 
-    resize() {
-        this.worldCamera.resize()
-        this.renderer.setSizeFromSizes(this.sizes)
+    const player = this.world.playerAircraft
+    if (player?.enabled) {
+      player.input.clear()
+      player.input.dispose()
     }
 
-    start() {
-        this.renderer.instance.setAnimationLoop((timestamp) => {
-            this.update(timestamp)
-        })
+    this.ui.setStage('即将穿出云层…')
+    await new Promise((resolve) => {
+      const timer = setTimeout(() => {
+        this._cancelPresent = null
+        resolve()
+      }, 1500)
+      this._cancelPresent = () => {
+        clearTimeout(timer)
+        this._cancelPresent = null
+        resolve()
+      }
+    })
+    if (this.disposed) {
+      return
     }
 
-    /**
-     * @param {number} timestamp
-     */
-    update(timestamp) {
-        this.time.update(timestamp)
-        this.worldCamera.update()
-        this.world.update()
-        this.sandbox.update()
-        this.renderer.updatePostProcessingTime(this.time.getElapsed())
-        this.renderer.render()
+    await this.ui.playCloudReveal()
+    if (this.disposed) {
+      return
     }
 
-    dispose() {
-        this.renderer.instance.setAnimationLoop(null)
-        this._unsubscribeResize?.()
-        this._unsubscribeResize = null
-
-        this.world.dispose()
-        this.sandbox.dispose()
-        this.environment.dispose()
-        this.worldCamera.dispose()
-        this.debug.dispose()
-        this.sizes.dispose()
-        this.time.dispose()
-        this.renderer.dispose()
-
-        if (typeof this.renderer.instance.dispose === 'function') {
-            this.renderer.instance.dispose()
-        }
+    if (player?.enabled && !player.paused) {
+      player.input.attach()
     }
+    this.ui.setReady()
+  }
+
+  resize() {
+    this.worldCamera.resize()
+    this.renderer.setSizeFromSizes(this.sizes)
+  }
+
+  start() {
+    this.renderer.instance.setAnimationLoop((timestamp) => {
+      this.update(timestamp)
+    })
+  }
+
+  /**
+   * @param {number} timestamp
+   */
+  update(timestamp) {
+    const started = this.debug.active ? performance.now() : 0
+    this.time.update(timestamp)
+    if (this.platformPaused) {
+      return
+    }
+    this.worldCamera.update()
+    this.world.update()
+    this.audio?.update(timestamp)
+    this.ui?.update(timestamp)
+    this.renderer.render()
+    if (this.debug.active) {
+      this.performance.frameMs = this.time.getDelta() * 1000
+      this.performance.cpuMs = performance.now() - started
+      this.updatePerformanceMetrics()
+    }
+  }
+
+  updatePerformanceMetrics() {
+    const renderer = this.renderer.instance
+    const manager = this.world.terrainChunkManager
+    const preparation = this.renderer.prefabPreparation?.metrics
+    Object.assign(this.performance, {
+      drawCalls: renderer.info.render.drawCalls,
+      triangles: renderer.info.render.triangles,
+      geometries: renderer.info.memory.geometries,
+      textures: renderer.info.memory.textures,
+      waterInstances: manager
+        ? manager.slots.reduce((count, slot) => count + (slot.waterRenderer?.instanceCount ?? 0), 0)
+        : this.world.waterBrickRenderer?.instanceCount ?? 0,
+      chunkBuildMs: manager?.buildTimings?.totalMs ?? 0,
+      prefabBuildMs: manager
+        ? Math.max(0, ...manager.slots.map(slot => slot.prefabBuildMs ?? 0))
+        : 0,
+      prefabPreparePending: preparation?.pending ?? 0,
+      prefabPrepareMaxSliceMs: preparation?.maxSliceMs ?? 0,
+      prefabPrepareFailed: preparation?.failed ?? 0,
+    })
+
+    if (!renderer.backend.trackTimestamp || this._gpuTimingPending) {
+      return
+    }
+    this._gpuTimingPending = true
+    renderer.resolveTimestampsAsync().then((duration) => {
+      if (this.disposed) {
+        return
+      }
+      this.performance.gpuMs = duration
+      this.performance.gpuTiming = 'available'
+    }).catch(() => {
+      this.performance.gpuTiming = 'unavailable'
+    }).finally(() => {
+      this._gpuTimingPending = false
+    })
+  }
+
+  getPerformanceSnapshot() {
+    const manager = this.world.terrainChunkManager
+    return {
+      ...this.performance,
+      viewport: [this.sizes.width, this.sizes.height],
+      dpr: window.devicePixelRatio,
+      init: { ...this.initTimings },
+      chunk: { ...manager?.buildTimings },
+      prefabPreparation: { ...this.renderer.prefabPreparation?.metrics },
+      memory: { ...this.renderer.instance.info.memory },
+      loadedChunks: manager?.activeSlots.size ?? 0,
+      waterMeshes: manager
+        ? manager.slots.reduce((count, slot) => count + (slot.waterRenderer?.pages.length ?? 0), 0)
+        : this.world.waterBrickRenderer?.pages.length ?? 0,
+      terrainMaterials: manager
+        ? new Set(manager.slots.map(slot => slot.terrainRenderer.material)).size
+        : this.world.terrainBrickRenderer ? 1 : 0,
+      rawHDRRetained: Boolean(this.resources.items.studioEnvMap),
+      playerPosition: this.world.playerAircraft?.state.position.toArray() ?? null,
+      chunkCenter: manager?.centerCoord ?? null,
+      waterMaterials: manager
+        ? new Set(manager.slots.map(slot => slot.waterRenderer?.material)).size
+        : this.world.waterBrickRenderer ? 1 : 0,
+    }
+  }
+
+  dispose() {
+    if (this.disposed) {
+      return
+    }
+    this.disposed = true
+    this._unregisterPlatform?.()
+    this._unregisterPlatform = null
+    this._cancelPresent?.()
+    if (this.renderer.initialized) {
+      this.renderer.instance.setAnimationLoop(null)
+    }
+    this._unsubscribeResize?.()
+    this._unsubscribeResize = null
+
+    this.ui?.dispose()
+    this.audio?.dispose()
+    this.world.dispose()
+    this.environment.dispose()
+    this.worldCamera.dispose()
+    this.debug.dispose()
+    this.sizes.dispose()
+    this.time.dispose()
+    this.resources.dispose()
+    this.renderer.dispose()
+  }
 }

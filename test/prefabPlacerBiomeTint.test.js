@@ -2,9 +2,11 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import * as THREE from 'three/webgpu'
 import PrefabPlacer from '../src/world/prefabs/PrefabPlacer.js'
+import WorldMaterials from '../src/world/WorldMaterials.js'
 
 function createPlacer({ manifest, biomes, width = 2, depth = 1 }) {
   return new PrefabPlacer({
+    materials: new WorldMaterials(),
     config: {
       seed: 1,
       terrain: { width, depth, cellSize: 1, layerHeight: 1, waterLevel: 0 },
@@ -147,6 +149,93 @@ test('collectTransforms stores deterministic color indices without splitting buc
   for (const transform of firstBuild[0].transforms) {
     assert.equal(Number.isInteger(transform.instanceColorIndex), true)
     assert.equal(transform.instanceColorIndex >= 0 && transform.instanceColorIndex < 3, true)
+  }
+})
+
+test('collectTransforms selects tree models using each biome independent weights', () => {
+  const manifest = {
+    tree: {
+      category: 'tree',
+      placement: { surface: 'land' },
+      variants: [
+        { source: 'treeModel', weight: 1 },
+        { source: 'fruitTreeModel', weight: 1 },
+        { source: 'cTreeModel', weight: 1 },
+      ],
+      randomRotation: false,
+    },
+  }
+  const biomes = {
+    forest: { trees: { variantWeights: { treeModel: 1 } }, prefabs: [{ id: 'tree', density: 1 }] },
+    autumnForest: { trees: { variantWeights: { fruitTreeModel: 1 } }, prefabs: [{ id: 'tree', density: 1 }] },
+  }
+  const placer = createPlacer({ manifest, biomes, width: 4 })
+  try {
+    const terrainMap = createTerrainMap([['forest', 'autumnForest', 'forest', 'autumnForest']])
+    const buckets = [...placer.collectTransforms(terrainMap).values()]
+    assert.equal(buckets.length, 2)
+    assert.deepEqual(buckets.map(({ biomeId, variantIndex }) => ({ biomeId, variantIndex })), [
+      { biomeId: 'forest', variantIndex: 0 },
+      { biomeId: 'autumnForest', variantIndex: 1 },
+    ])
+    assert.deepEqual(buckets.map(bucket => bucket.transforms.length), [2, 2])
+  } finally {
+    placer.dispose()
+    placer.materials.dispose()
+  }
+})
+
+test('placement rules are prepared once per biome per collection and refresh edited weights', () => {
+  const entry = {
+    category: 'tree',
+    placement: { surface: 'land' },
+    variants: [{ source: 'treeModel', weight: 1 }, { source: 'fruitTreeModel', weight: 1 }],
+  }
+  const biome = { trees: { variantWeights: { treeModel: 1 } }, prefabs: [{ id: 'tree', density: 1 }] }
+  const placer = createPlacer({ manifest: { tree: entry }, biomes: { forest: biome }, width: 3 })
+  let registryReads = 0
+  placer.prefabRegistry.get = id => {
+    registryReads++
+    return { id, entry }
+  }
+  try {
+    const terrainMap = createTerrainMap([['forest', 'forest', 'forest']])
+    const first = [...placer.collectTransforms(terrainMap).values()]
+    assert.equal(first[0].variantIndex, 0)
+    assert.equal(first[0].transforms.length, 3)
+    assert.equal(registryReads, 1)
+
+    biome.trees.variantWeights.treeModel = 0
+    biome.trees.variantWeights.fruitTreeModel = 1
+    const second = [...placer.collectTransforms(terrainMap).values()]
+    assert.equal(second[0].variantIndex, 1)
+    assert.equal(second[0].transforms.length, 3)
+    assert.equal(registryReads, 2)
+  } finally {
+    placer.dispose()
+    placer.materials.dispose()
+  }
+})
+
+test('disabled tree variants leave the cell available for subsequent prefab rules', () => {
+  const manifest = {
+    tree: { category: 'tree', variants: [{ source: 'treeModel', weight: 1 }] },
+    rock: { category: 'rock', variants: [{ source: 'rockModel', weight: 1 }] },
+  }
+  const biomes = {
+    forest: {
+      trees: { variantWeights: { treeModel: 0 } },
+      prefabs: [{ id: 'tree', density: 1 }, { id: 'rock', density: 1 }],
+    },
+  }
+  const placer = createPlacer({ manifest, biomes, width: 1 })
+  try {
+    const buckets = [...placer.collectTransforms(createTerrainMap([['forest']])).values()]
+    assert.equal(buckets.length, 1)
+    assert.equal(buckets[0].prefabId, 'rock')
+  } finally {
+    placer.dispose()
+    placer.materials.dispose()
   }
 })
 
@@ -356,7 +445,7 @@ test('buildVariantInstances preserves material array order when tinting', () => 
   assert.notEqual(group.children[0].material[1], second)
 })
 
-test('clearInstances disposes tinted material clones without disposing textures', () => {
+test('clearInstances releases meshes while retaining borrowed materials and textures', () => {
   const texture = new THREE.Texture()
   const material = new THREE.MeshBasicMaterial({ map: texture })
   let materialDisposed = false
@@ -374,7 +463,7 @@ test('clearInstances disposes tinted material clones without disposing textures'
 
   placer.clearInstances()
 
-  assert.equal(materialDisposed, true)
+  assert.equal(materialDisposed, false)
   assert.equal(textureDisposed, false)
   assert.equal(placer.group.children.length, 0)
 })

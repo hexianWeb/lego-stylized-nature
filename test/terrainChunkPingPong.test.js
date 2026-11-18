@@ -8,6 +8,7 @@ import TerrainGenerator from '../src/world/terrain/TerrainGenerator.js'
 import LayeredTerrainBuilder from '../src/world/terrain/LayeredTerrainBuilder.js'
 import BrickColorResolver from '../src/world/bricks/BrickColorResolver.js'
 import TerrainChunkPingPong from '../src/world/chunks/TerrainChunkPingPong.js'
+import WorldMaterials from '../src/world/WorldMaterials.js'
 
 const config = {
   seed: 1,
@@ -22,12 +23,19 @@ const config = {
     noiseOctaves: 4,
     noiseGain: 0.5,
     noiseLacunarity: 2,
-    seaClip: 0.35,
     ao: { enabled: false, previewGrayscale: false }
   },
   biomes: {
-    regions: [
-      { id: 'forest', center: [24, 34], radius: 30, weight: 1 }
+    cellSize: 192,
+    jitter: 0.6,
+    blendWidth: 24,
+    warp: { amplitude: 40, scale: 160 },
+    originBiome: 'autumnForest',
+    table: [
+      { id: 'forest', weight: 4 },
+      { id: 'autumnForest', weight: 3 },
+      { id: 'desert', weight: 2 },
+      { id: 'volcano', weight: 1 }
     ]
   },
   chunks: {
@@ -44,11 +52,11 @@ function createPingPong() {
   const terrainGenerator = new TerrainGenerator({
     config,
     biomeMaskGenerator: new BiomeMaskGenerator(config),
-    biomeBlender,
     biomeRegistry
   })
 
   return new TerrainChunkPingPong({
+    materials: new WorldMaterials({ config }),
     config,
     terrainGenerator,
     layeredTerrainBuilder: new LayeredTerrainBuilder({ config }),

@@ -12,7 +12,7 @@ export const DEFAULT_AIRCRAFT_CONFIG = {
   angularDrag: 4,
   maxSpeed: 8,
   maxAngularSpeed: 2.8,
-  maxDelta: 0.05
+  maxDelta: 0.05,
 }
 
 const FORWARD = new THREE.Vector3()
@@ -38,7 +38,7 @@ export function normalizeAircraftConfig(config = {}) {
     angularDrag: nonNegativeNumber(config.angularDrag, DEFAULT_AIRCRAFT_CONFIG.angularDrag),
     maxSpeed: positiveNumber(config.maxSpeed, DEFAULT_AIRCRAFT_CONFIG.maxSpeed),
     maxAngularSpeed: positiveNumber(config.maxAngularSpeed, DEFAULT_AIRCRAFT_CONFIG.maxAngularSpeed),
-    maxDelta: positiveNumber(config.maxDelta, DEFAULT_AIRCRAFT_CONFIG.maxDelta)
+    maxDelta: positiveNumber(config.maxDelta, DEFAULT_AIRCRAFT_CONFIG.maxDelta),
   }
 }
 
@@ -50,7 +50,7 @@ export function createAircraftState(options = {}) {
     position: new THREE.Vector3(position[0], position[1], position[2]),
     velocity: new THREE.Vector3(velocity[0], velocity[1], velocity[2]),
     yaw: Number.isFinite(options.yaw) ? options.yaw : 0,
-    angularVelocity: Number.isFinite(options.angularVelocity) ? options.angularVelocity : 0
+    angularVelocity: Number.isFinite(options.angularVelocity) ? options.angularVelocity : 0,
   }
 }
 
@@ -62,7 +62,7 @@ export function resolveAircraftInput(keys = {}) {
 
   return {
     thrustInput: forward - reverse,
-    turnInput: left - right
+    turnInput: left - right,
   }
 }
 
@@ -110,7 +110,7 @@ export function stepAircraftMotion(state, input, config, delta) {
   state.angularVelocity = THREE.MathUtils.clamp(
     state.angularVelocity,
     -maxAngularSpeed,
-    maxAngularSpeed
+    maxAngularSpeed,
   )
 
   state.position.addScaledVector(state.velocity, dt)

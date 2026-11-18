@@ -1,6 +1,6 @@
-const VOLCANO_FILL_BIOME_CELL = Object.freeze({
+export const VOLCANO_FILL_BIOME_CELL = Object.freeze({
   biomeId: 'volcano',
-  weights: Object.freeze({ volcano: 1 })
+  weights: Object.freeze({ volcano: 1 }),
 })
 
 export default class LayeredTerrainBuilder {
@@ -57,13 +57,13 @@ export default class LayeredTerrainBuilder {
           effectiveHeight(sampleX + 1, sampleZ),
           effectiveHeight(sampleX - 1, sampleZ),
           effectiveHeight(sampleX, sampleZ + 1),
-          effectiveHeight(sampleX, sampleZ - 1)
+          effectiveHeight(sampleX, sampleZ - 1),
         )
         const lavaAwareNeighborHeight = Math.min(
           effectiveHeight(sampleX + 1, sampleZ, true),
           effectiveHeight(sampleX - 1, sampleZ, true),
           effectiveHeight(sampleX, sampleZ + 1, true),
-          effectiveHeight(sampleX, sampleZ - 1, true)
+          effectiveHeight(sampleX, sampleZ - 1, true),
         )
         const originalYStart = Math.min(topHeight, originalNeighborHeight + 1)
         const yStart = Math.min(topHeight, lavaAwareNeighborHeight + 1)

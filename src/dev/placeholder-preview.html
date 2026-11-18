@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>旷野 · 地形占位预览</title>
+  <style>
+    body { margin: 0; overflow: hidden; background: #d9e7df; color: #244a40; font: 13px system-ui, sans-serif; }
+    canvas { display: block; width: 100vw; height: 100vh; }
+    nav { position: fixed; top: 24px; left: 28px; right: 28px; display: flex; align-items: center; gap: 16px; }
+    h1 { font-size: 17px; font-weight: 600; margin: 0 auto 0 0; }
+    h1 small { display: block; margin-top: 7px; font-size: 11px; font-weight: 400; opacity: .65; }
+    button, a { font: inherit; color: inherit; border: 1px solid #ffffffcc; background: #ffffff66; border-radius: 30px; padding: 10px 16px; text-decoration: none; cursor: pointer; }
+    .label { position: fixed; transform: translate(-50%, 0); padding: 6px 12px; border-radius: 20px; background: #ffffff88; font-size: 12px; white-space: nowrap; pointer-events: none; }
+    footer { position: fixed; bottom: 20px; left: 28px; right: 28px; display: flex; gap: 12px; align-items: center; }
+    footer span { margin-right: auto; opacity: .65; font-size: 11px; }
+    input { width: 160px; accent-color: #427b66; }
+  </style>
+</head>
+<body>
+  <canvas aria-label="森林、秋林、沙漠、雪地、湿地和火山的大格体素地形"></canvas>
+  <nav><h1>地形的第一层轮廓<small>当地色系 · 大格方盒 · 逐列消融</small></h1><button id="next" type="button">换一片地形</button><a href="/">返回旷野</a></nav>
+  <div id="labels"></div>
+  <footer><span>拖动旋转 · 滚轮缩放 · 与旷野使用同一套占位地形</span><label for="reveal">展开进度</label><input id="reveal" type="range" min="0" max="100" value="0" aria-label="展开进度"></footer>
+  <script type="module" src="./placeholder-preview.js"></script>
+</body>
+</html>

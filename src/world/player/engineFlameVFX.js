@@ -1,4 +1,3 @@
-import * as THREE from 'three/webgpu'
 import {
   clamp,
   color,
@@ -9,8 +8,9 @@ import {
   smoothstep,
   time,
   uniform,
-  uv
+  uv,
 } from 'three/tsl'
+import * as THREE from 'three/webgpu'
 
 export const DEFAULT_ENGINE_FLAME_CONFIG = {
   enabled: true,
@@ -20,7 +20,7 @@ export const DEFAULT_ENGINE_FLAME_CONFIG = {
   speed: 1.05,
   respondToThrusters: true,
   respondToSpeed: true,
-  minIntensity: 0.12
+  minIntensity: 0.12,
 }
 
 let sharedConeGeometry = null
@@ -55,7 +55,7 @@ export function normalizeEngineFlameConfig(config = {}) {
     respondToSpeed: config.respondToSpeed !== false,
     minIntensity: Number.isFinite(config.minIntensity)
       ? Math.max(0, config.minIntensity)
-      : DEFAULT_ENGINE_FLAME_CONFIG.minIntensity
+      : DEFAULT_ENGINE_FLAME_CONFIG.minIntensity,
   }
 }
 
@@ -77,7 +77,7 @@ export function resolveFlameResponseScale(config, speedRatio, thrusterIntensity 
     intensity: combined,
     length: combined,
     radius: combined,
-    speed: combined
+    speed: combined,
   }
 }
 
@@ -87,7 +87,7 @@ export function applyFlameResponseScale(config, scale) {
     intensity: config.intensity * scale.intensity,
     length: config.length * scale.length,
     radius: config.radius * scale.radius,
-    speed: config.speed * scale.speed
+    speed: config.speed * scale.speed,
   }
 }
 
@@ -100,14 +100,14 @@ function createFlameMaterial(sharedState, { base, mid, tip, opacity, noiseOffset
     uv().x.mul(42.0)
       .add(progress.mul(14.0))
       .sub(time.mul(sharedState.speed).mul(9.0))
-      .add(uNoiseOffset)
+      .add(uNoiseOffset),
   ).mul(0.5).add(0.5)
 
   const bandB = sin(
     uv().x.mul(17.0)
       .sub(progress.mul(23.0))
       .add(time.mul(sharedState.speed).mul(14.5))
-      .add(uNoiseOffset.mul(2.1))
+      .add(uNoiseOffset.mul(2.1)),
   ).mul(0.5).add(0.5)
 
   const flameNoise = bandA.mul(0.58).add(bandB.mul(0.42))
@@ -145,11 +145,11 @@ function createShockRings(parent) {
 
   for (let i = 0; i < 7; i++) {
     const material = new THREE.MeshBasicMaterial({
-      color: 0xffb45c,
+      color: 0xFFB45C,
       transparent: true,
       opacity: 0.0,
       depthWrite: false,
-      blending: THREE.AdditiveBlending
+      blending: THREE.AdditiveBlending,
     })
 
     const ring = new THREE.Mesh(geometry, material)
@@ -184,8 +184,8 @@ const FLAME_LAYERS = [
       mid: '#ff9f1a',
       tip: '#b91c1c',
       opacity: 0.38,
-      noiseOffset: 0.0
-    }
+      noiseOffset: 0.0,
+    },
   },
   {
     name: 'middle_yellow_flame',
@@ -196,8 +196,8 @@ const FLAME_LAYERS = [
       mid: '#ffb11b',
       tip: '#ff5f0f',
       opacity: 0.58,
-      noiseOffset: 1.7
-    }
+      noiseOffset: 1.7,
+    },
   },
   {
     name: 'inner_white_hot_core',
@@ -208,9 +208,9 @@ const FLAME_LAYERS = [
       mid: '#ffe36e',
       tip: '#ff9a16',
       opacity: 0.80,
-      noiseOffset: 3.2
-    }
-  }
+      noiseOffset: 3.2,
+    },
+  },
 ]
 
 export function createEngineFlameVFX(parent, config = {}) {
@@ -221,7 +221,7 @@ export function createEngineFlameVFX(parent, config = {}) {
 
   const sharedState = {
     intensity: uniform(settings.intensity),
-    speed: uniform(settings.speed)
+    speed: uniform(settings.speed),
   }
 
   const coneGeometry = getConeGeometry()
@@ -229,7 +229,7 @@ export function createEngineFlameVFX(parent, config = {}) {
   const flameLayers = FLAME_LAYERS.map((layer) => {
     const mesh = new THREE.Mesh(
       coneGeometry,
-      createFlameMaterial(sharedState, layer.material)
+      createFlameMaterial(sharedState, layer.material),
     )
     mesh.name = layer.name
     // fly.glb engine empties exhaust along local -Z (forward is +Z).
@@ -286,6 +286,6 @@ export function createEngineFlameVFX(parent, config = {}) {
     applyShape,
     update,
     setVisible,
-    dispose
+    dispose,
   }
 }

@@ -1,24 +1,26 @@
 import { createNoise2D } from 'simplex-noise'
-import HeightField from './HeightField.js'
-import TerrainMap from './TerrainMap.js'
-import SurfaceClassifier from './SurfaceClassifier.js'
-import VolcanoSurfaceFeatureGenerator from './VolcanoSurfaceFeatureGenerator.js'
-import DesertSurfaceFeatureGenerator from './DesertSurfaceFeatureGenerator.js'
 import { mulberry32 } from '../../utils/random.js'
+import { applyLandmarkTerraces, planSunGate } from '../landmarks/landmarkPlacement.js'
+import DesertSurfaceFeatureGenerator from './DesertSurfaceFeatureGenerator.js'
+import HeightField from './HeightField.js'
+import { heightShapers } from './heightShapers.js'
+import SurfaceClassifier from './SurfaceClassifier.js'
+import TerrainMap from './TerrainMap.js'
+import VolcanoSurfaceFeatureGenerator from './VolcanoSurfaceFeatureGenerator.js'
 
 export default class TerrainGenerator {
-  constructor({ config, biomeMaskGenerator, biomeBlender, biomeRegistry }) {
+  constructor({ config, biomeMaskGenerator, biomeRegistry }) {
     this.config = config
     this.biomeMaskGenerator = biomeMaskGenerator
-    this.biomeBlender = biomeBlender
+    this.biomeRegistry = biomeRegistry
     this.surfaceClassifier = new SurfaceClassifier(config)
     this.volcanoSurfaceFeatureGenerator = new VolcanoSurfaceFeatureGenerator({
       config,
-      biomeRegistry
+      biomeRegistry,
     })
     this.desertSurfaceFeatureGenerator = new DesertSurfaceFeatureGenerator({
       config,
-      biomeRegistry
+      biomeRegistry,
     })
   }
 
@@ -27,7 +29,7 @@ export default class TerrainGenerator {
     return this.generateForBounds({ x: 0, z: 0 }, width, depth, {
       origin: { x: 0, z: 0 },
       visibleSize: width,
-      halo: 0
+      halo: 0,
     })
   }
 
@@ -39,7 +41,8 @@ export default class TerrainGenerator {
     return this.generateForBounds(sampleOrigin, sampleWidth, sampleDepth, {
       origin,
       visibleSize: size,
-      halo
+      halo,
+      chunk: true,
     })
   }
 
@@ -48,26 +51,37 @@ export default class TerrainGenerator {
     const biomeCells = this.biomeMaskGenerator.generateForBounds(
       sampleOrigin,
       sampleWidth,
-      sampleDepth
+      sampleDepth,
     )
     const heightField = this.generateHeightFieldForBounds(
       sampleOrigin,
       sampleWidth,
       sampleDepth,
-      biomeCells
+      biomeCells,
     )
-    const surfaceCells = this.surfaceClassifier.classify(heightField)
+    let surfaceCells = this.surfaceClassifier.classify(heightField)
     this.volcanoSurfaceFeatureGenerator.apply(biomeCells, surfaceCells)
     this.desertSurfaceFeatureGenerator.apply(biomeCells, surfaceCells)
 
-    return new TerrainMap({
+    const terrainMap = new TerrainMap({
       heightField,
       biomeCells,
       surfaceCells,
       origin: chunkMeta.origin,
       visibleSize: chunkMeta.visibleSize,
-      halo: chunkMeta.halo
+      halo: chunkMeta.halo,
     })
+    // Candidate validation uses untouched surfaces, including ponds and lava.
+    // Only accepted sites need a second classification after the platform edit.
+    terrainMap.landmarks = chunkMeta.chunk ? planSunGate(terrainMap, this.config) : []
+    if (terrainMap.landmarks.length) {
+      applyLandmarkTerraces(heightField, terrainMap.landmarks, chunkMeta.halo, this.config)
+      surfaceCells = this.surfaceClassifier.classify(heightField)
+      this.volcanoSurfaceFeatureGenerator.apply(biomeCells, surfaceCells)
+      this.desertSurfaceFeatureGenerator.apply(biomeCells, surfaceCells)
+      terrainMap.surfaceCells = surfaceCells
+    }
+    return terrainMap
   }
 
   generateHeightField(biomeCells) {
@@ -94,7 +108,7 @@ export default class TerrainGenerator {
           z,
           biomeCells[z][x],
           sampleOrigin.x + x,
-          sampleOrigin.z + z
+          sampleOrigin.z + z,
         )
       }
     }
@@ -104,30 +118,21 @@ export default class TerrainGenerator {
 
   writeHeightSample(field, x, z, biomeCell, worldX = x, worldZ = z) {
     const terrain = this.config.terrain
-    const heightOffset = this.biomeBlender.blendTerrainParam(biomeCell.weights, 'heightOffset', 0)
-    const heightMagnitude = this.biomeBlender.blendTerrainParam(biomeCell.weights, 'heightMagnitude', 1)
-
-    const n01 = 0.5 + 0.5 * this.fbm(worldX, worldZ)
-    const shaped = Math.max(0, Math.min(1, (n01 - terrain.seaClip) / (1 - terrain.seaClip)))
-    const height = Math.floor(shaped * terrain.maxHeight * heightMagnitude + terrain.waterLevel + heightOffset)
-
-    field.set(x, z, Math.max(0, Math.min(terrain.maxHeight, height)))
-  }
-
-  fbm(x, z) {
-    const terrain = this.config.terrain
-    let value = 0
-    let amplitude = 1
-    let frequency = 1 / terrain.noiseScale
-    let totalAmplitude = 0
-
-    for (let octave = 0; octave < terrain.noiseOctaves; octave++) {
-      value += this.noise2D(x * frequency, z * frequency) * amplitude
-      totalAmplitude += amplitude
-      amplitude *= terrain.noiseGain
-      frequency *= terrain.noiseLacunarity
+    let height = terrain.waterLevel
+    for (const [biomeId, weight] of Object.entries(biomeCell.weights)) {
+      if (weight <= 0)
+        continue
+      const params = this.biomeRegistry.get(biomeId).terrain.shape
+      height += weight * heightShapers[params.type]({
+        x: worldX,
+        z: worldZ,
+        noise2D: this.noise2D,
+        terrain,
+        params,
+        site: biomeCell.sites?.[biomeId],
+      })
     }
 
-    return value / totalAmplitude
+    field.set(x, z, Math.max(0, Math.min(terrain.maxHeight, Math.floor(height))))
   }
 }

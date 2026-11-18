@@ -187,8 +187,10 @@ export class Sandbox {
     const overlay = this.experience.world?.group
     if (overlay) overlay.visible = false
     this.experience.renderer.attachPipeline(this.scene, this.camera)
-    this.experience.renderer.postProcessingController.setTiltShiftEnabled(false)
-    this.experience.renderer.postProcessingController.setSpeedLinesEnabled(false)
+    // Tilt-shift / speed-lines were removed from the shared renderer; the
+    // controller only exists on the WebGL fallback and 2D stubs.
+    this.experience.renderer.postProcessingController?.setTiltShiftEnabled?.(false)
+    this.experience.renderer.postProcessingController?.setSpeedLinesEnabled?.(false)
 
     if (typeof window !== 'undefined' && this.experience) {
       window.__sandbox = this
@@ -280,7 +282,7 @@ export class Sandbox {
     const overlay = this.experience.world?.group
     if (overlay) overlay.visible = true
     this.experience.renderer.attachPipeline(this.scene, this.experience.worldCamera.instance)
-    this.experience.renderer.postProcessingController.setTiltShiftEnabled(true)
+    this.experience.renderer.postProcessingController?.setTiltShiftEnabled?.(true)
 
     if (typeof window !== 'undefined' && window.__sandbox === this) {
       delete window.__sandbox

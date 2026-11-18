@@ -10,21 +10,21 @@ export const DEFAULT_VISUAL_ATTITUDE_CONFIG = {
   hover: {
     amplitude: 0.06,
     frequency: 0.7,
-    fadeSpeedRatio: 0.25
+    fadeSpeedRatio: 0.25,
   },
   turbulence: {
     enabled: true,
-    pitchAmplitude: 0.018,
-    rollAmplitude: 0.028,
-    yawAmplitude: 0.012,
-    verticalAmplitude: 0.022,
+    pitchAmplitude: 0.011,
+    rollAmplitude: 0.010,
+    yawAmplitude: 0.007,
+    verticalAmplitude: 0.013,
     frequency: 1.1,
     pitchFrequencyScale: 1,
     rollFrequencyScale: 1.35,
     yawFrequencyScale: 0.75,
     verticalFrequencyScale: 1.6,
     minSpeedRatio: 0.05,
-    fullSpeedRatio: 0.45
+    fullSpeedRatio: 0.45,
   },
   thrusters: {
     enabled: true,
@@ -32,8 +32,8 @@ export const DEFAULT_VISUAL_ATTITUDE_CONFIG = {
     thrustBoost: 0.65,
     turnBias: 0.25,
     leftNodeName: 'left_engine',
-    rightNodeName: 'right_engine'
-  }
+    rightNodeName: 'right_engine',
+  },
 }
 
 function positiveNumber(value, fallback) {
@@ -71,7 +71,7 @@ export function normalizeVisualAttitudeConfig(config = {}) {
     hover: {
       amplitude: positiveNumber(hover.amplitude, DEFAULT_VISUAL_ATTITUDE_CONFIG.hover.amplitude),
       frequency: positiveNumber(hover.frequency, DEFAULT_VISUAL_ATTITUDE_CONFIG.hover.frequency),
-      fadeSpeedRatio: positiveNumber(hover.fadeSpeedRatio, DEFAULT_VISUAL_ATTITUDE_CONFIG.hover.fadeSpeedRatio)
+      fadeSpeedRatio: positiveNumber(hover.fadeSpeedRatio, DEFAULT_VISUAL_ATTITUDE_CONFIG.hover.fadeSpeedRatio),
     },
     turbulence: {
       enabled: turbulence.enabled !== false,
@@ -85,7 +85,7 @@ export function normalizeVisualAttitudeConfig(config = {}) {
       yawFrequencyScale: positiveNumber(turbulence.yawFrequencyScale, DEFAULT_VISUAL_ATTITUDE_CONFIG.turbulence.yawFrequencyScale),
       verticalFrequencyScale: positiveNumber(turbulence.verticalFrequencyScale, DEFAULT_VISUAL_ATTITUDE_CONFIG.turbulence.verticalFrequencyScale),
       minSpeedRatio: nonNegativeNumber(turbulence.minSpeedRatio, DEFAULT_VISUAL_ATTITUDE_CONFIG.turbulence.minSpeedRatio),
-      fullSpeedRatio: positiveNumber(turbulence.fullSpeedRatio, DEFAULT_VISUAL_ATTITUDE_CONFIG.turbulence.fullSpeedRatio)
+      fullSpeedRatio: positiveNumber(turbulence.fullSpeedRatio, DEFAULT_VISUAL_ATTITUDE_CONFIG.turbulence.fullSpeedRatio),
     },
     thrusters: {
       enabled: thrusters.enabled !== false,
@@ -93,8 +93,8 @@ export function normalizeVisualAttitudeConfig(config = {}) {
       thrustBoost: positiveNumber(thrusters.thrustBoost, DEFAULT_VISUAL_ATTITUDE_CONFIG.thrusters.thrustBoost),
       turnBias: positiveNumber(thrusters.turnBias, DEFAULT_VISUAL_ATTITUDE_CONFIG.thrusters.turnBias),
       leftNodeName: thrusters.leftNodeName || DEFAULT_VISUAL_ATTITUDE_CONFIG.thrusters.leftNodeName,
-      rightNodeName: thrusters.rightNodeName || DEFAULT_VISUAL_ATTITUDE_CONFIG.thrusters.rightNodeName
-    }
+      rightNodeName: thrusters.rightNodeName || DEFAULT_VISUAL_ATTITUDE_CONFIG.thrusters.rightNodeName,
+    },
   }
 }
 
@@ -107,7 +107,7 @@ export function createVisualAttitudeState() {
     hoverPhase: 0,
     turbulencePhase: 0,
     leftThruster: 0,
-    rightThruster: 0
+    rightThruster: 0,
   }
 }
 
@@ -171,7 +171,7 @@ export function computeThrusterIntensity(input, speedRatio, config) {
 
   return {
     leftThruster: clamp01(base - turnBias),
-    rightThruster: clamp01(base + turnBias)
+    rightThruster: clamp01(base + turnBias),
   }
 }
 
@@ -194,7 +194,7 @@ export function stepVisualAttitude(state, attitudeState, input, motionConfig, vi
     speedRatio,
     attitudeState.turbulencePhase,
     visualConfig.turbulence,
-    delta
+    delta,
   )
   attitudeState.turbulencePhase = turbulence.nextPhase
   attitudeState.pitch += turbulence.pitch

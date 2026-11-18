@@ -5,30 +5,30 @@ import Stats from 'three/examples/jsm/libs/stats.module.js'
  * Active in dev builds only.
  */
 export default class StatsMonitor {
-    constructor() {
-        this.active = import.meta.env.DEV
-        /** @type {Stats | null} */
-        this.instance = null
+  constructor() {
+    this.active = import.meta.env.DEV
+    /** @type {Stats | null} */
+    this.instance = null
 
-        if (!this.active) {
-            return
-        }
-
-        this.instance = new Stats()
-        this.instance.dom.style.zIndex = '2'
-        document.body.appendChild(this.instance.dom)
+    if (!this.active) {
+      return
     }
 
-    begin() {
-        this.instance?.begin()
-    }
+    this.instance = new Stats()
+    this.instance.dom.style.zIndex = '2'
+    document.body.appendChild(this.instance.dom)
+  }
 
-    end() {
-        this.instance?.end()
-    }
+  begin() {
+    this.instance?.begin()
+  }
 
-    dispose() {
-        this.instance?.dom.remove()
-        this.instance = null
-    }
+  end() {
+    this.instance?.end()
+  }
+
+  dispose() {
+    this.instance?.dom.remove()
+    this.instance = null
+  }
 }

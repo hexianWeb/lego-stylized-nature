@@ -2,7 +2,7 @@ export default class HeightField {
   constructor(width, depth) {
     this.width = width
     this.depth = depth
-    this.values = Array.from({ length: depth }, () => Array.from({ length: width }, () => 0))
+    this.values = Array.from({ length: depth }, () => Array.from({ length: width }).fill(0))
   }
 
   get(x, z) {
@@ -21,8 +21,8 @@ export default class HeightField {
       this.get(x + 1, z),
       this.get(x - 1, z),
       this.get(x, z + 1),
-      this.get(x, z - 1)
+      this.get(x, z - 1),
     ]
-    return Math.max(...neighbors.map((height) => Math.abs(center - height)))
+    return Math.max(...neighbors.map(height => Math.abs(center - height)))
   }
 }

@@ -1,5 +1,5 @@
 const DEFAULT_DRY = {
-  minDesertWeight: 0.65
+  minDesertWeight: 0.65,
 }
 
 export default class DesertSurfaceFeatureGenerator {

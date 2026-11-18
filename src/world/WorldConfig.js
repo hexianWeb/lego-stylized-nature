@@ -1,123 +1,60 @@
-import { TILT_SHIFT_DEFAULTS } from '../renderer/postprocessing/tiltShiftConfig.js'
-import { SPEED_LINES_DEFAULTS } from '../renderer/postprocessing/speedLinesConfig.js'
+import { STUD_SHADING_DEFAULTS } from '../materials/tsl/legoStudsConfig.js'
+import { BRICK_LOD_DEFAULTS } from './bricks/BrickLOD.js'
+import { createTerrainColorSettings } from './bricks/terrainColorScheme.js'
+import { CHUNK_TRANSITION_DEFAULTS } from './chunks/ChunkColumnTransition.js'
+import { LANDMARK_DEFAULTS } from './landmarks/landmarkConfig.js'
 
 export const worldConfig = {
   seed: 20260608,
+  landmarks: { ...LANDMARK_DEFAULTS },
   postProcessing: {
-    tiltShift: { ...TILT_SHIFT_DEFAULTS },
-    speedLines: {
-      ...SPEED_LINES_DEFAULTS,
-      color: { ...SPEED_LINES_DEFAULTS.color }
-    }
-  },
-  ui: {
-    controlGuide: {
-      enabled: true,
-      screenOffset: {
-        right: 40,
-        verticalAlign: 'center'
-      },
-      opacity: 1
-    },
-    biomeRadar: {
-      enabled: true,
-      size: 300,
-      screenOffset: {
-        left: 75,
-        top: 75
-      },
-      range: 360,
-      scanSpeed: 0.9,
-      updateThreshold: {
-        position: 0.02,
-        yaw: 0.01
-      },
-      opacity: 0.9,
-      colors: {
-        forest: '#53D86A',
-        autumnForest: '#F4A13D',
-        desert: '#E8D45A',
-        volcano: '#FF513D'
-      }
-    },
-    storyRecord: {
-      enabled: true
-    },
-    storyObjective: {
-      enabled: true
-    }
+    enabled: true,
   },
   terrain: {
     width: 128,
     depth: 128,
-    maxHeight: 36,
+    maxHeight: 64,
     layerHeight: 0.095,
     cellSize: 0.2,
+    brickLOD: { ...BRICK_LOD_DEFAULTS },
+    studShading: { ...STUD_SHADING_DEFAULTS },
     waterLevel: 3,
-    noiseScale: 34,
+    noiseScale: 72,
     noiseOctaves: 4,
     noiseGain: 0.5,
     noiseLacunarity: 2,
-    seaClip: 0.35,
+    color: createTerrainColorSettings(),
     ao: {
       enabled: true,
       previewGrayscale: false,
-      strength: 1.4,
-      min: 0.2,
-      horizonScale: 2.5,
-      creviceScale: 2.5,
-      depthScale: 6.5,
-      horizonWeight: 0.61,
-      creviceWeight: 0.42,
-      depthWeight: 0.32,
-      sideWeight: 0.52
-    }
+      strength: 2.2,
+      min: 0.18,
+      /** Grid steps sampled along each of 8 directions. Max value must be ≤ chunks.halo. */
+      sampleDistances: [1, 2, 4, 8],
+      /** Softens far samples: atten = 1 / (1 + (dist - 1) * falloff). */
+      distanceFalloff: 0.25,
+      creviceScale: 3.0,
+      horizonWeight: 0.58,
+      creviceWeight: 0.52,
+    },
   },
   biomes: {
-    regions: [
-      { id: 'forest', center: [0, 0], radius: 120, weight: 1 },
-      { id: 'autumnForest', center: [400, 400], radius: 120, weight: 1 },
-      { id: 'desert', center: [400, -400], radius: 120, weight: 1 },
-      { id: 'volcano', center: [-400, 400], radius: 120, weight: 1 }
-    ]
-  },
-  biomeCenters: {
-    enabled: true,
-    assetName: 'biomeTowerModel',
-    triggerRadius: 3,
-    footprintCells: 4,
-    lightMeshName: 'light',
-    towers: {
-      forest: {
-        light: {
-          color: '#43ff7a',
-          emissiveIntensity: 1.8
-        },
-        log: 'Forest validation reached: biomass exploitation record unlocked.'
-      },
-      autumnForest: {
-        storyAlias: 'badlands',
-        light: {
-          color: '#b24cff',
-          emissiveIntensity: 1.6
-        },
-        log: 'Badlands validation reached: mining waste record unlocked.'
-      },
-      desert: {
-        light: {
-          color: '#ffd34a',
-          emissiveIntensity: 1.5
-        },
-        log: 'Desert validation reached: groundwater collapse record unlocked.'
-      },
-      volcano: {
-        light: {
-          color: '#ff4a1f',
-          emissiveIntensity: 2.2
-        },
-        log: 'Volcano validation reached: geothermal extraction record unlocked.'
-      }
-    }
+    cellSize: 384,
+    jitter: 0.6,
+    blendWidth: 48,
+    warp: { amplitude: 80, scale: 320 },
+    originBiome: 'autumnForest',
+    previewBiome: '',
+    table: [
+      { id: 'forest', weight: 4 },
+      { id: 'autumnForest', weight: 3 },
+      { id: 'desert', weight: 2 },
+      { id: 'volcano', weight: 1 },
+      { id: 'snowForest', weight: 2 },
+      // Compact flower hills rather than another forest-sized region.
+      { id: 'meadow', weight: 2, regionScale: 0.6 },
+      { id: 'wetland', weight: 2 },
+    ],
   },
   placement: {
     enablePrefabs: true,
@@ -127,28 +64,40 @@ export const worldConfig = {
       default: 128,
       tree: 128,
       flora: 512,
-      rock: 256,
+      rock: 512,
       plant: 256,
-      waterAccent: 32,
-      waterPlant: 64,
-      prop: 64
-    }
+      waterAccent: 64,
+      waterPlant: 256,
+      prop: 128,
+    },
   },
   chunks: {
     enabled: true,
     size: 72,
-    halo: 1,
+    /** Must cover terrain AO sampleDistances (max 8) and placement neighbor lookups. */
+    halo: 8,
     windowRadius: 1,
+    /** Coarse biome-colored boxes cover pending chunks; cellSpan is in terrain cells. */
+    placeholder: { enabled: true, radius: 3, cellSpan: 12 },
+    /** A continuous band of brick-sized clouds over the placeholder, bandBoxes boxes wide around loaded terrain. */
+    clouds: { enabled: true, bandBoxes: 2 },
     maxPendingBuildsPerFrame: 1,
+    maxPrefabBuildsPerFrame: 1,
+    /** Shared main-thread budget; individual chunk/prefab populations are atomic and may exceed it. */
+    mainThreadBudgetMs: 4,
+    /** Web Workers that generate terrain, placements and AO off the main thread; 0 builds on the main thread. */
+    buildWorkers: 2,
+    /** Seconds per column / across the chunk; riseDistance is in world units. */
+    transition: { ...CHUNK_TRANSITION_DEFAULTS },
     visibilityPadding: 1,
-    /** World-unit gap between adjacent chunks; use in #debug to inspect chunk boundaries. */
-    debugSpacing: 0
+    /** World-unit gap between adjacent chunks. */
+    debugSpacing: 0,
   },
   player: {
     aircraft: {
       enabled: true,
       assetName: 'playerAircraftModel',
-      height: 3,
+      height: 5.5,
       scale: 1,
       thrust: 16,
       reverseThrust: 8,
@@ -161,7 +110,7 @@ export const worldConfig = {
       maxAngularSpeed: 2.8,
       cameraFollow: {
         enabled: true,
-        smoothing: 8
+        smoothing: 8,
 
       },
       visualAttitude: {
@@ -174,21 +123,21 @@ export const worldConfig = {
         hover: {
           amplitude: 0.06,
           frequency: 0.7,
-          fadeSpeedRatio: 0.25
+          fadeSpeedRatio: 0.25,
         },
         turbulence: {
           enabled: true,
-          pitchAmplitude: 0.018,
-          rollAmplitude: 0.028,
-          yawAmplitude: 0.012,
-          verticalAmplitude: 0.022,
+          pitchAmplitude: 0.011,
+          rollAmplitude: 0.017,
+          yawAmplitude: 0.007,
+          verticalAmplitude: 0.013,
           frequency: 1.1,
           pitchFrequencyScale: 1,
           rollFrequencyScale: 1.35,
           yawFrequencyScale: 0.75,
           verticalFrequencyScale: 1.6,
           minSpeedRatio: 0.05,
-          fullSpeedRatio: 0.45
+          fullSpeedRatio: 0.45,
         },
         thrusters: {
           enabled: true,
@@ -196,8 +145,8 @@ export const worldConfig = {
           thrustBoost: 0.65,
           turnBias: 0.25,
           leftNodeName: 'left_engine',
-          rightNodeName: 'right_engine'
-        }
+          rightNodeName: 'right_engine',
+        },
       },
       engineFlame: {
         enabled: true,
@@ -206,7 +155,7 @@ export const worldConfig = {
         radius: 0.03,
         speed: 1.05,
         respondToThrusters: true,
-        minIntensity: 0.15
+        minIntensity: 0.15,
       },
       wingAirflow: {
         enabled: true,
@@ -214,7 +163,7 @@ export const worldConfig = {
           wingHalfWidth: 0.40,
           outwardOffset: 0.1,
           backOffset: -0.21,
-          upOffset: 0.03
+          upOffset: 0.03,
         },
         sampleLife: 0.56,
         emitInterval: 0.034,
@@ -233,12 +182,13 @@ export const worldConfig = {
         pulseStrength: 0.01,
         color: '#f7fbff',
         additive: true,
-        showAnchors: false
-      }
-    }
+        showAnchors: false,
+      },
+    },
   },
   water: {
     enableWater: true,
+    castShadow: true,
     darkColor: '#0757A6',
     midColor: '#168FD2',
     lightColor: '#42DDEB',
@@ -248,6 +198,6 @@ export const worldConfig = {
     flowVariance: 0.55,
     roughness: 0.3,
     clearcoat: 0.45,
-    clearcoatRoughness: 0.2
-  }
+    clearcoatRoughness: 0.2,
+  },
 }

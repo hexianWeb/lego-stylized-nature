@@ -1,67 +1,51 @@
-import Experience from './Experience.js'
+import { MODES, currentModeFromHash } from '../utils/mode.js'
+import { bootstrapSandbox } from './bootstrapSandbox.js'
 
 /**
+ * Route to the experience matching the URL hash:
+ * - `#sandbox` (or `#build`) → brick-building sandbox
+ * - default / `#play` → explorer showcase
+ *
  * @param {HTMLCanvasElement} canvas
  */
 export async function bootstrap(canvas) {
-    const errorEl = document.getElementById('app-error')
-    const loadingEl = document.getElementById('sandbox-loading')
-    if (errorEl) {
-        errorEl.hidden = true
-        errorEl.textContent = ''
-    }
+  const mode = currentModeFromHash()
+  if (mode === MODES.SANDBOX || mode === MODES.BUILD) {
+    await bootstrapSandbox(canvas)
+    return
+  }
 
-    // Global watchdog: if anything in init takes more than 8s, force
-    // 2D SSR mode + hide the loading overlay. We also unblock any
-    // pending await by replacing the experience's renderer with a
-    // no-op and calling the hidden-flag path so the rest of init
-    // skips the GPU stack.
-    let watchdogTriggered = false
-    const watchdog = setTimeout(() => {
-        watchdogTriggered = true
-        if (typeof window !== 'undefined') {
-            window.__sandbox_2d_only = true
-        }
-        if (loadingEl) loadingEl.classList.add('is-hidden')
-        if (errorEl) {
-            errorEl.hidden = false
-            errorEl.textContent = 'Init watchdog timeout (8s). Falling back to 2D mode.'
-        }
-    }, 8000)
-    const clearWatchdog = () => clearTimeout(watchdog)
+  const { default: Experience } = await import('./Experience.js')
+  const { attachPlatform } = await import('./platform.js')
 
-    // Guard against browsers that throw on `new WebGPURenderer`
-    // synchronously (we still want to fall back).
-    let experience
-    try {
-        experience = new Experience(canvas)
-    } catch (err) {
-        clearWatchdog()
-        if (loadingEl) loadingEl.classList.add('is-hidden')
-        if (errorEl) {
-            errorEl.hidden = false
-            errorEl.textContent = `WebGPU / 初始化失敗: ${err?.message ?? err}`
-        }
-        return
-    }
+  // The sandbox loading overlay is not used on the explorer route.
+  document.getElementById('sandbox-loading')?.classList.add('is-hidden')
 
-    if (import.meta.env.DEV && typeof window !== 'undefined') {
-        window.__experience = experience
-    }
+  const experience = new Experience(canvas)
 
-    try {
-        await experience.init()
-        clearWatchdog()
-        if (loadingEl) loadingEl.classList.add('is-hidden')
-        experience.start()
-    } catch (err) {
-        clearWatchdog()
-        console.error(err)
-        if (loadingEl) loadingEl.classList.add('is-hidden')
-        const message = err instanceof Error ? err.message : String(err)
-        if (errorEl) {
-            errorEl.hidden = false
-            errorEl.textContent = `WebGPU / 初始化失敗: ${message}`
-        }
+  if (import.meta.env.DEV && typeof window !== 'undefined') {
+    window.__experience = experience
+  }
+
+  try {
+    const platform = await attachPlatform(experience)
+    platform.reportLoading()
+    await experience.init({ deferReady: true })
+    experience.start()
+    await experience.present()
+    platform.reportLoaded()
+  }
+  catch (err) {
+    experience.dispose()
+    if (typeof window !== 'undefined' && window.__experience === experience) {
+      delete window.__experience
     }
+    console.error(err)
+    const uiRoot = document.getElementById('explorer-ui')
+    if (uiRoot) {
+      uiRoot.className = 'startup-error'
+      uiRoot.innerHTML = '<div class="surface error-card" role="alert"><span class="eyebrow">BRICKLAND EXPLORER</span><h1>旷野还没准备好</h1><p>场景加载失败，请检查浏览器是否支持 WebGPU，然后重试。</p><button type="button" class="primary-button">重新加载</button></div>'
+      uiRoot.querySelector('button').addEventListener('click', () => window.location.reload())
+    }
+  }
 }

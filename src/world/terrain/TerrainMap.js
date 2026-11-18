@@ -5,7 +5,7 @@ export default class TerrainMap {
     surfaceCells,
     origin = { x: 0, z: 0 },
     visibleSize = null,
-    halo = 0
+    halo = 0,
   }) {
     this.heightField = heightField
     this.biomeCells = biomeCells

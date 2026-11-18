@@ -1,12 +1,11 @@
 import * as THREE from 'three/webgpu'
-import { createLavaMaterial } from '../../materials/tsl/lavaMaterial.js'
 import { getTerrainIterationBounds } from '../terrain/terrainMapBounds.js'
 
 export default class LavaBrickRenderer {
-  constructor({ config, brickGeometry, lavaConfig = {}, lavaNoiseTexture = null }) {
+  constructor({ config, brickGeometry, materials }) {
     this.config = config
     this.brickGeometry = brickGeometry
-    this.material = createLavaMaterial(lavaConfig, lavaNoiseTexture)
+    this.material = materials.lavaMaterial
     this.group = new THREE.Group()
     this.group.name = 'LavaBricks'
     this.mesh = null
@@ -27,7 +26,7 @@ export default class LavaBrickRenderer {
           cells.push({
             x: localX,
             z: localZ,
-            height: surfaceCell.lavaHeight ?? surfaceCell.height
+            height: surfaceCell.lavaHeight ?? surfaceCell.height,
           })
         }
       }
@@ -41,6 +40,7 @@ export default class LavaBrickRenderer {
       this.capacity = Math.ceil(Math.max(cells.length, 1) * 1.2)
       this.mesh = new THREE.InstancedMesh(this.brickGeometry, this.material, this.capacity)
       this.mesh.name = 'LavaBrickInstances'
+      this.mesh.userData.streamingChunk = true
       this.mesh.castShadow = true
       this.mesh.receiveShadow = true
       this.group.add(this.mesh)
@@ -51,20 +51,23 @@ export default class LavaBrickRenderer {
       matrix.setPosition(
         (cell.x + 0.5) * cellSize,
         cell.height * layerHeight,
-        (cell.z + 0.5) * cellSize
+        (cell.z + 0.5) * cellSize,
       )
       this.mesh.setMatrixAt(i, matrix)
     })
 
     this.mesh.count = cells.length
     this.mesh.instanceMatrix.needsUpdate = true
+    this.mesh.computeBoundingSphere()
+    if (this.mesh.boundingBox) {
+      this.mesh.computeBoundingBox()
+    }
 
     return this.group
   }
 
   dispose() {
     this.mesh?.dispose()
-    this.material.dispose()
     this.group.parent?.remove(this.group)
     this.group.clear()
     this.mesh = null
