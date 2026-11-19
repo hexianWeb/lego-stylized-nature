@@ -1,4 +1,3 @@
-import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import { Inspector } from 'three/addons/inspector/Inspector.js'
 // import { sobel } from 'three/addons/tsl/display/SobelOperatorNode.js'
 import { pass, renderOutput } from 'three/tsl'
@@ -18,10 +17,8 @@ const sizes = {
 
 const camera = new THREE.PerspectiveCamera(25, sizes.width / sizes.height, 0.1, 100)
 camera.position.set(6, 3, 10)
+camera.lookAt(0, 0, 0)
 scene.add(camera)
-
-const controls = new OrbitControls(camera, canvas)
-controls.enableDamping = true
 
 const renderer = new THREE.WebGPURenderer({
   canvas,
@@ -70,7 +67,7 @@ scene.add(instancedMesh)
 
 scene.add(new THREE.AxesHelper(3))
 setupInspector(inspector)
-startLoop({ renderer, postProcessing, controls })
+startLoop({ renderer, postProcessing })
 
 window.addEventListener('resize', () => {
   sizes.width = window.innerWidth

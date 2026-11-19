@@ -20,24 +20,31 @@ function createTarget() {
   }
 }
 
-test('tracks WASD key state and ignores unrelated keys', () => {
+test('tracks WASD and arrow key state and ignores unrelated keys', () => {
   const input = new AircraftInput()
 
   input.handleKeyDown({ code: 'KeyW', repeat: false })
   input.handleKeyDown({ code: 'KeyA', repeat: false })
+  input.handleKeyDown({ code: 'ArrowRight', repeat: false })
   input.handleKeyDown({ code: 'Space', repeat: false })
 
   assert.deepEqual(input.getKeys(), {
     KeyW: true,
     KeyA: true,
     KeyS: false,
-    KeyD: false
+    KeyD: false,
+    ArrowUp: false,
+    ArrowDown: false,
+    ArrowLeft: false,
+    ArrowRight: true
   })
 
   input.handleKeyUp({ code: 'KeyW' })
+  input.handleKeyUp({ code: 'ArrowRight' })
 
   assert.equal(input.getKeys().KeyW, false)
   assert.equal(input.getKeys().KeyA, true)
+  assert.equal(input.getKeys().ArrowRight, false)
 })
 
 test('repeated keydown does not change tracked state', () => {
@@ -49,17 +56,24 @@ test('repeated keydown does not change tracked state', () => {
 })
 
 test('blur clears all key state', () => {
-  const input = new AircraftInput()
+  const target = createTarget()
+  const input = new AircraftInput(target)
+  input.attach()
 
   input.handleKeyDown({ code: 'KeyW', repeat: false })
   input.handleKeyDown({ code: 'KeyD', repeat: false })
-  input.clear()
+  input.handleKeyDown({ code: 'ArrowUp', repeat: false })
+  target.dispatch('blur')
 
   assert.deepEqual(input.getKeys(), {
     KeyW: false,
     KeyA: false,
     KeyS: false,
-    KeyD: false
+    KeyD: false,
+    ArrowUp: false,
+    ArrowDown: false,
+    ArrowLeft: false,
+    ArrowRight: false
   })
 })
 
@@ -92,6 +106,10 @@ test('attach is safe when no target is available', () => {
     KeyW: false,
     KeyA: false,
     KeyS: false,
-    KeyD: false
+    KeyD: false,
+    ArrowUp: false,
+    ArrowDown: false,
+    ArrowLeft: false,
+    ArrowRight: false
   })
 })

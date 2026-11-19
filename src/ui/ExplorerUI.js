@@ -1,3 +1,4 @@
+import FlightJoystick from './FlightJoystick.js'
 import TerrainMinimap from './TerrainMinimap.js'
 
 const ICONS = {
@@ -73,7 +74,7 @@ export default class ExplorerUI {
       </section>
       <div class="surface control-hint hud-part flight-panel" aria-label="操作提示">
         <span class="key-cluster"><kbd>W</kbd><span><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></span></span>
-        <span class="hint-copy"><b>出发，随心而行</b><span>方向键亦可驾驶 <i>·</i> 拖动环视 <i>·</i> 滚轮缩放</span></span>
+        <span class="hint-copy"><b>出发，随心而行</b><span>方向键亦可驾驶 · 镜头自动跟随</span></span>
         <button type="button" data-action="help" class="text-button">操作指南 <span>↗</span></button>
       </div>
       <aside class="surface map-card hud-part flight-panel" aria-label="周边地形小地图">
@@ -81,11 +82,12 @@ export default class ExplorerUI {
         <canvas class="terrain-minimap" aria-label="周边已探索地形与飞行朝向"></canvas>
         <div class="map-footer"><span><i></i> 你的位置</span><span data-seed></span></div>
       </aside>
-      <div class="touch-controls hud-part flight-panel" aria-label="触屏驾驶">
-        <button type="button" data-flight-code="KeyA" aria-label="左转">↶</button>
-        <button type="button" data-flight-code="KeyW" aria-label="前进">↑</button>
-        <button type="button" data-flight-code="KeyS" aria-label="后退">↓</button>
-        <button type="button" data-flight-code="KeyD" aria-label="右转">↷</button>
+      <div class="surface flight-joystick hud-part flight-panel" data-flight-joystick role="group" aria-label="飞行摇杆，上下推进，左右转向" hidden>
+        <svg viewBox="0 0 100 100" fill="none" stroke="currentColor" aria-hidden="true">
+          <circle cx="50" cy="50" r="30" stroke-dasharray="1 4" opacity=".55"/>
+          <path d="m46 15 4-4 4 4m-8 70 4 4 4-4M15 46l-4 4 4 4m70-8 4 4-4 4" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <span class="flight-joystick-thumb" aria-hidden="true"></span>
       </div>
       ${cloudVeilMarkup()}
       <div class="loading-card surface" role="status"><span class="eyebrow">A LITTLE WORLD, A BIG ADVENTURE</span><h2>旷野正在生长</h2><p data-stage>正在唤醒这片小世界…</p><div class="loading-track"><i></i></div></div>
@@ -93,8 +95,22 @@ export default class ExplorerUI {
       <dialog class="help-dialog surface" aria-labelledby="help-title">
         ${button('close-help', 'close', '关闭操作帮助')}
         <span class="eyebrow">LET'S WANDER</span><h2 id="help-title">把方向交给好奇心</h2><p class="help-intro">驾驶你的小飞机，掠过森林、河流与山丘。</p>
-        <dl class="help-keys"><div><dt><kbd>W</kbd> / <kbd>↑</kbd></dt><dd>向前飞行</dd></div><div><dt><kbd>S</kbd> / <kbd>↓</kbd></dt><dd>反向推进</dd></div><div><dt><kbd>A</kbd> <kbd>D</kbd> / <kbd>←</kbd> <kbd>→</kbd></dt><dd>左右转向</dd></div><div><dt>鼠标拖动 / 滚轮</dt><dd>环视 / 缩放</dd></div><div><dt><kbd>Space</kbd></dt><dd>暂停 / 继续飞行</dd></div><div><dt><kbd>H</kbd></dt><dd>隐藏 / 显示界面</dd></div><div><dt><kbd>M</kbd></dt><dd>静音 / 开启音效</dd></div><div><dt>小地图右上角 / <kbd>Esc</kbd></dt><dd>展开 / 收起地图</dd></div></dl>
-        <p class="help-note">触屏设备还可使用屏幕上的方向按钮驾驶。</p><button type="button" class="primary-button" data-action="close-help">开始探索 <span>→</span></button>
+        <dl class="help-keys desktop-help">
+          <div><dt><kbd>W</kbd> / <kbd>↑</kbd></dt><dd>向前飞行</dd></div>
+          <div><dt><kbd>S</kbd> / <kbd>↓</kbd></dt><dd>反向推进</dd></div>
+          <div><dt><kbd>A</kbd> / <kbd>←</kbd></dt><dd>向左转</dd></div>
+          <div><dt><kbd>D</kbd> / <kbd>→</kbd></dt><dd>向右转</dd></div>
+          <div><dt><kbd>Space</kbd></dt><dd>暂停 / 继续飞行</dd></div>
+          <div><dt><kbd>H</kbd> / <kbd>M</kbd></dt><dd>切换界面 / 音效</dd></div>
+          <div><dt>小地图右上角 / <kbd>Esc</kbd></dt><dd>展开 / 收起地图</dd></div>
+        </dl>
+        <dl class="help-keys touch-help">
+          <div><dt>左下角摇杆 · 上推 / 下拉</dt><dd>前进 / 反推</dd></div>
+          <div><dt>摇杆 · 左推 / 右推</dt><dd>左转 / 右转</dd></div>
+          <div><dt>斜推摇杆</dt><dd>边飞边转</dd></div>
+        </dl>
+        <p class="help-note touch-help">轻推微调，推远加大力度；松手回中，飞机惯性滑行。</p>
+        <p class="help-note">镜头会自动跟随飞机。</p><button type="button" class="primary-button" data-action="close-help">开始探索 <span>→</span></button>
       </dialog>`
     this.speed = root.querySelector('[data-speed]')
     this.speedBar = root.querySelector('[data-speed-bar]')
@@ -106,25 +122,28 @@ export default class ExplorerUI {
     this.syncAudioControl()
     root.querySelector('[data-seed]').textContent = `# ${experience.world.config.seed}`
     const options = { signal: this.events.signal }
+    this.touchMedia = window.matchMedia('(pointer: coarse)')
+    this.joystick = new FlightJoystick(
+      root.querySelector('[data-flight-joystick]'),
+      (x, y) => this.experience.world.playerAircraft?.input.setJoystick(x, y),
+      options,
+    )
+    this.syncTouchControls()
+    this.touchMedia.addEventListener('change', () => this.syncTouchControls(), options)
+    window.addEventListener('blur', () => this.joystick.reset(), options)
+    window.addEventListener('resize', () => this.joystick.reset(), options)
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) this.joystick.reset()
+    }, options)
     root.addEventListener('click', event => this.onAction(event.target.closest('[data-action]')?.dataset.action), options)
     window.addEventListener('keydown', event => this.onKeyDown(event), { ...options, capture: true })
     this.dialog.addEventListener('close', () => this.syncPause(), options)
     document.addEventListener('fullscreenchange', () => {
+      this.joystick.reset()
       const control = root.querySelector('[data-action="fullscreen"]')
       control.setAttribute('aria-label', document.fullscreenElement ? '退出全屏' : '切换全屏')
     }, options)
     if (!document.fullscreenEnabled) root.querySelector('[data-action="fullscreen"]').hidden = true
-    for (const control of root.querySelectorAll('[data-flight-code]')) {
-      const release = () => this.experience.world.playerAircraft?.input.setVirtualKey(control.dataset.flightCode, false)
-      control.addEventListener('pointerdown', (event) => {
-        const player = this.experience.world.playerAircraft
-        if (!this.ready || !player?.enabled || player.paused) return
-        event.preventDefault()
-        control.setPointerCapture(event.pointerId)
-        player.input.setVirtualKey(control.dataset.flightCode, true)
-      }, options)
-      for (const type of ['pointerup', 'pointercancel', 'lostpointercapture']) control.addEventListener(type, release, options)
-    }
   }
 
   setStage(message) {
@@ -162,20 +181,33 @@ export default class ExplorerUI {
     this.root.querySelector('.cloud-veil')?.remove()
     for (const control of this.root.querySelectorAll('button[disabled]')) control.disabled = false
     if (!this.experience.world.playerAircraft?.enabled) {
-      for (const control of this.root.querySelectorAll('[data-action="pause"], [data-action="home"], [data-flight-code]')) control.disabled = true
-      this.root.querySelector('[data-flight-status]').textContent = '风景漫游'
+      for (const control of this.root.querySelectorAll('[data-action="pause"], [data-action="home"]')) control.disabled = true
     }
+    this.syncPause()
     this.update(0)
   }
 
+  syncTouchControls() {
+    const player = this.experience.world.playerAircraft
+    const touch = this.touchMedia.matches
+    const available = touch && this.ready && player?.enabled === true
+    this.root.classList.toggle('is-touch', touch)
+    this.root.classList.toggle('has-flight-joystick', available)
+    this.joystick.setEnabled(available && !player.paused && !this.mapExpanded && !this.root.classList.contains('is-cinema'))
+  }
+
   syncPause() {
-    this.experience.world.playerAircraft?.setPaused(this.flightPaused || this.dialog.open)
+    const paused = this.experience.platformPaused || this.flightPaused || this.dialog.open
+    const player = this.experience.world.playerAircraft
+    this.joystick.reset()
+    if (player && (this.ready || paused)) player.setPaused(paused)
+    this.syncTouchControls()
     const control = this.root.querySelector('[data-action="pause"]')
     control.setAttribute('aria-pressed', String(this.flightPaused))
     control.setAttribute('aria-label', this.flightPaused ? '继续飞行（空格）' : '暂停飞行（空格）')
     control.title = control.getAttribute('aria-label')
     control.innerHTML = svg(this.flightPaused ? 'play' : 'pause')
-    this.root.querySelector('[data-flight-status]').textContent = !this.experience.world.playerAircraft?.enabled ? '风景漫游' : this.flightPaused ? '飞行已暂停' : '自由探索'
+    this.root.querySelector('[data-flight-status]').textContent = !player?.enabled ? '风景漫游' : this.flightPaused ? '飞行已暂停' : '自由探索'
     this.root.classList.toggle('is-paused', this.flightPaused)
   }
 
@@ -192,6 +224,7 @@ export default class ExplorerUI {
     if (action === 'cinema') {
       if (this.mapExpanded) this.toggleMap(false)
       const hidden = this.root.classList.toggle('is-cinema')
+      this.syncTouchControls()
       const control = this.root.querySelector('[data-action="cinema"]')
       control.setAttribute('aria-pressed', String(hidden))
       control.setAttribute('aria-label', hidden ? '显示界面（H）' : '隐藏界面（H）')
@@ -217,6 +250,7 @@ export default class ExplorerUI {
       this.syncPause()
     }
     if (action === 'home') {
+      this.joystick.reset()
       player.reset()
       this.experience.world.regenerate()
       this.experience.worldCamera.resetView(player.state.position)
@@ -280,6 +314,7 @@ export default class ExplorerUI {
     control.setAttribute('aria-label', expanded ? '收起地图' : '放大小地图')
     control.title = control.getAttribute('aria-label')
     control.innerHTML = svg(expanded ? 'close' : 'fullscreen')
+    this.syncTouchControls()
     this.minimap.update()
   }
 
@@ -293,6 +328,7 @@ export default class ExplorerUI {
 
   dispose() {
     this._cancelReveal?.()
+    this.joystick.reset()
     this.events.abort()
     clearTimeout(this.toastTimer)
     if (this.dialog.open) this.dialog.close()

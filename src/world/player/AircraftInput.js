@@ -17,7 +17,7 @@ export default class AircraftInput {
   constructor(target = globalThis.window ?? null) {
     this.target = target
     this.keys = createEmptyKeys()
-    this.virtualKeys = createEmptyKeys()
+    this.joystick = { x: 0, y: 0 }
     this.isAttached = false
 
     this._onKeyDown = event => this.handleKeyDown(event)
@@ -52,17 +52,20 @@ export default class AircraftInput {
 
   clear() {
     this.keys = createEmptyKeys()
-    this.virtualKeys = createEmptyKeys()
+    this.setJoystick(0, 0)
   }
 
-  setVirtualKey(code, pressed) {
-    if (CONTROL_CODES.includes(code)) {
-      this.virtualKeys[code] = Boolean(pressed)
-    }
+  setJoystick(x, y) {
+    this.joystick.x = x
+    this.joystick.y = y
+  }
+
+  getJoystick() {
+    return { ...this.joystick }
   }
 
   getKeys() {
-    return Object.fromEntries(CONTROL_CODES.map(code => [code, this.keys[code] || this.virtualKeys[code]]))
+    return { ...this.keys }
   }
 
   dispose() {

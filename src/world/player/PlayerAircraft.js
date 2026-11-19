@@ -348,7 +348,7 @@ export default class PlayerAircraft {
 
     const delta = this.experience.time.getDelta()
 
-    const input = resolveAircraftInput(this.input.getKeys())
+    const input = resolveAircraftInput(this.input.getKeys(), this.input.getJoystick())
 
     stepAircraftMotion(this.state, input, this.motionConfig, delta)
 

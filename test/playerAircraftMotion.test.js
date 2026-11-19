@@ -32,11 +32,24 @@ test('normalizes invalid numeric config to conservative defaults', () => {
 })
 
 test('resolves keyboard state to thrust and turn input', () => {
-  assert.deepEqual(resolveAircraftInput({ KeyW: true }), { thrustInput: 1, turnInput: 0 })
-  assert.deepEqual(resolveAircraftInput({ KeyS: true }), { thrustInput: -1, turnInput: 0 })
-  assert.deepEqual(resolveAircraftInput({ KeyA: true }), { thrustInput: 0, turnInput: 1 })
-  assert.deepEqual(resolveAircraftInput({ KeyD: true }), { thrustInput: 0, turnInput: -1 })
+  for (const key of ['KeyW', 'ArrowUp'])
+    assert.deepEqual(resolveAircraftInput({ [key]: true }), { thrustInput: 1, turnInput: 0 })
+  for (const key of ['KeyS', 'ArrowDown'])
+    assert.deepEqual(resolveAircraftInput({ [key]: true }), { thrustInput: -1, turnInput: 0 })
+  for (const key of ['KeyA', 'ArrowLeft'])
+    assert.deepEqual(resolveAircraftInput({ [key]: true }), { thrustInput: 0, turnInput: -1 })
+  for (const key of ['KeyD', 'ArrowRight'])
+    assert.deepEqual(resolveAircraftInput({ [key]: true }), { thrustInput: 0, turnInput: 1 })
   assert.deepEqual(resolveAircraftInput({ KeyW: true, KeyS: true, KeyA: true, KeyD: true }), { thrustInput: 0, turnInput: 0 })
+})
+
+test('resolves proportional joystick input and lets held keys override only their own axis', () => {
+  const joystick = { x: 0.4, y: 0.6 }
+  assert.deepEqual(resolveAircraftInput({}, joystick), { thrustInput: 0.6, turnInput: 0.4 })
+  assert.deepEqual(resolveAircraftInput({ KeyS: true }, joystick), { thrustInput: -1, turnInput: 0.4 })
+  assert.deepEqual(resolveAircraftInput({ KeyA: true }, joystick), { thrustInput: 0.6, turnInput: -1 })
+  assert.deepEqual(resolveAircraftInput({ KeyA: true, ArrowRight: true }, joystick), { thrustInput: 0.6, turnInput: 0 })
+  assert.deepEqual(resolveAircraftInput({}, { x: 2, y: Number.NaN }), { thrustInput: 0, turnInput: 1 })
 })
 
 test('forward thrust accelerates along current yaw', () => {
@@ -63,7 +76,7 @@ test('reverse thrust is weaker than forward thrust', () => {
   assert.equal(reverse.velocity.x < 0, true)
 })
 
-test('left and right turn inputs change angular velocity in opposite directions', () => {
+test('A steers the aircraft left and D steers it right', () => {
   const config = normalizeAircraftConfig({
     turnTorque: 3,
     turnIdleBoost: 1,
@@ -74,11 +87,21 @@ test('left and right turn inputs change angular velocity in opposite directions'
   const left = createAircraftState()
   const right = createAircraftState()
 
-  stepAircraftMotion(left, { thrustInput: 0, turnInput: 1 }, config, 1)
-  stepAircraftMotion(right, { thrustInput: 0, turnInput: -1 }, config, 1)
+  stepAircraftMotion(left, resolveAircraftInput({ KeyA: true }), config, 0.2)
+  stepAircraftMotion(right, resolveAircraftInput({ KeyD: true }), config, 0.2)
+  const forward = resolveAircraftInput({ KeyW: true })
+  stepAircraftMotion(left, forward, config, 0.2)
+  stepAircraftMotion(right, forward, config, 0.2)
 
-  assert.equal(left.angularVelocity, 3)
-  assert.equal(right.angularVelocity, -3)
+  // From the starting heading (+X), aircraft-left is -Z and right is +Z.
+  assert.ok(left.velocity.z < 0)
+  assert.ok(right.velocity.z > 0)
+})
+
+test('partial thrust blends turn boost without changing the full-thrust endpoints', () => {
+  const config = normalizeAircraftConfig({ turnTorque: 1, angularDrag: 0, maxDelta: 1 })
+  const turnRate = y => stepAircraftMotion(createAircraftState(), resolveAircraftInput({}, { x: 1, y }), config, 1).angularVelocity
+  assert.deepEqual([-1, -0.5, 0, 0.5, 1].map(turnRate), [1, 1.25, 1.5, 1.75, 2])
 })
 
 test('linear and angular drag reduce velocity over time', () => {

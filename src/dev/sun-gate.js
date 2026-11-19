@@ -23,7 +23,6 @@ try {
   const liveSlot = manager.loadCoordNow(chunk)
   ui.flightPaused = true
   ui.syncPause()
-  worldCamera.controls.maxPolarAngle = Math.PI * 0.42
   const target = new THREE.Vector3(site.worldX, site.baseY + 3.4, site.worldZ)
   worldCamera.instance.position.copy(target).add(new THREE.Vector3(10, 17, 34))
   worldCamera.lookAt(target)
@@ -61,7 +60,7 @@ try {
   const check = (time) => {
     if (disposed) return
     const reveal = liveSlot.landmarkRenderer
-    status.textContent = liveSlot.columnTransition?.active ? '地形逐列升起' : reveal.progress < 1 ? '日轮门正在显现' : '日轮门已就绪 · 拖动环绕，滚轮缩放'
+    status.textContent = liveSlot.columnTransition?.active ? '地形逐列升起' : reveal.progress < 1 ? '日轮门正在显现' : '日轮门已就绪 · 开始飞行后镜头自动跟随'
     if (previous && time - previous < 500) frameTimes.push(time - previous)
     previous = time
     if (frameTimes.length > 300) frameTimes.shift()

@@ -1,21 +1,19 @@
-import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
-import { TrackballControls } from 'three/addons/controls/TrackballControls.js'
 import * as THREE from 'three/webgpu'
 
 const DEFAULT_TARGET = new THREE.Vector3(12.8, 0, 12.8)
 const DEFAULT_VIEW_DIRECTION = new THREE.Vector3(27.2, 40, 27.2).normalize()
+const DEFAULT_FRUSTUM_HEIGHT = 6.4
+const MIN_FRAMING_ASPECT = 0.8
 
 export default class WorldCamera {
   /**
-   * @param {HTMLCanvasElement} canvas
    * @param {import('../systems/Sizes.js').default} sizes
    */
-  constructor(canvas, sizes) {
+  constructor(sizes) {
     this.sizes = sizes
-    this.canvas = canvas
-
     this.fov = 22
-    this._frustumHeight = 6.4
+    this.target = new THREE.Vector3()
+    this._offset = new THREE.Vector3()
 
     const aspect = sizes.width / sizes.height
     this.instance = new THREE.PerspectiveCamera(
@@ -25,107 +23,56 @@ export default class WorldCamera {
       200,
     )
 
-    this.controls = new OrbitControls(this.instance, canvas)
-    this.controls.enableDamping = true
-    this.controls.enableRotate = true
-    this.controls.enablePan = false
-    this.controls.enableZoom = false
-    this.controls.minPolarAngle = 0
-    this.controls.maxPolarAngle = Math.PI * 0.3
-    this.controls.target.copy(DEFAULT_TARGET)
+    this.resetView(DEFAULT_TARGET)
+  }
 
-    this.trackballControls = new TrackballControls(this.instance, canvas)
-    this.trackballControls.noRotate = true
-    this.trackballControls.noPan = true
-    this.trackballControls.staticMoving = false
-    this.trackballControls.dynamicDampingFactor = 0.2
-    this.trackballControls.target.copy(this.controls.target)
-
-    this._applyFrustumDistance(DEFAULT_VIEW_DIRECTION)
-    this.controls.update()
+  _framingScale() {
+    // Preserve some room to see where the aircraft is heading in portrait.
+    return Math.max(1, MIN_FRAMING_ASPECT / this.instance.aspect)
   }
 
   _getDistanceForFrustumHeight() {
     const halfFovRad = THREE.MathUtils.degToRad(this.fov * 0.5)
-    return this._frustumHeight / (2 * Math.tan(halfFovRad))
+    return this._frustumHeight * this._framingScale() / (2 * Math.tan(halfFovRad))
   }
 
-  _applyFrustumDistance(directionOverride = null) {
+  _applyFrustumDistance(direction = this._offset.subVectors(this.instance.position, this.target)) {
+    if (direction.lengthSq() <= 1e-6) direction = DEFAULT_VIEW_DIRECTION
     const distance = this._getDistanceForFrustumHeight()
-    const direction = directionOverride
-      ? directionOverride.clone().normalize()
-      : this.instance.position.clone().sub(this.controls.target)
-    if (direction.lengthSq() > 1e-6) {
-      direction.normalize()
-    }
-    else {
-      direction.copy(DEFAULT_VIEW_DIRECTION)
-    }
-
-    this.instance.position.copy(this.controls.target).addScaledVector(direction, distance)
-    if (this.trackballControls) {
-      this.trackballControls.minDistance = distance / 3
-      this.trackballControls.maxDistance = distance * 2
-    }
-    this._syncFocusDistance()
-  }
-
-  _syncFocusDistance() {
-    if (this.instance?.userData && this.controls?.target) {
-      this.instance.userData.focusDistance = this.instance.position.distanceTo(this.controls.target)
-    }
-  }
-
-  _syncTrackballTarget() {
-    this.trackballControls?.target?.copy(this.controls.target)
+    this.instance.position.copy(this.target).addScaledVector(direction, distance / direction.length())
+    this.lookAt(this.target)
   }
 
   lookAt(target) {
-    this.controls.target.copy(target)
-    this._syncTrackballTarget()
-    this.controls.update()
-    this._syncFocusDistance()
+    this.target.copy(target)
+    this.instance.lookAt(this.target)
+    this.instance.userData.focusDistance = this.instance.position.distanceTo(this.target)
   }
 
   resetView(target) {
-    this.controls.reset()
-    this.trackballControls.reset()
-    this.controls.target.copy(target)
-    this._frustumHeight = 6.4
+    this.target.copy(target)
+    this._frustumHeight = DEFAULT_FRUSTUM_HEIGHT
     this._applyFrustumDistance(DEFAULT_VIEW_DIRECTION)
-    this._syncTrackballTarget()
-    this.controls.update()
   }
 
   followTarget(target, delta, smoothing = 0) {
-    const previousTarget = this.controls.target.clone()
-    const nextTarget = target.clone()
-
-    if (smoothing > 0 && delta > 0) {
-      const alpha = 1 - Math.exp(-smoothing * delta)
-      nextTarget.lerpVectors(previousTarget, target, alpha)
-    }
-
-    const movement = nextTarget.sub(previousTarget)
-    this.controls.target.copy(previousTarget).add(movement)
+    const alpha = smoothing > 0 && delta > 0 ? 1 - Math.exp(-smoothing * delta) : 1
+    const movement = this._offset.subVectors(target, this.target).multiplyScalar(alpha)
+    this.target.add(movement)
+    // Translating both by the same amount preserves the camera's fixed angle.
     this.instance.position.add(movement)
-    this._syncTrackballTarget()
-    this.controls.update()
-    this._syncFocusDistance()
   }
 
   resize() {
-    const aspect = this.sizes.width / this.sizes.height
-    this.instance.aspect = aspect
+    const previousScale = this._framingScale()
+    this.instance.aspect = this.sizes.width / this.sizes.height
     this.instance.updateProjectionMatrix()
-    this.trackballControls.handleResize()
-  }
-
-  update() {
-    this.controls.update()
-    this._syncTrackballTarget()
-    this.trackballControls.update()
-    this._syncFocusDistance()
+    const scale = this._framingScale() / previousScale
+    if (scale !== 1) {
+      const offset = this._offset.subVectors(this.instance.position, this.target)
+      this.instance.position.copy(this.target).addScaledVector(offset, scale)
+      this.instance.userData.focusDistance = offset.length() * scale
+    }
   }
 
   /**
@@ -147,7 +94,6 @@ export default class WorldCamera {
   }
 
   dispose() {
-    this.controls.dispose()
-    this.trackballControls.dispose()
+    this.instance.removeFromParent()
   }
 }

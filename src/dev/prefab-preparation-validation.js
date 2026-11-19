@@ -422,8 +422,6 @@ async function runWorldRoute() {
     assert(player?.enabled && manager, 'World route requires the enabled player and chunk terrain')
     player.input.dispose()
     player.cameraFollow.enabled = false
-    experience.worldCamera.controls.enabled = false
-    experience.worldCamera.trackballControls.enabled = false
     device = raw.backend.device
     device?.addEventListener('uncapturederror', onGpuError)
     if (device?.pushErrorScope) {

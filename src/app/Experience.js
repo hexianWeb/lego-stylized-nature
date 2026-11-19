@@ -31,7 +31,7 @@ export default class Experience {
     this.scene = new THREE.Scene()
     this.environment = new Environment(this.scene)
 
-    this.worldCamera = new WorldCamera(canvas, this.sizes)
+    this.worldCamera = new WorldCamera(this.sizes)
     this.scene.add(this.worldCamera.instance)
 
     this.resources = new Resources()
@@ -72,16 +72,15 @@ export default class Experience {
    */
   setPlatformPaused(paused) {
     this.platformPaused = Boolean(paused)
-    if (this.platformPaused) {
-      this.world.playerAircraft?.setPaused(true)
-      this.audio?.update(performance.now())
-      return
-    }
     if (this.ui) {
       this.ui.syncPause()
-      return
     }
-    this.world.playerAircraft?.setPaused(false)
+    else {
+      this.world.playerAircraft?.setPaused(this.platformPaused)
+    }
+    if (this.platformPaused) {
+      this.audio?.update(performance.now())
+    }
   }
 
   isSimulationPaused() {
@@ -186,9 +185,6 @@ export default class Experience {
       return
     }
 
-    if (player?.enabled && !player.paused) {
-      player.input.attach()
-    }
     this.ui.setReady()
   }
 
@@ -212,7 +208,6 @@ export default class Experience {
     if (this.platformPaused) {
       return
     }
-    this.worldCamera.update()
     this.world.update()
     this.audio?.update(timestamp)
     this.ui?.update(timestamp)

@@ -203,7 +203,12 @@ export default class World {
     const centerZ = playerPosition?.z ?? depth * cellSize * 0.5
     const halfExtent = Math.max(width, depth) * cellSize * 0.55
 
-    this.experience.worldCamera.lookAt(new THREE.Vector3(centerX, 0, centerZ))
+    if (this.playerAircraft?.enabled && this.playerAircraft.cameraFollow?.enabled) {
+      this.experience.worldCamera.followTarget(playerPosition, 0)
+    }
+    else {
+      this.experience.worldCamera.lookAt(new THREE.Vector3(centerX, 0, centerZ))
+    }
     this.experience.environment.configureShadows({
       halfExtent,
       maxHeight: maxHeight * layerHeight + 8,

@@ -89,18 +89,18 @@ For the best experience, use a recent desktop browser with WebGPU support and ha
 | --- | --- | --- |
 | `W` / `↑` | 向前飞行 | Forward thrust |
 | `S` / `↓` | 反向推进 | Reverse thrust |
-| `A` `D` / `←` `→` | 左右转向 | Turn left / right |
-| 鼠标拖动 / Mouse drag | 环视 | Orbit the camera |
-| 滚轮 / Scroll wheel | 缩放 | Zoom |
+| `A` / `←` | 向左转 | Turn left |
+| `D` / `→` | 向右转 | Turn right |
+| 左下角摇杆 / Touch joystick | 上下推进、左右转向，可斜推 | Thrust and steer together |
 | `Space` | 暂停 / 继续飞行 | Pause / resume flight |
 | `H` | 隐藏 / 显示界面 | Hide / show the HUD |
 | `M` | 静音 / 开启声音 | Toggle sound |
 | 小地图右上角 / Map expand button | 展开 / 收起地图 | Expand / collapse the map |
 | `Esc` | 收起已展开的地图 | Collapse the expanded map |
 
-顶部工具栏可返回出生点、切换全屏或查看帮助；触屏设备也可使用屏幕方向按钮驾驶。
+镜头以固定角度自动跟随飞机，无需另外操作。触屏摇杆轻推微调，推远加大力度；松手自动回中，飞机惯性滑行。顶部工具栏可返回出生点、切换全屏或查看帮助。
 
-Use the top toolbar to return to the starting point, toggle fullscreen, or open help. Touch devices also have on-screen flight controls.
+The camera follows the aircraft from a fixed angle. On touchscreens, nudge the joystick for small adjustments, push farther for stronger input, and release it to coast. Use the top toolbar to return home, toggle fullscreen, or open help.
 
 ## 本地运行 · Run locally
 

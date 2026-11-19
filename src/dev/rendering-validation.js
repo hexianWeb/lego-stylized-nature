@@ -94,14 +94,14 @@ document.querySelector('#run').addEventListener('click', async () => {
       e.world.playerAircraft.input.dispose()
       validateMatrixCapacity(e)
       const cameraPosition = e.worldCamera.instance.position.clone()
-      const cameraTarget = e.worldCamera.controls.target.clone()
+      const cameraTarget = e.worldCamera.target.clone()
       const memories = []
       const snapshots = []
       const retiredWorlds = []
       for (let cycle = 0; cycle < 5; cycle++) {
         await frames(e, 120)
         memories.push({ ...e.renderer.instance.info.memory })
-        snapshots.push({ position: e.world.playerAircraft.state.position.toArray(), camera: e.worldCamera.instance.position.toArray(), target: e.worldCamera.controls.target.toArray(), chunkCenter: e.world.terrainChunkManager.centerCoord, slots: e.world.terrainChunkManager.slots.map(s => ({ coord: s.coord, terrainCapacity: s.terrainRenderer.mesh?.instanceMatrix.count, terrainCount: s.terrainRenderer.mesh?.count, water: s.waterRenderer.instanceCount })) })
+        snapshots.push({ position: e.world.playerAircraft.state.position.toArray(), camera: e.worldCamera.instance.position.toArray(), target: e.worldCamera.target.toArray(), chunkCenter: e.world.terrainChunkManager.centerCoord, slots: e.world.terrainChunkManager.slots.map(s => ({ coord: s.coord, terrainCapacity: s.terrainRenderer.mesh?.instanceMatrix.count, terrainCount: s.terrainRenderer.mesh?.count, water: s.waterRenderer.instanceCount })) })
         e.world.dispose()
         retiredWorlds.push({ ...e.renderer.instance.info.memory })
         if (cycle < 4) {

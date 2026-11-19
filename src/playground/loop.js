@@ -1,6 +1,5 @@
-export function startLoop({ renderer, postProcessing, controls }) {
+export function startLoop({ renderer, postProcessing }) {
   function tick() {
-    controls.update()
     postProcessing.render()
   }
 

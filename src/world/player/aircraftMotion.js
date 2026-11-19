@@ -54,15 +54,21 @@ export function createAircraftState(options = {}) {
   }
 }
 
-export function resolveAircraftInput(keys = {}) {
+function clampAxis(value) {
+  return Number.isFinite(value) ? THREE.MathUtils.clamp(value, -1, 1) : 0
+}
+
+export function resolveAircraftInput(keys = {}, joystick = {}) {
   const forward = keys.KeyW === true || keys.ArrowUp === true ? 1 : 0
   const reverse = keys.KeyS === true || keys.ArrowDown === true ? 1 : 0
   const left = keys.KeyA === true || keys.ArrowLeft === true ? 1 : 0
   const right = keys.KeyD === true || keys.ArrowRight === true ? 1 : 0
 
+  // Positive yaw turns from +X toward +Z (the aircraft's right).
+  // Held keys take precedence on their own axis without overriding the other axis.
   return {
-    thrustInput: forward - reverse,
-    turnInput: left - right,
+    thrustInput: forward || reverse ? forward - reverse : clampAxis(joystick.y),
+    turnInput: left || right ? right - left : clampAxis(joystick.x),
   }
 }
 
@@ -77,13 +83,8 @@ function resolveTurnMultiplier(input, config) {
   if (input.turnInput === 0) {
     return 1
   }
-  if (input.thrustInput > 0) {
-    return config.turnThrustBoost
-  }
-  if (input.thrustInput === 0) {
-    return config.turnIdleBoost
-  }
-  return 1
+  const fullThrustBoost = input.thrustInput > 0 ? config.turnThrustBoost : 1
+  return THREE.MathUtils.lerp(config.turnIdleBoost, fullThrustBoost, Math.abs(input.thrustInput))
 }
 
 export function stepAircraftMotion(state, input, config, delta) {

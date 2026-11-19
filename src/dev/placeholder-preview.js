@@ -1,4 +1,3 @@
-import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import * as THREE from 'three/webgpu'
 import VoxelTerrainPlaceholder from '../world/chunks/VoxelTerrainPlaceholder.js'
 import ChunkColumnTransition from '../world/chunks/ChunkColumnTransition.js'
@@ -64,12 +63,7 @@ populate()
 
 const camera = new THREE.PerspectiveCamera(35, innerWidth / innerHeight, 0.1, 300)
 camera.position.set(24, 64, 83)
-const controls = new OrbitControls(camera, document.querySelector('canvas'))
-controls.target.set(0, 0, 0)
-controls.enablePan = false
-controls.minDistance = 55
-controls.maxDistance = 160
-controls.update()
+camera.lookAt(0, 0, 0)
 const renderer = new THREE.WebGPURenderer({ canvas: document.querySelector('canvas'), antialias: true })
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2))
 renderer.setSize(innerWidth, innerHeight)
@@ -85,7 +79,6 @@ function updateLabels() {
 function render() { renderer.render(scene, camera); updateLabels() }
 await renderer.renderAsync(scene, camera)
 updateLabels()
-controls.addEventListener('change', render)
 document.querySelector('#next').addEventListener('click', () => { variation++; populate(); render() })
 document.querySelector('#reveal').addEventListener('input', () => { applyProgress(); render() })
 window.addEventListener('resize', () => {
