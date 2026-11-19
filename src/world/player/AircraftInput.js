@@ -13,6 +13,10 @@ function createEmptyKeys() {
   return Object.fromEntries(CONTROL_CODES.map(code => [code, false]))
 }
 
+function clampAxis(value) {
+  return Number.isFinite(value) ? Math.max(-1, Math.min(1, value)) : 0
+}
+
 export default class AircraftInput {
   constructor(target = globalThis.window ?? null) {
     this.target = target
@@ -56,8 +60,8 @@ export default class AircraftInput {
   }
 
   setJoystick(x, y) {
-    this.joystick.x = x
-    this.joystick.y = y
+    this.joystick.x = clampAxis(x)
+    this.joystick.y = clampAxis(y)
   }
 
   getJoystick() {

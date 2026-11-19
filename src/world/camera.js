@@ -55,6 +55,19 @@ export default class WorldCamera {
     this._applyFrustumDistance(DEFAULT_VIEW_DIRECTION)
   }
 
+  screenDirectionToYaw(position, right, up) {
+    const { position: eye, quaternion } = this.instance
+    const direction = this._offset.set(right, up, 0).applyQuaternion(quaternion)
+    // Shift the screen-plane vector along the view ray to keep flight at the
+    // same altitude. This corrects tilt and perspective even off-center.
+    const height = eye.y - position.y
+    const rayScale = Math.abs(height) > 1e-6 ? direction.y / height : 0
+    return Math.atan2(
+      direction.z + (position.z - eye.z) * rayScale,
+      direction.x + (position.x - eye.x) * rayScale,
+    )
+  }
+
   followTarget(target, delta, smoothing = 0) {
     const alpha = smoothing > 0 && delta > 0 ? 1 - Math.exp(-smoothing * delta) : 1
     const movement = this._offset.subVectors(target, this.target).multiplyScalar(alpha)

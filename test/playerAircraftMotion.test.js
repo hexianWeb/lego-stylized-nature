@@ -4,8 +4,14 @@ import {
   createAircraftState,
   normalizeAircraftConfig,
   resolveAircraftInput,
+  resolveAircraftFeedback,
   stepAircraftMotion
 } from '../src/world/player/aircraftMotion.js'
+
+function flyFor(state, input, config, seconds, fps = 60) {
+  for (let i = 0; i < Math.round(seconds * fps); i++)
+    stepAircraftMotion(state, input, config, 1 / fps)
+}
 
 test('normalizes invalid numeric config to conservative defaults', () => {
   const config = normalizeAircraftConfig({
@@ -43,13 +49,66 @@ test('resolves keyboard state to thrust and turn input', () => {
   assert.deepEqual(resolveAircraftInput({ KeyW: true, KeyS: true, KeyA: true, KeyD: true }), { thrustInput: 0, turnInput: 0 })
 })
 
-test('resolves proportional joystick input and lets held keys override only their own axis', () => {
-  const joystick = { x: 0.4, y: 0.6 }
-  assert.deepEqual(resolveAircraftInput({}, joystick), { thrustInput: 0.6, turnInput: 0.4 })
-  assert.deepEqual(resolveAircraftInput({ KeyS: true }, joystick), { thrustInput: -1, turnInput: 0.4 })
-  assert.deepEqual(resolveAircraftInput({ KeyA: true }, joystick), { thrustInput: 0.6, turnInput: -1 })
-  assert.deepEqual(resolveAircraftInput({ KeyA: true, ArrowRight: true }, joystick), { thrustInput: 0.6, turnInput: 0 })
-  assert.deepEqual(resolveAircraftInput({}, { x: 2, y: Number.NaN }), { thrustInput: 0, turnInput: 1 })
+test('directional flight takes the shortest angle across the yaw seam', () => {
+  const config = normalizeAircraftConfig()
+  const yaw = Math.PI - 0.1
+  const targetYaw = -Math.PI + 0.1
+  const state = createAircraftState({ yaw, velocity: [4 * Math.cos(yaw), 0, 4 * Math.sin(yaw)] })
+  const input = { targetYaw, thrustInput: 0.5 }
+  stepAircraftMotion(state, input, config, 0.05)
+  assert.ok(state.yaw > yaw && state.yaw < Math.PI)
+  assert.ok(state.velocity.z > 0)
+  flyFor(state, input, config, 2)
+  assert.ok(Math.abs(state.yaw - (targetYaw + 2 * Math.PI)) < 0.01)
+  assert.ok(state.velocity.x < 0 && state.velocity.z < 0)
+})
+
+test('a right-angle command banks into a curve before settling on the new course', () => {
+  const config = normalizeAircraftConfig()
+  const state = createAircraftState({ velocity: [config.maxSpeed, 0, 0] })
+  const right = { targetYaw: Math.PI / 2, thrustInput: 1 }
+  flyFor(state, right, config, 0.5)
+  const course = Math.atan2(state.velocity.z, state.velocity.x)
+  assert.ok(course > 0.1 && course < Math.PI / 4)
+  assert.ok(state.yaw > course && state.yaw < right.targetYaw)
+  assert.ok(state.position.x > state.position.z && state.position.z > 0)
+  assert.ok(resolveAircraftFeedback(state, right).turnInput > 0.5)
+
+  flyFor(state, right, config, 2.5)
+  assert.ok(state.velocity.z > config.maxSpeed * 0.99 && Math.abs(state.velocity.x) < 0.1)
+  assert.ok(Math.abs(resolveAircraftFeedback(state, right).turnInput) < 0.05)
+})
+
+test('higher airspeed widens the arc and the same turn is consistent at 30 and 120 Hz', () => {
+  const config = normalizeAircraftConfig()
+  const turn = (speed, fps) => {
+    const state = createAircraftState({ velocity: [speed, 0, 0] })
+    flyFor(state, { targetYaw: Math.PI / 2, thrustInput: speed / config.maxSpeed }, config, 1, fps)
+    return state
+  }
+  const slow = turn(2, 30)
+  const fast = turn(8, 30)
+  const highRefresh = turn(8, 120)
+  const course = state => Math.atan2(state.velocity.z, state.velocity.x)
+  assert.ok(course(slow) - course(fast) > 0.15)
+  assert.ok(Math.abs(course(fast) - course(highRefresh)) < 0.03)
+  assert.ok(fast.position.distanceTo(highRefresh.position) < 0.2)
+})
+
+test('release mid-turn rolls out and coasts without completing the abandoned turn', () => {
+  const config = normalizeAircraftConfig()
+  const state = createAircraftState({ velocity: [config.maxSpeed, 0, 0] })
+  const turn = { targetYaw: Math.PI / 2, thrustInput: 1 }
+  flyFor(state, turn, config, 0.4)
+  const rate = state.angularVelocity
+  const yaw = state.yaw
+  const neutral = { ...turn, thrustInput: 0 }
+  stepAircraftMotion(state, neutral, config, 0.05)
+  assert.ok(state.angularVelocity > 0 && state.angularVelocity < rate)
+  flyFor(state, neutral, config, 2)
+  assert.equal(state.velocity.length(), 0)
+  assert.equal(state.angularVelocity, 0)
+  assert.ok(state.yaw > yaw && state.yaw < Math.PI / 4)
 })
 
 test('forward thrust accelerates along current yaw', () => {
@@ -100,7 +159,7 @@ test('A steers the aircraft left and D steers it right', () => {
 
 test('partial thrust blends turn boost without changing the full-thrust endpoints', () => {
   const config = normalizeAircraftConfig({ turnTorque: 1, angularDrag: 0, maxDelta: 1 })
-  const turnRate = y => stepAircraftMotion(createAircraftState(), resolveAircraftInput({}, { x: 1, y }), config, 1).angularVelocity
+  const turnRate = thrustInput => stepAircraftMotion(createAircraftState(), { turnInput: 1, thrustInput }, config, 1).angularVelocity
   assert.deepEqual([-1, -0.5, 0, 0.5, 1].map(turnRate), [1, 1.25, 1.5, 1.75, 2])
 })
 

@@ -91,16 +91,16 @@ For the best experience, use a recent desktop browser with WebGPU support and ha
 | `S` / `↓` | 反向推进 | Reverse thrust |
 | `A` / `←` | 向左转 | Turn left |
 | `D` / `→` | 向右转 | Turn right |
-| 左下角摇杆 / Touch joystick | 上下推进、左右转向，可斜推 | Thrust and steer together |
+| 左下角摇杆 / Touch joystick | 朝摇杆所指的屏幕方向飞行 | Fly in the direction you push |
 | `Space` | 暂停 / 继续飞行 | Pause / resume flight |
 | `H` | 隐藏 / 显示界面 | Hide / show the HUD |
 | `M` | 静音 / 开启声音 | Toggle sound |
 | 小地图右上角 / Map expand button | 展开 / 收起地图 | Expand / collapse the map |
 | `Esc` | 收起已展开的地图 | Collapse the expanded map |
 
-镜头以固定角度自动跟随飞机，无需另外操作。触屏摇杆轻推微调，推远加大力度；松手自动回中，飞机惯性滑行。顶部工具栏可返回出生点、切换全屏或查看帮助。
+镜头以固定角度自动跟随飞机。触屏摇杆指向目标航向：向前飞时往右推，飞机会倾斜并沿弧线转向右方。推得越远飞得越快，高速时转弯更宽；松手后飞机逐渐回平、滑行减速。顶部工具栏可返回出生点、切换全屏或查看帮助。
 
-The camera follows the aircraft from a fixed angle. On touchscreens, nudge the joystick for small adjustments, push farther for stronger input, and release it to coast. Use the top toolbar to return home, toggle fullscreen, or open help.
+The camera follows the aircraft from a fixed angle. Point the joystick where you want to go: pushing right while flying forward banks the aircraft into a right-hand arc. Push farther for more speed and wider turns. Release to level out and coast to a stop. Use the top toolbar to return home, toggle fullscreen, or open help.
 
 ## 本地运行 · Run locally
 

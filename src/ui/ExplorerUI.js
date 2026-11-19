@@ -82,7 +82,7 @@ export default class ExplorerUI {
         <canvas class="terrain-minimap" aria-label="周边已探索地形与飞行朝向"></canvas>
         <div class="map-footer"><span><i></i> 你的位置</span><span data-seed></span></div>
       </aside>
-      <div class="surface flight-joystick hud-part flight-panel" data-flight-joystick role="group" aria-label="飞行摇杆，上下推进，左右转向" hidden>
+      <div class="surface flight-joystick hud-part flight-panel" data-flight-joystick role="group" aria-label="飞行摇杆，拖向哪个方向就往哪个方向飞" hidden>
         <svg viewBox="0 0 100 100" fill="none" stroke="currentColor" aria-hidden="true">
           <circle cx="50" cy="50" r="30" stroke-dasharray="1 4" opacity=".55"/>
           <path d="m46 15 4-4 4 4m-8 70 4 4 4-4M15 46l-4 4 4 4m70-8 4 4-4 4" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
@@ -105,11 +105,11 @@ export default class ExplorerUI {
           <div><dt>小地图右上角 / <kbd>Esc</kbd></dt><dd>展开 / 收起地图</dd></div>
         </dl>
         <dl class="help-keys touch-help">
-          <div><dt>左下角摇杆 · 上推 / 下拉</dt><dd>前进 / 反推</dd></div>
-          <div><dt>摇杆 · 左推 / 右推</dt><dd>左转 / 右转</dd></div>
-          <div><dt>斜推摇杆</dt><dd>边飞边转</dd></div>
+          <div><dt>拖动左下角摇杆</dt><dd>沿屏幕方向飞行</dd></div>
+          <div><dt>推得越远</dt><dd>飞得越快</dd></div>
+          <div><dt>松手回中</dt><dd>飞机滑行减速</dd></div>
         </dl>
-        <p class="help-note touch-help">轻推微调，推远加大力度；松手回中，飞机惯性滑行。</p>
+        <p class="help-note touch-help">摇杆指向想飞的方向，飞机会倾斜着转过去。飞得越快，转弯的弧线越宽。</p>
         <p class="help-note">镜头会自动跟随飞机。</p><button type="button" class="primary-button" data-action="close-help">开始探索 <span>→</span></button>
       </dialog>`
     this.speed = root.querySelector('[data-speed]')

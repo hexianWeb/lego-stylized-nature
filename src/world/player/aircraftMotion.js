@@ -16,6 +16,11 @@ export const DEFAULT_AIRCRAFT_CONFIG = {
 }
 
 const FORWARD = new THREE.Vector3()
+const JOYSTICK_SPEED_RESPONSE = 5.5
+const JOYSTICK_HEADING_GAIN = 3
+const JOYSTICK_TRACK_RESPONSE = 5
+const JOYSTICK_MAX_LATERAL_ACCELERATION = 10 // world units/s² at full bank
+const JOYSTICK_STOP_SPEED = 0.01
 
 function positiveNumber(value, fallback) {
   return Number.isFinite(value) && value > 0 ? value : fallback
@@ -54,21 +59,30 @@ export function createAircraftState(options = {}) {
   }
 }
 
-function clampAxis(value) {
-  return Number.isFinite(value) ? THREE.MathUtils.clamp(value, -1, 1) : 0
-}
-
-export function resolveAircraftInput(keys = {}, joystick = {}) {
+export function resolveAircraftInput(keys = {}) {
   const forward = keys.KeyW === true || keys.ArrowUp === true ? 1 : 0
   const reverse = keys.KeyS === true || keys.ArrowDown === true ? 1 : 0
   const left = keys.KeyA === true || keys.ArrowLeft === true ? 1 : 0
   const right = keys.KeyD === true || keys.ArrowRight === true ? 1 : 0
 
   // Positive yaw turns from +X toward +Z (the aircraft's right).
-  // Held keys take precedence on their own axis without overriding the other axis.
   return {
-    thrustInput: forward || reverse ? forward - reverse : clampAxis(joystick.y),
-    turnInput: left || right ? right - left : clampAxis(joystick.x),
+    thrustInput: forward - reverse,
+    turnInput: right - left,
+  }
+}
+
+function getYawError(yaw, targetYaw) {
+  return THREE.MathUtils.euclideanModulo(targetYaw - yaw + Math.PI, 2 * Math.PI) - Math.PI
+}
+
+export function resolveAircraftFeedback(state, input) {
+  if (!Number.isFinite(input.targetYaw)) return input
+  // Bank reflects the turn actually being flown, including the roll-out.
+  const lateralAcceleration = state.velocity.length() * state.angularVelocity
+  return {
+    thrustInput: input.thrustInput,
+    turnInput: THREE.MathUtils.clamp(lateralAcceleration / JOYSTICK_MAX_LATERAL_ACCELERATION, -1, 1),
   }
 }
 
@@ -87,12 +101,37 @@ function resolveTurnMultiplier(input, config) {
   return THREE.MathUtils.lerp(config.turnIdleBoost, fullThrustBoost, Math.abs(input.thrustInput))
 }
 
-export function stepAircraftMotion(state, input, config, delta) {
-  const dt = Math.min(Math.max(delta, 0), config.maxDelta)
-  if (dt === 0) {
-    return state
+function stepDirectionalMotion(state, { targetYaw, thrustInput }, config, dt) {
+  const currentSpeed = state.velocity.length()
+  const headingError = getYawError(state.yaw, targetYaw)
+  const targetSpeed = config.maxSpeed * thrustInput
+  // On takeoff, ease in thrust as the nose lines up. A turn at cruise
+  // preserves airspeed, even when the new heading is directly behind us.
+  const alignment = targetSpeed > currentSpeed ? (1 + Math.cos(headingError)) * 0.5 : 1
+  const speed = THREE.MathUtils.damp(currentSpeed, targetSpeed, JOYSTICK_SPEED_RESPONSE * alignment, dt)
+  if (thrustInput === 0 && speed < JOYSTICK_STOP_SPEED) {
+    state.velocity.set(0, 0, 0)
+    state.angularVelocity = 0
+    return
   }
 
+  // A given bank can only supply so much sideways acceleration (a = vω).
+  const rateLimit = Math.min(config.maxAngularSpeed, JOYSTICK_MAX_LATERAL_ACCELERATION / Math.max(speed, JOYSTICK_STOP_SPEED))
+  const targetRate = thrustInput > 0 ? THREE.MathUtils.clamp(headingError * JOYSTICK_HEADING_GAIN, -rateLimit, rateLimit) : 0
+  const previousRate = state.angularVelocity
+  const rateStep = config.turnTorque * dt
+  state.angularVelocity += THREE.MathUtils.clamp(targetRate - previousRate, -rateStep, rateStep)
+  state.yaw += (previousRate + state.angularVelocity) * 0.5 * dt
+
+  // The nose leads the flight path. Rotate the existing velocity rather
+  // than blending opposing vectors through zero during a U-turn.
+  const course = currentSpeed > 0 ? Math.atan2(state.velocity.z, state.velocity.x) : state.yaw
+  const correction = THREE.MathUtils.damp(0, getYawError(course, state.yaw), JOYSTICK_TRACK_RESPONSE, dt)
+  const nextCourse = course + THREE.MathUtils.clamp(correction, -rateLimit * dt, rateLimit * dt)
+  state.velocity.set(Math.cos(nextCourse) * speed, 0, Math.sin(nextCourse) * speed)
+}
+
+function stepManualMotion(state, input, config, dt) {
   const thrustPower = input.thrustInput >= 0 ? config.thrust : config.reverseThrust
   const acceleration = input.thrustInput * thrustPower
   FORWARD.set(Math.cos(state.yaw), 0, Math.sin(state.yaw))
@@ -104,9 +143,6 @@ export function stepAircraftMotion(state, input, config, delta) {
   state.velocity.multiplyScalar(applyExponentialDrag(1, config.linearDrag, dt))
   state.angularVelocity = applyExponentialDrag(state.angularVelocity, config.angularDrag, dt)
 
-  if (state.velocity.lengthSq() > config.maxSpeed * config.maxSpeed) {
-    state.velocity.setLength(config.maxSpeed)
-  }
   const maxAngularSpeed = config.maxAngularSpeed * turnMultiplier
   state.angularVelocity = THREE.MathUtils.clamp(
     state.angularVelocity,
@@ -114,8 +150,26 @@ export function stepAircraftMotion(state, input, config, delta) {
     maxAngularSpeed,
   )
 
-  state.position.addScaledVector(state.velocity, dt)
   state.yaw += state.angularVelocity * dt
+}
+
+export function stepAircraftMotion(state, input, config, delta) {
+  const dt = Math.min(Math.max(delta, 0), config.maxDelta)
+  if (dt === 0) {
+    return state
+  }
+
+  if (Number.isFinite(input.targetYaw)) {
+    stepDirectionalMotion(state, input, config, dt)
+  }
+  else {
+    stepManualMotion(state, input, config, dt)
+  }
+
+  if (state.velocity.lengthSq() > config.maxSpeed * config.maxSpeed) {
+    state.velocity.setLength(config.maxSpeed)
+  }
+  state.position.addScaledVector(state.velocity, dt)
   state.position.y = config.height
 
   return state

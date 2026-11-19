@@ -10,6 +10,8 @@ import {
 
   resolveAircraftInput,
 
+  resolveAircraftFeedback,
+
   stepAircraftMotion,
 
 } from './aircraftMotion.js'
@@ -112,6 +114,7 @@ export default class PlayerAircraft {
     }
 
     this.input = new AircraftInput(options.inputTarget ?? globalThis.window ?? null)
+    this._joystickYaw = null
 
     const initialPosition = resolveInitialPosition(this.worldConfig)
 
@@ -341,6 +344,21 @@ export default class PlayerAircraft {
     })
   }
 
+  _resolveFlightInput() {
+    const { x, y } = this.input.getJoystick()
+    const amount = Math.min(1, Math.hypot(x, y))
+    if (amount > 0) {
+      this._joystickYaw = this.experience.worldCamera.screenDirectionToYaw(this.state.position, x, y)
+    }
+    else {
+      const keyboard = resolveAircraftInput(this.input.getKeys())
+      if (keyboard.thrustInput || keyboard.turnInput) this._joystickYaw = null
+      if (this._joystickYaw === null) return keyboard
+    }
+
+    return { targetYaw: this._joystickYaw, thrustInput: amount }
+  }
+
   update() {
     if (!this.enabled || this.paused) {
       return
@@ -348,9 +366,9 @@ export default class PlayerAircraft {
 
     const delta = this.experience.time.getDelta()
 
-    const input = resolveAircraftInput(this.input.getKeys(), this.input.getJoystick())
-
-    stepAircraftMotion(this.state, input, this.motionConfig, delta)
+    const controls = this._resolveFlightInput()
+    stepAircraftMotion(this.state, controls, this.motionConfig, delta)
+    const input = resolveAircraftFeedback(this.state, controls)
 
     stepVisualAttitude(
 
@@ -403,6 +421,7 @@ export default class PlayerAircraft {
   reset() {
     const position = resolveInitialPosition(this.worldConfig)
     this.state = createAircraftState({ position: [position[0], this.motionConfig.height, position[2]] })
+    this._joystickYaw = null
     this.attitudeState = createVisualAttitudeState()
     this.input.clear()
     this.wingAirflow?.clear()

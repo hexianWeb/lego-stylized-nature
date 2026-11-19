@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import FlightJoystick, { resolveJoystickDrag } from '../src/ui/FlightJoystick.js'
+import WorldCamera from '../src/world/camera.js'
 import AircraftInput from '../src/world/player/AircraftInput.js'
 import PlayerAircraft from '../src/world/player/PlayerAircraft.js'
 
@@ -20,6 +21,8 @@ test('joystick and keyboard release independently and blur clears both sources',
   target.dispatchEvent(new Event('blur'))
   assert.ok(Object.values(input.getKeys()).every(value => value === false))
   assert.deepEqual(input.getJoystick(), { x: 0, y: 0 })
+  input.setJoystick(2, Number.NaN)
+  assert.deepEqual(input.getJoystick(), { x: 1, y: 0 })
   input.dispose()
 })
 
@@ -87,23 +90,100 @@ test('a single finger owns the stick and release, cancellation or hiding always 
   assert.equal(element.hidden, true)
 })
 
-function createPlayer() {
-  const experience = { renderer: {}, time: { getDelta: () => 0.05, getElapsed: () => 1 } }
+function createPlayer(sizes = { width: 390, height: 844 }) {
+  const experience = {
+    renderer: {},
+    time: { getDelta: () => 0.05, getElapsed: () => 1 },
+    worldCamera: new WorldCamera(sizes),
+  }
   const player = new PlayerAircraft(experience, {
     inputTarget: new EventTarget(),
     config: { terrain: { width: 128, depth: 128, cellSize: 0.2 }, player: { aircraft: { enabled: false, height: 5.5 } } },
   })
   player.enabled = true
+  experience.worldCamera.resetView(player.state.position)
   return player
 }
 
-test('joystick input drives both thrust and turn in the live player update', () => {
+test('joystick acquires all eight screen directions even with a different nose direction or camera lag', () => {
+  const directions = [[1, 0], [1, 1], [0, 1], [-1, 1], [-1, 0], [-1, -1], [0, -1], [1, -1]]
+  for (const sizes of [{ width: 390, height: 844 }, { width: 844, height: 390 }]) {
+    const player = createPlayer(sizes)
+    const rig = player.experience.worldCamera
+    const camera = rig.instance
+    player.cameraFollow.enabled = true
+    for (const [x, y] of directions) {
+      player.reset()
+      rig.resetView(player.state.position)
+      player.state.position.x -= 0.8
+      player.state.position.z += 1.1
+      player.state.yaw = 1.9
+      player.state.velocity.set(-2, 0, 3)
+      player.input.setJoystick(x, y)
+      for (let i = 0; i < 100; i++) player.update()
+      const before = player.state.position.clone()
+      player.update()
+      camera.updateMatrixWorld()
+      before.project(camera)
+      const after = player.state.position.clone().project(camera)
+      // Correct the NDC aspect before comparing slopes in screen pixels.
+      const dx = (after.x - before.x) * camera.aspect
+      const dy = after.y - before.y
+      const agreement = (dx * x + dy * y) / (Math.hypot(dx, dy) * Math.hypot(x, y))
+      assert.ok(agreement > 1 - 1e-9, `wrong screen direction for (${x}, ${y}) at width ${sizes.width}`)
+      assert.equal(player.state.position.y, player.motionConfig.height)
+    }
+    player.dispose()
+  }
+})
+
+test('reversing the stick flies a U-turn with forward momentum, and release coasts to a stop', () => {
   const player = createPlayer()
-  player.input.setJoystick(-0.4, 0.6)
+  player.input.setJoystick(0.25, 0)
+  for (let i = 0; i < 60; i++) player.update()
+  const slowSpeed = player.state.velocity.length()
+  const right = player.state.velocity.clone().normalize()
+  assert.ok(Math.abs(slowSpeed / player.motionConfig.maxSpeed - 0.25) < 0.01)
+
+  player.input.setJoystick(-1, 0)
   player.update()
-  assert.ok(player.state.velocity.x > 0)
-  assert.ok(player.state.yaw < 0)
-  assert.ok(player.group.rotation.y > 0)
+  assert.ok(player.state.velocity.clone().normalize().dot(right) > 0.99)
+  const start = player.state.position.clone()
+  let widestOffset = 0
+  for (let i = 0; i < 100; i++) {
+    player.update()
+    assert.ok(player.state.velocity.length() > slowSpeed * 0.98, 'a U-turn must not brake through zero')
+    const { x, z } = player.state.position
+    widestOffset = Math.max(widestOffset, Math.abs((x - start.x) * right.z - (z - start.z) * right.x))
+  }
+  const left = player.state.velocity.clone().normalize()
+  assert.ok(left.dot(right) < -0.99)
+  assert.ok(widestOffset > 1)
+  assert.ok(player.state.velocity.length() > slowSpeed * 3)
+
+  player.input.setJoystick(0, 0)
+  const speed = player.state.velocity.length()
+  player.update()
+  assert.ok(player.state.velocity.length() < speed)
+  for (let i = 0; i < 30; i++) player.update()
+  assert.equal(player.state.velocity.length(), 0)
+  const { yaw } = player.state
+  assert.ok(Math.cos(yaw) * left.x + Math.sin(yaw) * left.z > 0.999)
+  player.dispose()
+})
+
+test('keyboard controls resume when an active joystick is centered', () => {
+  const player = createPlayer()
+  player.input.setJoystick(0, 1)
+  player.input.handleKeyDown({ code: 'KeyD' })
+  player.update()
+  assert.ok(player.state.angularVelocity < 0)
+
+  player.input.setJoystick(0, 0)
+  const yaw = player.state.yaw
+  for (let i = 0; i < 10; i++) player.update()
+  assert.ok(player.state.yaw > yaw)
+  assert.ok(player.state.angularVelocity > 0)
   player.dispose()
 })
 
