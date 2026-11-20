@@ -334,6 +334,7 @@ kbd { display: inline-flex; align-items: center; justify-content: center; min-wi
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } .loading-track i { width: 100%; opacity: .6; } }
 
 .webgl {
+    touch-action: none;
     position: fixed;
     top: 0;
     left: 0;
@@ -342,4 +343,26 @@ kbd { display: inline-flex; align-items: center; justify-content: center; min-wi
     height: 100%;
     height: 100dvh;
     outline: none;
+}
+
+.flight-altimeter { display: flex; justify-content: space-between; gap: 6px; margin-top: 9px; color: #36564c; font: 11px ui-monospace, monospace; }
+.flight-altimeter b { font-variant-numeric: tabular-nums; }
+.cockpit-frame { position: absolute; inset: 0; z-index: -1; pointer-events: none; }
+.cockpit-frame svg { width: 100%; height: 100%; shape-rendering: crispEdges; }
+.cockpit-instruments { position: absolute; bottom: 4.8%; left: 50%; transform: translateX(-50%); color: #a4edd0; font: 600 clamp(8px, 1.3vw, 15px) ui-monospace, monospace; white-space: pre; }
+.flight-glass { position: absolute; inset: 47% auto auto 50%; transform: translate(-50%, -50%); display: flex; align-items: center; gap: 4px; color: #c7ffe3; filter: drop-shadow(0 1px 2px #183b38); }
+.flight-glass i { width: 18px; border-bottom: 2px solid; }
+.flight-glass b { font: bold 20px monospace; }
+.explorer-ui:has(.cockpit-frame:not([hidden])) .control-hint { display: none; }
+.flight-pads { position: absolute; right: var(--touch-right); bottom: var(--touch-bottom); display: grid; grid-template-columns: repeat(2, 1fr); gap: 5px; pointer-events: auto; }
+.flight-pads button { border: 1px solid #bed5c9; border-radius: 8px; min-width: 54px; min-height: 40px; padding: 6px; color: #effff6; background: #243d3ce8; font: 600 12px monospace; touch-action: none; }
+.flight-pads button:active, .flight-pads button.held { background: #ffd392; color: #323a38; }
+.has-flight-joystick .map-card:not(.is-expanded) { bottom: calc(var(--touch-bottom) + 94px); }
+@media (pointer: coarse) and (max-height: 520px) {
+    .is-touch .map-card:not(.is-expanded) { width: 142px; padding: 7px; }
+    .is-touch .map-card:not(.is-expanded) .map-heading { margin: 0 0 4px; }
+    .is-touch .map-card:not(.is-expanded) .map-heading .eyebrow { display: none; }
+    .is-touch .map-card:not(.is-expanded) .terrain-minimap { height: 54px; border-radius: 9px; }
+    .has-flight-joystick .location-card { padding: 9px 12px; width: 140px; }
+    .has-flight-joystick .coordinates { display: none; }
 }

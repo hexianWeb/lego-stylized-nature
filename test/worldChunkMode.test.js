@@ -36,6 +36,28 @@ function createExperience() {
   }
 }
 
+test('flight clearance samples brick tops, liquids and negative chunks without mistaking a streaming gap for ground', () => {
+  const world = new World(createExperience())
+  world.config = { terrain: { layerHeight: 0.1, cellSize: 0.2, waterLevel: 3 }, chunks: { size: 4 } }
+  world.brickGeometry = { boundingBox: { max: { y: 0.12 } } }
+  const map = {
+    origin: { x: -4, z: 0 }, halo: 1, heightField: { width: 6, depth: 6 },
+    getSurfaceCell(col, row) {
+      assert.equal(row, 2)
+      return [null, { height: 7 }, { height: 0, isWater: true }, { height: 3, isLava: true, lavaHeight: 5 }][col]
+    },
+  }
+  world.terrainChunkManager = { activeSlots: new Map([['-1:0', { terrainMap: map }]]) }
+  assert.ok(Math.abs(world.sampleSurface(-0.79, 0.21) - 0.82) < 1e-9)
+  assert.ok(Math.abs(world.sampleSurface(-0.59, 0.21) - 0.42) < 1e-9)
+  assert.ok(Math.abs(world.sampleSurface(-0.39, 0.21) - 0.62) < 1e-9)
+  assert.equal(world.sampleSurface(0.01, 0.21), null)
+  world.terrainChunkManager = null
+  world.terrainMap = map
+  assert.ok(Math.abs(world.sampleSurface(-0.79, 0.21) - 0.82) < 1e-9)
+  assert.equal(world.sampleSurface(0, 0.21), null)
+})
+
 test('chunk mode regenerate skips full terrain generation', () => {
   const world = new World(createExperience())
   let generatedFullMap = false

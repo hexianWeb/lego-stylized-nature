@@ -1,297 +1,152 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import * as THREE from 'three/webgpu'
+import WorldCamera from '../src/world/camera.js'
 import PlayerAircraft from '../src/world/player/PlayerAircraft.js'
-
-function createExperience({ asset = createAsset(), config = {} } = {}) {
-  let followCall = null
-  return {
-    resources: {
-      items: {
-        playerAircraftModel: asset
-      }
-    },
-    renderer: {},
-    time: {
-      _elapsed: 0,
-      getDelta() {
-        return 0.1
-      },
-      getElapsed() {
-        return this._elapsed
-      }
-    },
-    worldCamera: {
-      followTarget(target, delta, smoothing) {
-        followCall = { target: target.clone(), delta, smoothing }
-      },
-      get followCall() {
-        return followCall
-      }
-    },
-    config: {
-      player: {
-        aircraft: {
-          enabled: true,
-          assetName: 'playerAircraftModel',
-          height: 3,
-          scale: 2,
-          thrust: 10,
-          reverseThrust: 5,
-          turnTorque: 4,
-          linearDrag: 0,
-          angularDrag: 0,
-          maxSpeed: 100,
-          maxAngularSpeed: 100,
-          cameraFollow: {
-            enabled: true,
-            smoothing: 6
-          },
-          wingAirflow: {
-            enabled: false
-          },
-          ...config
-        }
-      }
-    }
-  }
-}
 
 function createAsset() {
   const scene = new THREE.Group()
-  scene.name = 'aircraftRoot'
-  const body = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial())
+  const body = new THREE.Mesh(new THREE.BoxGeometry(0.84, 0.17, 0.57), new THREE.MeshStandardMaterial())
   body.name = 'aircraft'
   scene.add(body)
+  for (const name of ['left_engine', 'right_engine']) {
+    const socket = new THREE.Object3D()
+    socket.name = name
+    body.add(socket)
+  }
   return { scene }
 }
 
-test('engine emission clones shared materials and changes intensity without recompilation', () => {
-  const asset = createAsset()
-  const texture = new THREE.Texture()
-  const sourceMaterial = new THREE.MeshStandardMaterial({ emissive: '#ff8000', emissiveMap: texture })
-  for (const name of ['left_engine', 'right_engine']) {
-    const engine = new THREE.Mesh(new THREE.BoxGeometry(), sourceMaterial)
-    engine.name = name
-    asset.scene.add(engine)
+function createPlayer(options = {}, sampleSurface = () => 0, asset = createAsset()) {
+  const experience = {
+    resources: { items: { playerAircraftModel: asset } },
+    worldCamera: new WorldCamera({ width: 960, height: 580 }),
+    time: { getDelta: () => 1 / 60 },
   }
-  const aircraft = new PlayerAircraft(createExperience({ asset, config: { engineFlame: { enabled: false } } }))
-  const left = aircraft.engineNodes.left.material
-  const right = aircraft.engineNodes.right.material
-  assert.notEqual(left, sourceMaterial)
-  assert.notEqual(right, left)
-  const versions = [left.version, right.version]
-  aircraft.attitudeState.leftThruster = 0.2
-  aircraft.attitudeState.rightThruster = 0.8
-  aircraft._applyThrusterVisuals()
-  assert.equal(left.emissiveIntensity, 0.2)
-  assert.equal(right.emissiveIntensity, 0.8)
-  assert.deepEqual(left.emissive, sourceMaterial.emissive)
-  assert.deepEqual([left.version, right.version], versions)
-  assert.equal(sourceMaterial.emissiveIntensity, 1)
-  let disposed = 0
-  left.addEventListener('dispose', () => disposed++)
-  right.addEventListener('dispose', () => disposed++)
-  sourceMaterial.addEventListener('dispose', () => assert.fail('source material is owned by Resources'))
-  texture.addEventListener('dispose', () => assert.fail('shared texture is owned by Resources'))
-  aircraft.dispose()
-  aircraft.dispose()
-  assert.equal(disposed, 2)
-})
-
-function createDebugFolder(title = 'root') {
-  return {
-    title,
-    folders: [],
-    bindings: [],
-    addFolder(options) {
-      const folder = createDebugFolder(options.title)
-      folder.options = options
-      this.folders.push(folder)
-      return folder
-    },
-    addBinding(target, key, options) {
-      const binding = {
-        target,
-        key,
-        options,
-        handlers: new Map(),
-        on(event, handler) {
-          this.handlers.set(event, handler)
-          return this
-        }
-      }
-      this.bindings.push(binding)
-      return binding
-    }
-  }
+  return new PlayerAircraft(experience, {
+    inputTarget: new EventTarget(), sampleSurface,
+    config: { terrain: { width: 100, depth: 80, cellSize: 0.2 }, player: { aircraft: options } },
+  })
 }
 
-test('clones the configured aircraft asset into its group', () => {
-  const experience = createExperience()
-  const player = new PlayerAircraft(experience)
-
-  assert.equal(player.enabled, true)
-  assert.equal(player.group.children.length, 1)
-  assert.notEqual(player.group.children[0], experience.resources.items.playerAircraftModel.scene)
-  assert.equal(player.group.scale.x, 2)
-  assert.equal(player.group.position.y, 3)
-
-  const body = player.group.children[0].children[0].children[0]
-  assert.equal(body.castShadow, true)
-  assert.equal(body.receiveShadow, true)
+test('the original airframe spawns over the local surface and follows the simulated track', () => {
+  const p = createPlayer({}, () => 6)
+  assert.deepEqual(p.state.position.toArray(), [10, 6 + p.motionConfig.clearance, 8])
+  assert.ok(p.enabled && p.modelRoot.getObjectByProperty('isMesh', true))
+  p.input.handleKeyDown({ code: 'KeyS' })
+  for (let i = 0; i < 30; i++) p.update()
+  assert.ok(p.state.velocity.y > 0 && p.state.position.y > 7)
+  assert.ok(p.group.position.equals(p.state.position))
+  const nose = new THREE.Vector3(1, 0, 0).applyQuaternion(p.group.quaternion)
+  assert.ok(nose.dot(p.state.velocity.clone().normalize()) > 0.999)
+  p.dispose()
 })
 
-test('missing asset disables player and warns once', () => {
-  const warnings = []
-  const originalWarn = console.warn
-  console.warn = (message) => warnings.push(message)
-
-  try {
-    const player = new PlayerAircraft(createExperience({ asset: null }))
-    player.update()
-    player.update()
-
-    assert.equal(player.enabled, false)
-    assert.equal(player.group.children.length, 0)
-    assert.equal(warnings.length, 1)
-    assert.match(warnings[0], /Missing aircraft asset/)
-  } finally {
-    console.warn = originalWarn
+test('changing views mid-loop preserves the track and uses the renderer camera throughout', () => {
+  const p = createPlayer({ wingAirflow: { enabled: false } })
+  const comparison = createPlayer({ wingAirflow: { enabled: false } })
+  const rig = p.experience.worldCamera, camera = rig.instance
+  const offsets = []
+  for (const jet of [p, comparison]) jet.input.request('backLoop')
+  for (const view of ['top', 'chase', 'cockpit', 'top']) {
+    if (view !== p.view) p.input.request('view')
+    for (let i = 0; i < 46; i++) {
+      p.update()
+      comparison.update()
+      assert.ok(p.state.position.distanceTo(comparison.state.position) < 1e-8)
+      assert.equal(p.state.pitch, comparison.state.pitch)
+    }
+    assert.equal(rig.instance, camera)
+    assert.equal(rig.flightView, view)
+    assert.equal(p.visualRoot.visible, view !== 'cockpit')
+    offsets.push(camera.position.distanceTo(p.state.position))
   }
+  assert.ok(offsets[0] > offsets[1] && offsets[1] > offsets[2] && offsets[2] < 1)
+  p.dispose()
+  comparison.dispose()
 })
 
-test('update applies thrust motion and camera follow', () => {
-  const experience = createExperience()
-  const player = new PlayerAircraft(experience, { inputTarget: null })
-
-  player.input.handleKeyDown({ code: 'KeyW', repeat: false })
-  player.update()
-
-  assert.equal(player.group.position.x > 0, true)
-  assert.equal(player.group.position.y, 3)
-  assert.equal(experience.worldCamera.followCall.target.x, player.group.position.x)
-  assert.equal(experience.worldCamera.followCall.delta, 0.1)
-  assert.equal(experience.worldCamera.followCall.smoothing, 6)
+test('disabled follow leaves the camera in place and disabling the player does not attach input', () => {
+  const p = createPlayer({ cameraFollow: { enabled: false } })
+  const camera = p.experience.worldCamera.instance
+  const before = camera.position.clone()
+  p.update()
+  assert.ok(camera.position.equals(before))
+  p.dispose()
+  const off = createPlayer({ enabled: false })
+  assert.equal(off.input.isAttached, false)
+  assert.equal(off.airframe, undefined)
+  off.dispose()
 })
 
-test('camera follow can be disabled', () => {
-  const experience = createExperience({
-    config: {
-      cameraFollow: {
-        enabled: false,
-        smoothing: 6
-      }
-    }
-  })
-  const player = new PlayerAircraft(experience, { inputTarget: null })
-
-  player.update()
-
-  assert.equal(experience.worldCamera.followCall, null)
-})
-
-test('creates and disposes wing airflow when configured', () => {
-  const player = new PlayerAircraft(createExperience({
-    config: {
-      wingAirflow: {
-        enabled: true,
-        capacity: 4,
-        maxSamples: 4
-      }
-    }
-  }), { inputTarget: null })
-
-  assert.equal(player.wingAirflow?.root?.name, 'WingAirflowVFX')
-  assert.equal(player.wingAirflow.root.parent, player.modelRoot)
-  assert.equal(player.modelRoot.parent, player.visualRoot)
-  assert.equal(player.modelRoot.rotation.y, Math.PI / 2)
-
-  player.dispose()
-
-  assert.equal(player.wingAirflow, null)
-})
-
-test('debugger exposes wing airflow tuning bindings', () => {
-  const player = new PlayerAircraft(createExperience({
-    config: {
-      wingAirflow: {
-        enabled: true,
-        capacity: 6,
-        maxSamples: 4
-      }
-    }
-  }), { inputTarget: null })
-  const debug = createDebugFolder()
-
-  player.debuggerInit(debug)
-
-  const playerFolder = debug.folders.find((folder) => folder.title === 'Player Aircraft')
-  const airflowFolder = playerFolder.folders.find((folder) => folder.title === 'Wing Airflow')
-  const bindingKeys = airflowFolder.bindings.map((binding) => binding.key)
-
-  assert.equal(airflowFolder.options.expanded, false)
-  assert.deepEqual(bindingKeys, [
-    'enabled',
-    'outwardOffset',
-    'backOffset',
-    'upOffset',
-    'sampleLife',
-    'emitInterval',
-    'minEmitDistance',
-    'maxSamples',
-    'breakAngleDeg',
-    'width',
-    'opacity',
-    'speedOpacity',
-    'accelerationBoost',
-    'color',
-    'additive',
-    'showAnchors'
-  ])
-  assert.equal(
-    airflowFolder.bindings.find((binding) => binding.key === 'maxSamples').options.max,
-    player.wingAirflowConfig.capacity
-  )
-
-  airflowFolder.bindings[0].handlers.get('change')({ value: false })
-  assert.equal(player.wingAirflow.root.visible, false)
-
-  airflowFolder.bindings[0].handlers.get('change')({ value: true })
-  assert.equal(player.wingAirflow.root.visible, true)
-
-  player.wingAirflow.left.count = 6
-  player.wingAirflow.right.count = 6
-  player.wingAirflowConfig.maxSamples = 2
-  airflowFolder.bindings.find((binding) => binding.key === 'maxSamples')
-    .handlers.get('change')({ value: 2 })
-  assert.equal(player.wingAirflow.left.count, 2)
-  assert.equal(player.wingAirflow.right.count, 2)
-
-  player.wingAirflow.left.count = 2
-  airflowFolder.bindings.find((binding) => binding.key === 'outwardOffset')
-    .handlers.get('change')({ value: 0.24 })
-  assert.equal(player.wingAirflow.left.count, 0)
-})
-
-test('dispose removes input listeners and scene children', () => {
-  const target = {
-    listeners: new Map(),
-    addEventListener(type, listener) {
-      this.listeners.set(type, listener)
-    },
-    removeEventListener(type, listener) {
-      if (this.listeners.get(type) === listener) {
-        this.listeners.delete(type)
-      }
-    }
+test('the finite-map flight crosses an edge without leaving terrain or drawing a connecting ribbon', () => {
+  const p = createPlayer()
+  p.worldConfig.chunks = { enabled: false }
+  p.state.position.x = 19.99
+  for (let i = 0; i < 4; i++) p.update()
+  assert.ok(p.state.position.x > 0 && p.state.position.x < 1)
+  assert.equal(p.state.yaw, 0)
+  assert.equal(p.state.speed, p.motionConfig.cruiseSpeed)
+  for (const wing of [p.wingAirflow.left, p.wingAirflow.right]) {
+    for (let i = 0; i < wing.count; i++)
+      assert.ok(Math.abs(wing.getPosition(wing.logicalIndex(i), new THREE.Vector3()).x) < 2)
   }
-  const player = new PlayerAircraft(createExperience(), { inputTarget: target })
+  p.dispose()
+})
 
-  assert.equal(target.listeners.size, 3)
+test('a paused stunt and its trail resume from the same pose; reset clears the trail', () => {
+  const p = createPlayer()
+  p.input.request('roll')
+  for (let i = 0; i < 15; i++) p.update()
+  assert.ok(p.wingAirflow.left.count > 0)
+  const progress = p.state.stunt.elapsed
+  p.setPaused(true)
+  p.update()
+  assert.equal(p.state.stunt.elapsed, progress)
+  assert.equal(p.input.isAttached, false)
+  p.setPaused(false)
+  p.update()
+  assert.ok(p.state.stunt.elapsed > progress)
+  p.reset()
+  assert.equal(p.wingAirflow.left.count, 0)
+  assert.equal(p.state.stunt, null)
+  p.dispose()
+})
 
-  player.dispose()
+test('the original plane uses the GLB paint and engine sockets without taking ownership of the asset', () => {
+  const asset = createAsset()
+  const p = createPlayer({}, () => 0, asset)
+  const source = asset.scene.getObjectByName('aircraft')
+  const body = p.modelRoot.getObjectByName('aircraft')
+  assert.notEqual(source, body)
+  assert.equal(source.geometry, body.geometry)
+  assert.equal(source.material, body.material)
+  assert.equal(p.modelRoot.rotation.y, Math.PI / 2)
+  assert.ok(body.castShadow && body.receiveShadow)
+  let released = 0
+  for (const name of ['left_engine', 'right_engine']) {
+    const flame = body.getObjectByName(name).getObjectByName('EngineFlameVFX')
+    assert.ok(flame)
+    assert.equal(source.getObjectByName(name).children.length, 0)
+    flame.getObjectByProperty('isMesh', true).material.addEventListener('dispose', () => released++)
+  }
+  source.geometry.addEventListener('dispose', () => assert.fail('resource-owned geometry disposed'))
+  source.material.addEventListener('dispose', () => assert.fail('resource-owned paint disposed'))
+  p.dispose()
+  p.dispose()
+  assert.equal(released, 2)
+})
 
-  assert.equal(target.listeners.size, 0)
-  assert.equal(player.group.children.length, 0)
+test('retiring the sprite variant releases its own pixels, geometry, materials and listeners exactly once', () => {
+  const p = createPlayer({ appearance: 'sprite' })
+  const [body, plume] = p.modelRoot.children
+  const owners = [body.geometry, body.material, body.material.map, plume.geometry, plume.material]
+  const disposals = owners.map(() => 0)
+  owners.forEach((owner, i) => owner.addEventListener('dispose', () => disposals[i]++))
+  p.dispose()
+  p.dispose()
+  assert.deepEqual(disposals, owners.map(() => 1))
+  assert.equal(p.wingAirflow, null)
+  assert.equal(p.input.isAttached, false)
+  assert.equal(p.group.children.length, 0)
 })

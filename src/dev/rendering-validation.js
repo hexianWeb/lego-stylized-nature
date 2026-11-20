@@ -91,7 +91,7 @@ document.querySelector('#run').addEventListener('click', async () => {
     const e = new Experience(canvas)
     try {
       await e.init()
-      e.world.playerAircraft.input.dispose()
+      e.world.playerAircraft.setPaused(true)
       validateMatrixCapacity(e)
       const cameraPosition = e.worldCamera.instance.position.clone()
       const cameraTarget = e.worldCamera.target.clone()
@@ -109,7 +109,7 @@ document.querySelector('#run').addEventListener('click', async () => {
           e.worldCamera.lookAt(cameraTarget)
           e.world = new World(e)
           e.world.build()
-          e.world.playerAircraft.input.dispose()
+          e.world.playerAircraft.setPaused(true)
           await e.world.warmupPrefabPipelines(e.renderer.instance, e.worldCamera.instance, () => e.renderer.render())
         }
       }
@@ -126,7 +126,7 @@ document.querySelector('#run').addEventListener('click', async () => {
     const post = new Experience(canvas)
     try {
       await post.init()
-      post.world.playerAircraft.input.dispose()
+      post.world.playerAircraft.setPaused(true)
       await frames(post)
       assert(post.renderer.renderPipeline.needsUpdate === false, 'Pipeline did not render')
       const targets = new Set()
@@ -152,7 +152,7 @@ document.querySelector('#run').addEventListener('click', async () => {
     const optional = new Experience(canvas)
     try {
       await optional.init()
-      optional.world.playerAircraft.input.dispose()
+      optional.world.playerAircraft.setPaused(true)
       await frames(optional)
       assert(optional.resources.errors.waterNoiseTexture, 'Optional failure not recorded')
       assert(optional.world.terrainChunkManager.activeSlots.size === 9, 'Optional failure blocked world')

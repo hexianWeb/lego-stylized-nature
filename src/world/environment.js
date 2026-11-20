@@ -16,21 +16,25 @@ const PLAYER_SHADOW_TARGET_OFFSET = new THREE.Vector3(
 const PLAYER_SHADOW_FAR_PADDING = 8
 const PLAYER_SHADOW_MIN_CAMERA_DEPTH
   = PLAYER_SHADOW_LIGHT_OFFSET.distanceTo(PLAYER_SHADOW_TARGET_OFFSET) + PLAYER_SHADOW_FAR_PADDING
-// Flat studio backdrop sampled from the reference image.
 const SOLID_BACKGROUND = '#6aca97'
 
 export default class Environment {
   /**
    * @param {THREE.Scene} scene
    */
-  constructor(scene) {
+  constructor(scene, flightAtmosphere = null) {
     this.scene = scene
     this.envMap = null
     this.envMapRenderTarget = null
     this.disposed = false
     this.environmentIntensity = 0.3
     this.useEnvBackground = false
-    this.backgroundColor = SOLID_BACKGROUND
+    this.backgroundColor = flightAtmosphere?.sky ?? SOLID_BACKGROUND
+    if (flightAtmosphere) {
+      // Fade coarse terrain beyond the detail window into the flying horizon.
+      this.fog = new THREE.Fog(this.backgroundColor, flightAtmosphere.near, flightAtmosphere.far)
+      scene.fog = this.fog
+    }
     /** 0 = darker shadows, 1 = more ambient/env fill */
     this.shadowFill = 0.32
     this.shadowBounds = {
@@ -105,6 +109,7 @@ export default class Environment {
 
   syncBackground() {
     this.clearColor.set(this.backgroundColor)
+    this.fog?.color.copy(this.clearColor)
     this.scene.background = this.useEnvBackground && this.envMap
       ? this.envMap
       : this.clearColor
@@ -245,6 +250,7 @@ export default class Environment {
     this.disposed = true
     this.scene.environment = null
     this.scene.background = null
+    if (this.fog) this.scene.fog = null
     this.envMapRenderTarget?.dispose()
     this.envMapRenderTarget = null
     this.envMap = null

@@ -167,7 +167,10 @@ export default class World {
         this.addSystem(this.prefabPlacer)
       }
 
-      this.playerAircraft = new PlayerAircraft(this.experience, { config: this.config })
+      this.playerAircraft = new PlayerAircraft(this.experience, {
+        config: this.config,
+        sampleSurface: (x, z) => this.sampleSurface(x, z),
+      })
       this.addSystem(this.playerAircraft)
     }
 
@@ -191,7 +194,7 @@ export default class World {
     const halfExtent = Math.max(width, depth) * cellSize * 0.55
 
     if (this.playerAircraft?.enabled && this.playerAircraft.cameraFollow?.enabled) {
-      this.experience.worldCamera.followTarget(playerPosition, 0)
+      this.playerAircraft.syncCamera(0)
     }
     else {
       this.experience.worldCamera.lookAt(new THREE.Vector3(centerX, 0, centerZ))
@@ -209,6 +212,7 @@ export default class World {
         centerZ,
         this.experience.worldCamera.instance,
       )
+      this.playerAircraft?.snapToSurface?.()
       this.refreshAOPreview()
       return
     }
@@ -225,8 +229,36 @@ export default class World {
     this.waterBrickRenderer?.build(this.terrainMap)
     this.lavaBrickRenderer.build(this.terrainMap)
     this.prefabPlacer?.build(this.terrainMap)
+    this.playerAircraft?.snapToSurface?.()
 
     this.refreshAOPreview()
+  }
+
+  /** World Y at the top of the rendered surface brick; null while its chunk is pending. */
+  sampleSurface(worldX, worldZ) {
+    const { cellSize, layerHeight, waterLevel } = this.config.terrain
+    let map = this.terrainMap
+    let x = worldX
+    let z = worldZ
+    if (this.terrainChunkManager) {
+      const { size, debugSpacing = 0 } = this.config.chunks
+      const pitch = size * cellSize + debugSpacing
+      const cx = Math.floor(x / pitch)
+      const cz = Math.floor(z / pitch)
+      map = this.terrainChunkManager.activeSlots.get(`${cx}:${cz}`)?.terrainMap
+      x -= cx * debugSpacing
+      z -= cz * debugSpacing
+    }
+    if (!map) return null
+    const halo = map.halo ?? 0
+    const col = Math.floor(x / cellSize + 1e-9) - map.origin.x + halo
+    const row = Math.floor(z / cellSize + 1e-9) - map.origin.z + halo
+    if (col < halo || row < halo || col >= map.heightField.width - halo || row >= map.heightField.depth - halo) return null
+    const cell = map.getSurfaceCell(col, row)
+    if (!cell) return null
+    const layer = cell.isLava ? cell.lavaHeight ?? cell.height
+      : cell.isWater && this.config.water?.enableWater !== false ? waterLevel : cell.height
+    return layer * layerHeight + (this.brickGeometry?.boundingBox?.max.y ?? layerHeight)
   }
 
   refreshAOPreview() {

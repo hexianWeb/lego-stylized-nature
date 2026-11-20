@@ -15,12 +15,12 @@ import * as THREE from 'three/webgpu'
 export const DEFAULT_ENGINE_FLAME_CONFIG = {
   enabled: true,
   intensity: 1.15,
-  length: 0.28,
-  radius: 0.03,
+  length: 0.38,
+  radius: 0.036,
   speed: 1.05,
   respondToThrusters: true,
   respondToSpeed: true,
-  minIntensity: 0.12,
+  minIntensity: 0.72,
 }
 
 let sharedConeGeometry = null
@@ -28,7 +28,16 @@ let sharedRingGeometry = null
 
 function getConeGeometry() {
   if (!sharedConeGeometry) {
-    sharedConeGeometry = new THREE.ConeGeometry(1, 1, 96, 36, true)
+    sharedConeGeometry = new THREE.ConeGeometry(1, 1, 32, 20, true)
+    // The throat meets fly.glb's small outlet; the plume opens just behind it.
+    const position = sharedConeGeometry.getAttribute('position')
+    for (let i = 0; i < position.count; i++) {
+      const t = position.getY(i) + 0.5
+      const flare = 0.5 + 0.5 * THREE.MathUtils.smoothstep(t, 0, 0.15)
+      position.setX(i, position.getX(i) * flare)
+      position.setZ(i, position.getZ(i) * flare)
+    }
+    sharedConeGeometry.computeVertexNormals()
   }
   return sharedConeGeometry
 }
@@ -54,7 +63,7 @@ export function normalizeEngineFlameConfig(config = {}) {
     respondToThrusters: config.respondToThrusters !== false,
     respondToSpeed: config.respondToSpeed !== false,
     minIntensity: Number.isFinite(config.minIntensity)
-      ? Math.max(0, config.minIntensity)
+      ? clamp01(config.minIntensity)
       : DEFAULT_ENGINE_FLAME_CONFIG.minIntensity,
   }
 }
@@ -67,17 +76,19 @@ function blendResponse(min, ratio) {
   return min + (1 - min) * clamp01(ratio)
 }
 
-export function resolveFlameResponseScale(config, speedRatio, thrusterIntensity = 1) {
-  const min = config.minIntensity
-  const speedScale = config.respondToSpeed ? blendResponse(min, speedRatio) : 1
-  const thrusterScale = config.respondToThrusters ? blendResponse(min, thrusterIntensity) : 1
-  const combined = speedScale * thrusterScale
-
+export function resolveFlameResponseScale(config, speedRatio, boost = 1) {
+  const speed = clamp01(speedRatio)
+  const thrust = clamp01(boost)
+  const drive = config.respondToThrusters
+    ? (config.respondToSpeed ? 0.3 * speed + 0.7 * thrust : thrust)
+    : (config.respondToSpeed ? speed : 1)
+  // A running engine keeps its outlet width at cruise. Boost mostly extends
+  // the plume; multiplying speed and throttle used to shrink all three axes.
   return {
-    intensity: combined,
-    length: combined,
-    radius: combined,
-    speed: combined,
+    intensity: blendResponse(config.minIntensity, drive),
+    length: blendResponse(0.43, drive),
+    radius: blendResponse(0.8, drive),
+    speed: blendResponse(0.65, drive),
   }
 }
 
@@ -91,7 +102,7 @@ export function applyFlameResponseScale(config, scale) {
   }
 }
 
-function createFlameMaterial(sharedState, { base, mid, tip, opacity, noiseOffset }) {
+function createFlameMaterial(sharedState, { base, mid, tip, opacity, noiseOffset, blending = THREE.AdditiveBlending }) {
   const uOpacity = uniform(opacity)
   const uNoiseOffset = uniform(noiseOffset)
 
@@ -113,7 +124,7 @@ function createFlameMaterial(sharedState, { base, mid, tip, opacity, noiseOffset
   const flameNoise = bandA.mul(0.58).add(bandB.mul(0.42))
   const streaks = smoothstep(0.16, 0.92, flameNoise)
 
-  const baseFade = smoothstep(0.0, 0.045, progress)
+  const baseFade = smoothstep(0.0, 0.045, progress).mul(0.35).add(0.65)
   const tipFade = float(1.0).sub(smoothstep(0.50, 1.0, progress))
   const breakup = mix(float(1.0), streaks, progress.mul(0.88))
   const flicker = sin(time.mul(sharedState.speed).mul(31.0).add(uNoiseOffset)).mul(0.075).add(0.925)
@@ -134,7 +145,7 @@ function createFlameMaterial(sharedState, { base, mid, tip, opacity, noiseOffset
   material.transparent = true
   material.depthWrite = false
   material.side = THREE.DoubleSide
-  material.blending = THREE.AdditiveBlending
+  material.blending = blending
   material.forceSinglePass = false
   return material
 }
@@ -164,7 +175,7 @@ function createShockRings(parent) {
 function animateShockRings(rings, elapsed, values, pulse) {
   for (const ring of rings) {
     const phase = (elapsed * values.speed * 0.72 + ring.userData.phaseOffset) % 1
-    const z = -(0.08 + phase * values.length * 0.86)
+    const z = -values.length * (0.12 + phase * 0.75)
     const radius = values.radius * (1.02 - phase * 0.74) * pulse
     const opacity = (1.0 - phase) * 0.11 * values.intensity
 
@@ -183,7 +194,9 @@ const FLAME_LAYERS = [
       base: '#ff5a0a',
       mid: '#ff9f1a',
       tip: '#b91c1c',
-      opacity: 0.38,
+      // Keep an amber silhouette even over white bricks and sunlit terrain.
+      blending: THREE.NormalBlending,
+      opacity: 0.84,
       noiseOffset: 0.0,
     },
   },

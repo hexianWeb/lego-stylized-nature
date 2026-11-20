@@ -105,76 +105,27 @@ function createPlayer(sizes = { width: 390, height: 844 }) {
   return player
 }
 
-test('joystick acquires all eight screen directions even with a different nose direction or camera lag', () => {
-  const directions = [[1, 0], [1, 1], [0, 1], [-1, 1], [-1, 0], [-1, -1], [0, -1], [1, -1]]
+test('the same stick commands bank and pitch in all three views and both screen orientations', () => {
   for (const sizes of [{ width: 390, height: 844 }, { width: 844, height: 390 }]) {
-    const player = createPlayer(sizes)
-    const rig = player.experience.worldCamera
-    const camera = rig.instance
-    player.cameraFollow.enabled = true
-    for (const [x, y] of directions) {
-      player.reset()
-      rig.resetView(player.state.position)
-      player.state.position.x -= 0.8
-      player.state.position.z += 1.1
-      player.state.yaw = 1.9
-      player.state.velocity.set(-2, 0, 3)
-      player.input.setJoystick(x, y)
-      for (let i = 0; i < 100; i++) player.update()
-      const before = player.state.position.clone()
-      player.update()
-      camera.updateMatrixWorld()
-      before.project(camera)
-      const after = player.state.position.clone().project(camera)
-      // Correct the NDC aspect before comparing slopes in screen pixels.
-      const dx = (after.x - before.x) * camera.aspect
-      const dy = after.y - before.y
-      const agreement = (dx * x + dy * y) / (Math.hypot(dx, dy) * Math.hypot(x, y))
-      assert.ok(agreement > 1 - 1e-9, `wrong screen direction for (${x}, ${y}) at width ${sizes.width}`)
-      assert.equal(player.state.position.y, player.motionConfig.height)
+    for (const view of ['top', 'chase', 'cockpit']) {
+      const player = createPlayer(sizes)
+      player.view = view
+      player.input.setJoystick(0.6, -0.8)
+      for (let i = 0; i < 20; i++) player.update()
+      assert.ok(player.state.bank > 0.3 && player.state.yaw > 0)
+      assert.ok(player.state.position.y > player.motionConfig.height + 0.8)
+      player.input.setJoystick(0, 0)
+      for (let i = 0; i < 40; i++) player.update()
+      assert.ok(Math.abs(player.state.bank) < 0.001 && Math.abs(player.state.pitch) < 0.001)
+      assert.ok(Math.abs(player.state.speed - player.motionConfig.cruiseSpeed) < 0.01)
+      player.dispose()
     }
-    player.dispose()
   }
-})
-
-test('reversing the stick flies a U-turn with forward momentum, and release coasts to a stop', () => {
-  const player = createPlayer()
-  player.input.setJoystick(0.25, 0)
-  for (let i = 0; i < 60; i++) player.update()
-  const slowSpeed = player.state.velocity.length()
-  const right = player.state.velocity.clone().normalize()
-  assert.ok(Math.abs(slowSpeed / player.motionConfig.maxSpeed - 0.25) < 0.01)
-
-  player.input.setJoystick(-1, 0)
-  player.update()
-  assert.ok(player.state.velocity.clone().normalize().dot(right) > 0.99)
-  const start = player.state.position.clone()
-  let widestOffset = 0
-  for (let i = 0; i < 100; i++) {
-    player.update()
-    assert.ok(player.state.velocity.length() > slowSpeed * 0.98, 'a U-turn must not brake through zero')
-    const { x, z } = player.state.position
-    widestOffset = Math.max(widestOffset, Math.abs((x - start.x) * right.z - (z - start.z) * right.x))
-  }
-  const left = player.state.velocity.clone().normalize()
-  assert.ok(left.dot(right) < -0.99)
-  assert.ok(widestOffset > 1)
-  assert.ok(player.state.velocity.length() > slowSpeed * 3)
-
-  player.input.setJoystick(0, 0)
-  const speed = player.state.velocity.length()
-  player.update()
-  assert.ok(player.state.velocity.length() < speed)
-  for (let i = 0; i < 30; i++) player.update()
-  assert.equal(player.state.velocity.length(), 0)
-  const { yaw } = player.state
-  assert.ok(Math.cos(yaw) * left.x + Math.sin(yaw) * left.z > 0.999)
-  player.dispose()
 })
 
 test('keyboard controls resume when an active joystick is centered', () => {
   const player = createPlayer()
-  player.input.setJoystick(0, 1)
+  player.input.setJoystick(-1, 0)
   player.input.handleKeyDown({ code: 'KeyD' })
   player.update()
   assert.ok(player.state.angularVelocity < 0)
@@ -219,7 +170,7 @@ test('returning home clears motion and trails while preserving an explicit pause
   player.reset()
   assert.deepEqual(player.state.position.toArray(), [12.8, 5.5, 12.8])
   assert.deepEqual(player.group.position.toArray(), [12.8, 5.5, 12.8])
-  assert.equal(player.state.velocity.length(), 0)
+  assert.equal(player.state.velocity.length(), player.motionConfig.cruiseSpeed)
   assert.equal(player.state.yaw, 0)
   assert.equal(player.state.angularVelocity, 0)
   assert.equal(player.paused, true)

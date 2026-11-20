@@ -420,7 +420,7 @@ async function runWorldRoute() {
     const player = world.playerAircraft
     const manager = world.terrainChunkManager
     assert(player?.enabled && manager, 'World route requires the enabled player and chunk terrain')
-    player.input.dispose()
+    player.setPaused(true)
     player.cameraFollow.enabled = false
     device = raw.backend.device
     device?.addEventListener('uncapturederror', onGpuError)

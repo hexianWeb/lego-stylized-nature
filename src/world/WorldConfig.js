@@ -2,6 +2,7 @@ import { STUD_SHADING_DEFAULTS } from '../materials/tsl/legoStudsConfig.js'
 import { BRICK_LOD_DEFAULTS } from './bricks/BrickLOD.js'
 import { createTerrainColorSettings } from './bricks/terrainColorScheme.js'
 import { CHUNK_TRANSITION_DEFAULTS } from './chunks/ChunkColumnTransition.js'
+import { DEFAULT_AIRCRAFT_CONFIG } from './player/aircraftMotion.js'
 
 export const worldConfig = {
   seed: 20260608,
@@ -94,35 +95,14 @@ export const worldConfig = {
   player: {
     aircraft: {
       enabled: true,
+      ...DEFAULT_AIRCRAFT_CONFIG,
+      appearance: 'model',
       assetName: 'playerAircraftModel',
-      height: 5.5,
-      scale: 1,
-      thrust: 16,
-      reverseThrust: 8,
-      turnTorque: 5,
-      turnThrustBoost: 5,
-      turnIdleBoost: 4,
-      linearDrag: 2.2,
-      angularDrag: 6,
-      maxSpeed: 8,
-      maxAngularSpeed: 2.8,
-      cameraFollow: {
-        enabled: true,
-        smoothing: 8,
-
-      },
+      view: 'top',
+      atmosphere: { sky: '#add7e0', near: 12, far: 35 },
+      invertY: true,
+      cameraFollow: { enabled: true },
       visualAttitude: {
-        enabled: true,
-        pitchMax: 0.22,
-        rollMax: 0.50,
-        pitchSmoothing: 10,
-        rollSmoothing: 8,
-        rollSpeedBoost: 0.4,
-        hover: {
-          amplitude: 0.06,
-          frequency: 0.7,
-          fadeSpeedRatio: 0.25,
-        },
         turbulence: {
           enabled: true,
           pitchAmplitude: 0.011,
@@ -137,32 +117,9 @@ export const worldConfig = {
           minSpeedRatio: 0.05,
           fullSpeedRatio: 0.45,
         },
-        thrusters: {
-          enabled: true,
-          baseIntensity: 0.35,
-          thrustBoost: 0.65,
-          turnBias: 0.25,
-          leftNodeName: 'left_engine',
-          rightNodeName: 'right_engine',
-        },
-      },
-      engineFlame: {
-        enabled: true,
-        intensity: 1.15,
-        length: 0.28,
-        radius: 0.03,
-        speed: 1.05,
-        respondToThrusters: true,
-        minIntensity: 0.15,
       },
       wingAirflow: {
         enabled: true,
-        anchors: {
-          wingHalfWidth: 0.40,
-          outwardOffset: 0.1,
-          backOffset: -0.21,
-          upOffset: 0.03,
-        },
         sampleLife: 0.56,
         emitInterval: 0.034,
         minEmitDistance: 0.050,

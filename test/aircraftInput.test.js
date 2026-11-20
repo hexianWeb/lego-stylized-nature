@@ -36,7 +36,9 @@ test('tracks WASD and arrow key state and ignores unrelated keys', () => {
     ArrowUp: false,
     ArrowDown: false,
     ArrowLeft: false,
-    ArrowRight: true
+    ArrowRight: true,
+    ShiftLeft: false,
+    ShiftRight: false
   })
 
   input.handleKeyUp({ code: 'KeyW' })
@@ -73,7 +75,9 @@ test('blur clears all key state', () => {
     ArrowUp: false,
     ArrowDown: false,
     ArrowLeft: false,
-    ArrowRight: false
+    ArrowRight: false,
+    ShiftLeft: false,
+    ShiftRight: false
   })
 })
 
@@ -110,6 +114,42 @@ test('attach is safe when no target is available', () => {
     ArrowUp: false,
     ArrowDown: false,
     ArrowLeft: false,
-    ArrowRight: false
+    ArrowRight: false,
+    ShiftLeft: false,
+    ShiftRight: false
   })
+})
+
+test('short clicks roll once, a long press boosts without rolling, cancellation clears both', () => {
+  const input = new AircraftInput(null, { setPointerCapture() {}, hasPointerCapture: () => false })
+  const press = { button: 0, pointerId: 3, clientX: 10, clientY: 20, pointerType: 'mouse', timeStamp: 100 }
+  input.pointerDown(press)
+  input.pointerUp({ ...press, timeStamp: 160 })
+  assert.equal(input.consume().stunt, 'roll')
+  assert.equal(input.consume().stunt, null)
+  input.pointerDown(press)
+  assert.equal(input.consume(true, 250).boost, false)
+  assert.equal(input.consume(true, 450).boost, true)
+  input.pointerUp({ ...press, timeStamp: 510 })
+  assert.equal(input.consume().stunt, null)
+  input.pointerDown(press)
+  input.cancelPointer()
+  assert.equal(input.consume(true, 600).boost, false)
+  assert.equal(input.consume().stunt, null)
+})
+
+test('view and stunt are edge actions and editable controls retain their keyboard input', () => {
+  const input = new AircraftInput(null)
+  input.handleKeyDown({ code: 'Space', target: { closest: () => true } })
+  assert.equal(input.consume().view, false)
+  input.handleKeyDown({ code: 'Space' })
+  input.handleKeyDown({ code: 'KeyF' })
+  const command = input.consume()
+  assert.equal(command.view, true)
+  assert.equal(command.stunt, 'backLoop')
+  input.handleKeyDown({ code: 'KeyF', repeat: true })
+  assert.equal(input.consume().stunt, null)
+  input.handleKeyDown({ code: 'KeyS' })
+  assert.equal(input.consume(true).climb, 1)
+  assert.equal(input.consume(false).climb, -1)
 })

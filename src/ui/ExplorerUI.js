@@ -1,7 +1,9 @@
 import FlightJoystick from './FlightJoystick.js'
+import FlightDeck, { flightDeckMarkup } from './FlightDeck.js'
 import TerrainMinimap from './TerrainMinimap.js'
 
 const ICONS = {
+  view: '<path d="m3 8 9-5 9 5-9 5zM3 12l9 5 9-5M3 16l9 5 9-5"/>',
   pause: '<path d="M8 5v14M16 5v14"/>',
   play: '<path d="m8 5 11 7-11 7Z"/>',
   home: '<path d="m3 11 9-8 9 8M5 10v10h14V10M9 20v-7h6v7"/>',
@@ -51,7 +53,7 @@ export default class ExplorerUI {
       <header class="hud-header">
         <div class="brand hud-part">
           <span class="brick-mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
-          <div><h1>积木旷野<span>BRICKLAND</span></h1><p>一场没有终点的微小冒险</p></div>
+          <div><h1>旷野飞行队<span>KESTREL · 01</span></h1><p>积木旷野 / 自由试飞</p></div>
         </div>
         <p class="surface orientation-hint hud-part">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -62,10 +64,11 @@ export default class ExplorerUI {
         <div class="header-tools">
           <span class="explore-badge hud-part"><i></i><span data-flight-status>自由探索</span></span>
           <nav class="surface action-bar" aria-label="探索工具">
-            ${button('pause', 'pause', '暂停飞行（空格）', 'aria-pressed="false" disabled')}
+            ${button('view', 'view', '切换视角（空格）', 'disabled')}
+            ${button('pause', 'pause', '暂停飞行（P）', 'aria-pressed="false" disabled')}
             ${button('home', 'home', '回到出生点', 'disabled')}
             <span class="tool-divider"></span>
-            ${button('sound', 'sound', '静音音效（M）', 'aria-pressed="false"')}
+            ${button('sound', 'sound', '静音音效（U）', 'aria-pressed="false"')}
             ${button('help', 'help', '操作帮助', 'disabled')}
             ${button('fullscreen', 'fullscreen', '切换全屏')}
             ${button('cinema', 'eye', '隐藏界面（H）', 'aria-pressed="false"')}
@@ -73,14 +76,15 @@ export default class ExplorerUI {
         </div>
       </header>
       <section class="surface location-card hud-part flight-panel" aria-label="飞行信息">
-        <div class="eyebrow">正在探索 <span class="live-dot"></span></div>
+        <div class="eyebrow"><span data-panel-status>自由巡航</span><span class="live-dot"></span></div>
         <h2>${svg('leaf')}<span data-biome>旷野之间</span></h2>
         <div class="flight-readings"><div><strong data-speed>0.0</strong><span>格 / 秒</span></div><div class="coordinates"><span>X <b data-x>—</b></span><span>Z <b data-z>—</b></span></div></div>
         <div class="speed-track" aria-hidden="true"><i data-speed-bar></i></div>
+        <div class="flight-altimeter"><span>离地 <b data-alt>—</b> 格</span><b data-view>俯视</b></div>
       </section>
       <div class="surface control-hint hud-part flight-panel" aria-label="操作提示">
         <span class="key-cluster"><kbd>W</kbd><span><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></span></span>
-        <span class="hint-copy"><b>出发，随心而行</b><span>方向键亦可驾驶 · 镜头自动跟随</span></span>
+        <span class="hint-copy"><b>S 拉起 · W 下压 · A/D 转向</b><span>Shift 加速 · R 翻滚 · F/G 空翻 · 空格切镜</span></span>
         <button type="button" data-action="help" class="text-button">操作指南 <span>↗</span></button>
       </div>
       <aside class="surface map-card hud-part flight-panel" aria-label="周边地形小地图">
@@ -88,35 +92,37 @@ export default class ExplorerUI {
         <canvas class="terrain-minimap" aria-label="周边已探索地形与飞行朝向"></canvas>
         <div class="map-footer"><span><i></i> 你的位置</span><span data-seed></span></div>
       </aside>
-      <div class="surface flight-joystick hud-part flight-panel" data-flight-joystick role="group" aria-label="飞行摇杆，拖向哪个方向就往哪个方向飞" hidden>
+      <div class="surface flight-joystick hud-part flight-panel" data-flight-joystick role="group" aria-label="飞行摇杆，横向转弯，纵向控制俯仰" hidden>
         <svg viewBox="0 0 100 100" fill="none" stroke="currentColor" aria-hidden="true">
           <circle cx="50" cy="50" r="30" stroke-dasharray="1 4" opacity=".55"/>
           <path d="m46 15 4-4 4 4m-8 70 4 4 4-4M15 46l-4 4 4 4m70-8 4 4-4 4" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
         <span class="flight-joystick-thumb" aria-hidden="true"></span>
       </div>
+      ${flightDeckMarkup}
       ${cloudVeilMarkup()}
       <div class="loading-card surface" role="status"><span class="eyebrow">A LITTLE WORLD, A BIG ADVENTURE</span><h2>旷野正在生长</h2><p data-stage>正在唤醒这片小世界…</p><div class="loading-track"><i></i></div></div>
       <div class="hud-toast surface" role="status" hidden></div>
       <dialog class="help-dialog surface" aria-labelledby="help-title">
         ${button('close-help', 'close', '关闭操作帮助')}
-        <span class="eyebrow">LET'S WANDER</span><h2 id="help-title">把方向交给好奇心</h2><p class="help-intro">驾驶你的小飞机，掠过森林、河流与山丘。</p>
+        <span class="eyebrow">KESTREL / FLIGHT MANUAL</span><h2 id="help-title">红隼试飞手册</h2><p class="help-intro">飞机会自动巡航。绕过山丘，拉起机头，看看空翻顶点的旷野。</p>
         <dl class="help-keys desktop-help">
-          <div><dt><kbd>W</kbd> / <kbd>↑</kbd></dt><dd>向前飞行</dd></div>
-          <div><dt><kbd>S</kbd> / <kbd>↓</kbd></dt><dd>反向推进</dd></div>
-          <div><dt><kbd>A</kbd> / <kbd>←</kbd></dt><dd>向左转</dd></div>
-          <div><dt><kbd>D</kbd> / <kbd>→</kbd></dt><dd>向右转</dd></div>
-          <div><dt><kbd>Space</kbd></dt><dd>暂停 / 继续飞行</dd></div>
-          <div><dt><kbd>H</kbd> / <kbd>M</kbd></dt><dd>切换界面 / 音效</dd></div>
+          <div><dt><kbd>A</kbd> / <kbd>D</kbd> 或鼠标左右</dt><dd>压坡转向</dd></div>
+          <div><dt><kbd>S</kbd> / <kbd>W</kbd> 或鼠标下 / 上</dt><dd>拉起 / 下压（方向键等价）</dd></div>
+          <div><dt><kbd>Shift</kbd> / 按住左键</dt><dd>加速，松开回到巡航</dd></div>
+          <div><dt><kbd>R</kbd> / 轻点左键</dt><dd>纵轴翻滚</dd></div>
+          <div><dt><kbd>F</kbd> / <kbd>G</kbd></dt><dd>后空翻 / 前空翻</dd></div>
+          <div><dt><kbd>Space</kbd> / <kbd>P</kbd></dt><dd>切换视角 / 暂停</dd></div>
+          <div><dt><kbd>H</kbd> / <kbd>U</kbd></dt><dd>切换界面 / 音效</dd></div>
           <div><dt>小地图右上角 / <kbd>Esc</kbd></dt><dd>展开 / 收起地图</dd></div>
         </dl>
         <dl class="help-keys touch-help">
-          <div><dt>拖动左下角摇杆</dt><dd>沿屏幕方向飞行</dd></div>
-          <div><dt>推得越远</dt><dd>飞得越快</dd></div>
-          <div><dt>松手回中</dt><dd>飞机滑行减速</dd></div>
+          <div><dt>左右拨杆</dt><dd>压坡转弯</dd></div>
+          <div><dt>向下拉 / 向上推</dt><dd>爬升 / 俯冲</dd></div>
+          <div><dt>右侧动作区</dt><dd>按住加速，点按特技</dd></div>
+          <div><dt>顶部视角按钮</dt><dd>俯视 → 追尾 → 驾驶舱</dd></div>
         </dl>
-        <p class="help-note touch-help">摇杆指向想飞的方向，飞机会倾斜着转过去。飞得越快，转弯的弧线越宽。</p>
-        <p class="help-note">镜头会自动跟随飞机。</p><button type="button" class="primary-button" data-action="close-help">开始探索 <span>→</span></button>
+        <p class="help-note">加速时持续拉满或推满也能触发空翻。前空翻需要下方净空；靠近地面时会自动拉平。</p><button type="button" class="primary-button" data-action="close-help">返回飞行 <span>→</span></button>
       </dialog>`
     this.speed = root.querySelector('[data-speed]')
     this.speedBar = root.querySelector('[data-speed-bar]')
@@ -128,6 +134,7 @@ export default class ExplorerUI {
     this.syncAudioControl()
     root.querySelector('[data-seed]').textContent = `# ${experience.world.config.seed}`
     const options = { signal: this.events.signal }
+    this.deck = new FlightDeck(root, () => this.experience.world.playerAircraft, options)
     this.touchMedia = window.matchMedia('(pointer: coarse)')
     this.joystick = new FlightJoystick(
       root.querySelector('[data-flight-joystick]'),
@@ -187,7 +194,7 @@ export default class ExplorerUI {
     this.root.querySelector('.cloud-veil')?.remove()
     for (const control of this.root.querySelectorAll('button[disabled]')) control.disabled = false
     if (!this.experience.world.playerAircraft?.enabled) {
-      for (const control of this.root.querySelectorAll('[data-action="pause"], [data-action="home"]')) control.disabled = true
+      for (const control of this.root.querySelectorAll('[data-action="view"], [data-action="pause"], [data-action="home"]')) control.disabled = true
     }
     this.syncPause()
     this.update(0)
@@ -199,18 +206,20 @@ export default class ExplorerUI {
     const available = touch && this.ready && player?.enabled === true
     this.root.classList.toggle('is-touch', touch)
     this.root.classList.toggle('has-flight-joystick', available)
-    this.joystick.setEnabled(available && !player.paused && !this.mapExpanded && !this.root.classList.contains('is-cinema'))
+    const enabled = available && !player.paused && !this.mapExpanded && !this.root.classList.contains('is-cinema')
+    this.joystick.setEnabled(enabled)
+    this.deck.setTouchEnabled(enabled)
   }
 
   syncPause() {
-    const paused = this.experience.platformPaused || this.flightPaused || this.dialog.open
+    const paused = this.experience.platformPaused || this.flightPaused || this.dialog.open || this.mapExpanded
     const player = this.experience.world.playerAircraft
     this.joystick.reset()
     if (player && (this.ready || paused)) player.setPaused(paused)
     this.syncTouchControls()
     const control = this.root.querySelector('[data-action="pause"]')
     control.setAttribute('aria-pressed', String(this.flightPaused))
-    control.setAttribute('aria-label', this.flightPaused ? '继续飞行（空格）' : '暂停飞行（空格）')
+    control.setAttribute('aria-label', this.flightPaused ? '继续飞行（P）' : '暂停飞行（P）')
     control.title = control.getAttribute('aria-label')
     control.innerHTML = svg(this.flightPaused ? 'play' : 'pause')
     this.root.querySelector('[data-flight-status]').textContent = !player?.enabled ? '风景漫游' : this.flightPaused ? '飞行已暂停' : '自由探索'
@@ -251,6 +260,7 @@ export default class ExplorerUI {
     if (action === 'close-help') this.dialog.close()
     const player = this.experience.world.playerAircraft
     if (!player?.enabled) return
+    if (action === 'view' && !player.paused) player.input.request('view')
     if (action === 'pause') {
       this.flightPaused = !this.flightPaused
       this.syncPause()
@@ -259,13 +269,12 @@ export default class ExplorerUI {
       this.joystick.reset()
       player.reset()
       this.experience.world.regenerate()
-      this.experience.worldCamera.resetView(player.state.position)
       this.toast('已回到出发的地方')
     }
   }
 
   onKeyDown(event) {
-    if (event.repeat || event.ctrlKey || event.metaKey || event.altKey || event.target.closest('input, textarea, select, [contenteditable="true"]')) return
+    if (event.repeat || event.ctrlKey || event.metaKey || event.altKey || event.target.closest?.('input, textarea, select, [contenteditable="true"]')) return
     if (this.dialog.open) return
     if (event.code === 'Escape' && this.mapExpanded) {
       event.preventDefault()
@@ -274,8 +283,7 @@ export default class ExplorerUI {
       this.experience.audio?.play('click')
       return
     }
-    const interactive = event.target.closest('button, a')
-    const action = event.code === 'KeyH' ? 'cinema' : event.code === 'KeyM' ? 'sound' : event.code === 'Space' && !interactive ? 'pause' : event.key === '?' ? 'help' : null
+    const action = event.code === 'KeyH' ? 'cinema' : event.code === 'KeyU' ? 'sound' : event.code === 'KeyP' ? 'pause' : event.key === '?' ? 'help' : null
     if (action) {
       event.preventDefault()
       event.stopPropagation()
@@ -286,11 +294,12 @@ export default class ExplorerUI {
   update(timestamp) {
     if (!this.ready || timestamp - this.lastUpdate < 100) return
     this.lastUpdate = timestamp
-    if (this.root.classList.contains('is-cinema')) return
     const player = this.experience.world.playerAircraft
     if (!player) return
     const cellSize = this.experience.world.config.terrain.cellSize
-    const speed = player.paused ? 0 : player.state.velocity.length()
+    this.deck.update(player, cellSize)
+    if (this.root.classList.contains('is-cinema')) return
+    const speed = player.enabled ? player.state.velocity.length() : 0
     this.speed.textContent = (speed / cellSize).toFixed(1)
     this.speedBar.style.width = `${Math.min(100, speed / player.motionConfig.maxSpeed * 100)}%`
     this.x.textContent = String(Math.floor(player.state.position.x / cellSize)).padStart(4, '0')
@@ -306,7 +315,7 @@ export default class ExplorerUI {
     const muted = this.experience.audio?.muted ?? true
     const control = this.root.querySelector('[data-action="sound"]')
     control.setAttribute('aria-pressed', String(muted))
-    control.setAttribute('aria-label', muted ? '开启音效（M）' : '静音音效（M）')
+    control.setAttribute('aria-label', muted ? '开启音效（U）' : '静音音效（U）')
     control.title = control.getAttribute('aria-label')
     control.innerHTML = svg(muted ? 'muted' : 'sound')
   }
@@ -320,7 +329,7 @@ export default class ExplorerUI {
     control.setAttribute('aria-label', expanded ? '收起地图' : '放大小地图')
     control.title = control.getAttribute('aria-label')
     control.innerHTML = svg(expanded ? 'close' : 'fullscreen')
-    this.syncTouchControls()
+    this.syncPause()
     this.minimap.update()
   }
 
@@ -335,6 +344,7 @@ export default class ExplorerUI {
   dispose() {
     this._cancelReveal?.()
     this.joystick.reset()
+    this.deck.release()
     this.events.abort()
     clearTimeout(this.toastTimer)
     if (this.dialog.open) this.dialog.close()

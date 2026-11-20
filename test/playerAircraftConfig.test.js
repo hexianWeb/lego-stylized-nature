@@ -3,53 +3,21 @@ import assert from 'node:assert/strict'
 import sources from '../src/assets/sources.js'
 import { worldConfig } from '../src/world/WorldConfig.js'
 
-test('registers player aircraft model source', () => {
-  const source = sources.find((entry) => entry.name === 'playerAircraftModel')
-
-  assert.deepEqual(source, {
-    name: 'playerAircraftModel',
-    type: 'gltfModel',
-    path: 'model/player/fly.glb'
-  })
-})
-
-test('player aircraft config is enabled and has no terrain bounds clamp', () => {
+test('free flight starts at cruise with room for a loop and the original aircraft selected', () => {
   const config = worldConfig.player.aircraft
-
   assert.equal(config.enabled, true)
-  assert.equal(config.assetName, 'playerAircraftModel')
-  assert.equal(config.height > 0, true)
-  assert.equal(config.scale > 0, true)
-  assert.equal(config.thrust > config.reverseThrust, true)
-  assert.equal(config.turnTorque > 0, true)
-  assert.equal(config.linearDrag > 0, true)
-  assert.equal(config.angularDrag > 0, true)
-  assert.equal(config.maxSpeed > 0, true)
-  assert.equal(config.maxAngularSpeed > 0, true)
-  assert.equal(config.boundsPadding, undefined)
-  assert.equal(config.cameraFollow.enabled, true)
-  assert.equal(config.cameraFollow.smoothing > 0, true)
-})
-
-test('player aircraft visualAttitude config has expected defaults', () => {
-  const attitude = worldConfig.player.aircraft.visualAttitude
-
-  assert.equal(attitude.enabled, true)
-  assert.equal(attitude.pitchMax > 0, true)
-  assert.equal(attitude.rollMax > 0, true)
-  assert.equal(attitude.pitchSmoothing > 0, true)
-  assert.equal(attitude.rollSmoothing > 0, true)
-  assert.equal(attitude.hover.amplitude > 0, true)
-  assert.equal(attitude.hover.frequency > 0, true)
-  assert.equal(attitude.thrusters.enabled, true)
+  assert.ok(config.cruiseSpeed > 0 && config.maxSpeed > config.cruiseSpeed)
+  assert.ok(config.ceiling - config.height > config.cruiseSpeed * config.loopSeconds / Math.PI)
+  assert.ok(config.clearance < config.height)
+  assert.equal(config.view, 'top')
+  assert.equal(config.appearance, 'model')
+  assert.equal(sources.find(item => item.name === config.assetName)?.path, 'model/player/fly.glb')
 })
 
 test('player aircraft wing airflow config has expected defaults', () => {
   const airflow = worldConfig.player.aircraft.wingAirflow
 
   assert.equal(airflow.enabled, true)
-  assert.equal(airflow.anchors.wingHalfWidth > 0, true)
-  assert.equal(airflow.anchors.outwardOffset >= 0, true)
   assert.equal(airflow.sampleLife > 0, true)
   assert.equal(airflow.emitInterval > 0, true)
   assert.equal(airflow.minEmitDistance >= 0, true)

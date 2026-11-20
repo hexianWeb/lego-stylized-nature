@@ -104,9 +104,8 @@ function createAudio({ ready = true, active = false, muted = false, storageFails
   const player = {
     enabled: true,
     paused: false,
-    state: { velocity: { x: 0, y: 0, z: 0 } },
+    state: { velocity: { x: 0, y: 0, z: 0 }, boost: 0 },
     motionConfig: { maxSpeed: 10 },
-    attitudeState: { leftThruster: 0.35, rightThruster: 0.35 },
   }
   const audio = new ExplorerAudio({ world: { playerAircraft: player } }, {
     AudioContext, eventTarget: events, document, userActivation: activation, storage, fetch,
@@ -140,8 +139,7 @@ test('flight ambience waits for readiness, follows speed and thrust, and fades w
   const idleWind = audio.windGain.gain.value
   assert.equal(audio.ambient.gain.value, 1)
   player.state.velocity.x = 10
-  player.attitudeState.leftThruster = 1
-  player.attitudeState.rightThruster = 1
+  player.state.boost = 1
   audio.update(100)
   assert.ok(audio.engine.frequency.value > idleFrequency)
   assert.ok(audio.windGain.gain.value > idleWind)

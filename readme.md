@@ -8,7 +8,9 @@ A little adventure with no finish line. Fly a brick-built plane through a proced
 
 **[进入旷野 · Explore live ↗](https://lego-stylized-nature.vercel.app/)** · [观看实机录像 · Watch the flight](docs/readmeImg/optimized/flight-demo.mp4)
 
-## 随心飞行 · Take flight
+## 试飞版本 · Arcade flight
+
+`feat/arcade-flight-core` 沿用项目原版积木飞机 `public/model/player/fly.glb`。座机自动巡航，爬升、俯冲和空翻会改变实际航迹；按空格在俯视、追尾和驾驶舱之间切换。以下旧版录像展示机体与地形；开发进度见[飞行重构计划](docs/arcade-flight-plan.md)。
 
 掠过树梢，沿着河流转弯，让好奇心决定下一站。
 
@@ -87,20 +89,20 @@ For the best experience, use a recent desktop browser with WebGPU support and ha
 
 | 按键 / Input | 操作 | Action |
 | --- | --- | --- |
-| `W` / `↑` | 向前飞行 | Forward thrust |
-| `S` / `↓` | 反向推进 | Reverse thrust |
-| `A` / `←` | 向左转 | Turn left |
-| `D` / `→` | 向右转 | Turn right |
-| 左下角摇杆 / Touch joystick | 朝摇杆所指的屏幕方向飞行 | Fly in the direction you push |
-| `Space` | 暂停 / 继续飞行 | Pause / resume flight |
+| `S` / `↓` · `W` / `↑` | 拉起 / 下压 | Climb / dive |
+| `A` / `←` · `D` / `→` | 向左 / 右转弯 | Bank and turn |
+| 鼠标或触屏摇杆 | 横向转弯，向下拉起 | Steer and pitch |
+| `Shift` / 按住鼠标左键 | 加速 | Boost |
+| `R` / 轻点飞行区域 | 翻滚 | Roll |
+| `F` / `G` | 后空翻 / 前空翻 | Back / front loop |
+| `Space` | 俯视 → 追尾 → 驾驶舱 | Cycle views |
+| `P` | 暂停 / 继续飞行 | Pause / resume |
 | `H` | 隐藏 / 显示界面 | Hide / show the HUD |
-| `M` | 静音 / 开启声音 | Toggle sound |
+| `U` | 静音 / 开启声音 | Toggle sound |
 | 小地图右上角 / Map expand button | 展开 / 收起地图 | Expand / collapse the map |
 | `Esc` | 收起已展开的地图 | Collapse the expanded map |
 
-镜头以固定角度自动跟随飞机。触屏摇杆指向目标航向：向前飞时往右推，飞机会倾斜并沿弧线转向右方。推得越远飞得越快，高速时转弯更宽；松手后飞机逐渐回平、滑行减速。顶部工具栏可返回出生点、切换全屏或查看帮助。
-
-The camera follows the aircraft from a fixed angle. Point the joystick where you want to go: pushing right while flying forward banks the aircraft into a right-hand arc. Push farther for more speed and wider turns. Release to level out and coast to a stop. Use the top toolbar to return home, toggle fullscreen, or open help.
+松杆后飞机回平，松开加速恢复巡航。加速时持续满杆也能做空翻；低空做前空翻会提示净空不足。触屏可用动作按钮加速和做特技，顶部可切镜、暂停、返回出生点或打开帮助。
 
 ## 本地运行 · Run locally
 

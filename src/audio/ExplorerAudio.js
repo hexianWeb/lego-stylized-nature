@@ -291,7 +291,7 @@ export default class ExplorerAudio {
       : Math.hypot(velocity?.x ?? 0, velocity?.y ?? 0, velocity?.z ?? 0)
     const maxSpeed = player.motionConfig?.maxSpeed ?? 1
     const speedRatio = clamp01(maxSpeed > 0 ? speed / maxSpeed : 0)
-    const thrust = clamp01(((player.attitudeState?.leftThruster ?? 0.35) + (player.attitudeState?.rightThruster ?? 0.35)) * 0.5)
+    const thrust = 0.35 + 0.65 * clamp01(player.state?.boost ?? 0)
     const frequency = 72 + speedRatio * 42 + thrust * 16
     this._target(this.engine.frequency, frequency)
     this._target(this.harmonic.frequency, frequency * 2.005)

@@ -29,7 +29,8 @@ export default class Experience {
     })
 
     this.scene = new THREE.Scene()
-    this.environment = new Environment(this.scene)
+    const aircraft = worldConfig.player.aircraft
+    this.environment = new Environment(this.scene, aircraft.enabled ? aircraft.atmosphere : null)
 
     this.worldCamera = new WorldCamera(this.sizes)
     this.scene.add(this.worldCamera.instance)
@@ -160,8 +161,7 @@ export default class Experience {
 
     const player = this.world.playerAircraft
     if (player?.enabled) {
-      player.input.clear()
-      player.input.dispose()
+      player.setPaused(true)
     }
 
     this.ui.setStage('即将穿出云层…')

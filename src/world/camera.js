@@ -4,6 +4,7 @@ const DEFAULT_TARGET = new THREE.Vector3(12.8, 0, 12.8)
 const DEFAULT_VIEW_DIRECTION = new THREE.Vector3(27.2, 40, 27.2).normalize()
 const DEFAULT_FRUSTUM_HEIGHT = 6.4
 const MIN_FRAMING_ASPECT = 0.8
+export const FLIGHT_VIEWS = ['top', 'chase', 'cockpit']
 
 export default class WorldCamera {
   /**
@@ -14,6 +15,14 @@ export default class WorldCamera {
     this.fov = 22
     this.target = new THREE.Vector3()
     this._offset = new THREE.Vector3()
+    this._eye = new THREE.Vector3()
+    this._aim = new THREE.Vector3()
+    this._up = new THREE.Vector3()
+    this._pose = new THREE.Euler(0, 0, 0, 'YZX')
+    this._basis = new THREE.Matrix4()
+    this._desiredRotation = new THREE.Quaternion()
+    this._fromRotation = new THREE.Quaternion()
+    this._fromOffset = new THREE.Vector3()
 
     const aspect = sizes.width / sizes.height
     this.instance = new THREE.PerspectiveCamera(
@@ -50,6 +59,10 @@ export default class WorldCamera {
   }
 
   resetView(target) {
+    this.flightView = null
+    this.insideCockpit = false
+    this.instance.fov = this.fov
+    this.instance.updateProjectionMatrix()
     this.target.copy(target)
     this._frustumHeight = DEFAULT_FRUSTUM_HEIGHT
     this._applyFrustumDistance(DEFAULT_VIEW_DIRECTION)
@@ -76,12 +89,63 @@ export default class WorldCamera {
     this.instance.position.add(movement)
   }
 
+  followFlight(state, view, delta, sampleSurface, aircraftScale = 1) {
+    const camera = this.instance
+    const snap = !this.flightView || delta <= 0
+    if (view !== this.flightView || snap) {
+      this._fromOffset.subVectors(camera.position, state.position)
+      this._fromRotation.copy(camera.quaternion)
+      this._fromFov = camera.fov
+      this._switchTime = snap ? 1 : 0
+      this.flightView = view
+    }
+    const dt = Math.min(Math.max(delta, 0), 0.15)
+    const diff = state.yaw - (this._heading ?? state.yaw)
+    this._heading = snap ? state.yaw : this._heading + Math.atan2(Math.sin(diff), Math.cos(diff)) * (1 - Math.exp(-5 * dt))
+    const fwdX = Math.cos(this._heading), fwdZ = Math.sin(this._heading)
+    const framing = this._framingScale()
+    const eye = this._eye, aim = this._aim, up = this._up.set(0, 1, 0)
+    let fov
+    if (view === 'cockpit') {
+      this._pose.set(state.roll, -state.yaw, state.pitch, 'YZX')
+      eye.set(0.28, 0.24, 0).multiplyScalar(aircraftScale).applyEuler(this._pose)
+      aim.set(1, -0.10, 0).normalize().applyEuler(this._pose).multiplyScalar(5).add(eye)
+      up.applyEuler(this._pose)
+      fov = 66 + 5 * state.boost
+    }
+    else {
+      const overhead = view === 'top'
+      const distanceScale = framing * (overhead ? Math.sqrt(aircraftScale) : aircraftScale)
+      const back = (overhead ? 4.2 : 4.5) * distanceScale
+      eye.set(-back * fwdX, (overhead ? 10.4 : 1.65) * distanceScale, -back * fwdZ)
+      const terrain = sampleSurface?.(state.position.x + eye.x, state.position.z + eye.z)
+      if (Number.isFinite(terrain)) eye.y = Math.max(eye.y, terrain + 0.28 - state.position.y)
+      aim.set(fwdX * 0.9, overhead ? -0.3 : -0.12, fwdZ * 0.9).multiplyScalar(aircraftScale)
+      fov = (overhead ? 38 : 48) + state.boost * 5
+    }
+    this._desiredRotation.setFromRotationMatrix(this._basis.lookAt(eye, aim, up))
+    this._switchTime = Math.min(1, this._switchTime + dt / 0.72)
+    const mix = THREE.MathUtils.smoothstep(this._switchTime, 0, 1)
+    camera.position.lerpVectors(this._fromOffset, eye, mix)
+    this.insideCockpit = camera.position.lengthSq() < (1.45 * aircraftScale) ** 2
+    camera.position.add(state.position)
+    camera.quaternion.slerpQuaternions(this._fromRotation, this._desiredRotation, mix)
+    const nextFov = THREE.MathUtils.lerp(this._fromFov, fov, mix)
+    if (Math.abs(camera.fov - nextFov) > 0.01) {
+      camera.fov = nextFov
+      camera.updateProjectionMatrix()
+    }
+    const distance = eye.distanceTo(aim)
+    camera.getWorldDirection(this.target).multiplyScalar(distance).add(camera.position)
+    camera.userData.focusDistance = distance
+  }
+
   resize() {
     const previousScale = this._framingScale()
     this.instance.aspect = this.sizes.width / this.sizes.height
     this.instance.updateProjectionMatrix()
     const scale = this._framingScale() / previousScale
-    if (scale !== 1) {
+    if (scale !== 1 && !this.flightView) {
       const offset = this._offset.subVectors(this.instance.position, this.target)
       this.instance.position.copy(this.target).addScaledVector(offset, scale)
       this.instance.userData.focusDistance = offset.length() * scale
