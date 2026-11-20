@@ -3,7 +3,6 @@ import LavaBrickRenderer from '../bricks/LavaBrickRenderer.js'
 import TerrainBrickRenderer from '../bricks/TerrainBrickRenderer.js'
 import WaterBrickRenderer from '../bricks/WaterBrickRenderer.js'
 import PrefabPlacer from '../prefabs/PrefabPlacer.js'
-import LandmarkRenderer from '../landmarks/LandmarkRenderer.js'
 import { unpackChunkBuild } from './chunkBuildData.js'
 import {
   getChunkBounds,
@@ -31,7 +30,6 @@ export default class ChunkManager {
     prefabRegistry = null,
     createSlot = null,
     buildWorkers = null,
-    landmarkAssets = null,
   }) {
     this.config = config
     this.terrainGenerator = terrainGenerator
@@ -44,7 +42,6 @@ export default class ChunkManager {
     this.prefabRegistry = prefabRegistry
     this.createSlotOverride = createSlot
     this.buildWorkers = buildWorkers
-    this.landmarkAssets = landmarkAssets
 
     const chunkConfig = config.chunks ?? {}
     this.chunkSize = chunkConfig.size ?? 64
@@ -149,7 +146,6 @@ export default class ChunkManager {
       }),
       heightfieldAO: new HeightfieldAO({ config: this.config }),
       prefabPlacer,
-      landmarkRenderer: this.landmarkAssets ? new LandmarkRenderer({ config: this.config, assets: this.landmarkAssets }) : null,
       waterRenderer: waterEnabled
         ? new WaterBrickRenderer({
             config: this.config,
@@ -249,7 +245,6 @@ export default class ChunkManager {
     for (const slot of this.activeSlots.values()) {
       if (this.transitionSettings.enabled === false) {
         slot.resetTransition?.()
-        slot.landmarkRenderer?.update(deltaSeconds, true)
       }
       else {
         slot.updateTransition?.(deltaSeconds)
@@ -399,8 +394,6 @@ export default class ChunkManager {
       seed: this.config.seed,
       terrain: this.config.terrain,
       biomes: this.config.biomes,
-      chunks: { size: this.chunkSize, halo: this.halo },
-      landmarks: this.config.landmarks,
     }
 
     while (this.buildWorkers.hasIdleWorker() && this.pendingQueue.length > 0) {

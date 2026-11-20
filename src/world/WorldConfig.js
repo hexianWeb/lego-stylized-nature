@@ -2,11 +2,9 @@ import { STUD_SHADING_DEFAULTS } from '../materials/tsl/legoStudsConfig.js'
 import { BRICK_LOD_DEFAULTS } from './bricks/BrickLOD.js'
 import { createTerrainColorSettings } from './bricks/terrainColorScheme.js'
 import { CHUNK_TRANSITION_DEFAULTS } from './chunks/ChunkColumnTransition.js'
-import { LANDMARK_DEFAULTS } from './landmarks/landmarkConfig.js'
 
 export const worldConfig = {
   seed: 20260608,
-  landmarks: { ...LANDMARK_DEFAULTS },
   postProcessing: {
     enabled: true,
   },

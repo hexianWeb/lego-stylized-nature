@@ -19,9 +19,6 @@ import { isTerrainPreview } from './bricks/terrainColorScheme.js'
 import WaterBrickRenderer from './bricks/WaterBrickRenderer.js'
 import ChunkBuildWorkerPool from './chunks/ChunkBuildWorkerPool.js'
 import ChunkManager from './chunks/ChunkManager.js'
-import LandmarkRenderer, { createLandmarkAssets } from './landmarks/LandmarkRenderer.js'
-import { warmupLandmarkPipelines } from './landmarks/LandmarkPipelineWarmup.js'
-import { getLandmarkSettings } from './landmarks/landmarkConfig.js'
 import PlayerAircraft from './player/PlayerAircraft.js'
 import { warmupPrefabPipelines } from './prefabs/PrefabPipelineWarmup.js'
 import PrefabPlacer from './prefabs/PrefabPlacer.js'
@@ -66,8 +63,6 @@ export default class World {
     this.playerAircraft = null
     this.terrainChunkManager = null
     this.prefabWarmup = null
-    this.landmarkAssets = null
-    this.landmarkRenderer = null
     this.disposed = false
   }
 
@@ -91,8 +86,6 @@ export default class World {
     }
 
     this.brickLOD ??= new BrickLOD(this.brickGeometry, this.config.terrain.brickLOD)
-    this.brickGeometry.computeBoundingBox()
-    this.config.landmarks.terrainTopOffset = this.brickGeometry.boundingBox.max.y
 
     if (!this.terrainGenerator) {
       this.biomeRegistry = new BiomeRegistry()
@@ -112,7 +105,6 @@ export default class World {
       this.heightfieldAO = new HeightfieldAO({ config: this.config })
 
       const useChunkTerrain = this.config.chunks?.enabled === true
-      this.landmarkAssets = getLandmarkSettings(this.config).enabled ? createLandmarkAssets(resources) : null
 
       this.materials = new WorldMaterials({
         config: this.config,
@@ -137,7 +129,6 @@ export default class World {
           biomeRegistry: this.biomeRegistry,
           prefabRegistry,
           materials: this.materials,
-          landmarkAssets: this.landmarkAssets,
           buildWorkers: ChunkBuildWorkerPool.create(this.config.chunks),
         })
       }
@@ -151,10 +142,6 @@ export default class World {
       }
 
       if (!useChunkTerrain) {
-        if (this.landmarkAssets) {
-          this.landmarkRenderer = new LandmarkRenderer({ config: this.config, assets: this.landmarkAssets })
-          this.group.add(this.landmarkRenderer.group)
-        }
         const waterEnabled = this.config.water?.enableWater !== false
         if (waterEnabled) {
           this.waterBrickRenderer = new WaterBrickRenderer({
@@ -238,7 +225,6 @@ export default class World {
     this.waterBrickRenderer?.build(this.terrainMap)
     this.lavaBrickRenderer.build(this.terrainMap)
     this.prefabPlacer?.build(this.terrainMap)
-    this.landmarkRenderer?.build(this.terrainMap)
 
     this.refreshAOPreview()
   }
@@ -272,7 +258,6 @@ export default class World {
     if (this.playerAircraft?.group) {
       this.playerAircraft.group.visible = !preview
     }
-    this.landmarkRenderer?.setVisible(!preview)
   }
 
   getTerrainColorHistogram() {
@@ -336,7 +321,6 @@ export default class World {
     for (const child of this.children) {
       child.update?.()
     }
-    this.landmarkRenderer?.update(this.experience.time.getDelta(), true)
 
     if (this.terrainChunkManager && this.playerAircraft?.enabled) {
       const { x, z } = this.playerAircraft.state.position
@@ -394,8 +378,7 @@ export default class World {
     return {
       radius: (windowRadius + 1) * chunkWorldSize + bounds.horizontal,
       minY: Math.min(0, layerHeight + bounds.minY),
-      maxY: (Math.max(maxHeight, waterLevel) + 1) * layerHeight
-        + Math.max(bounds.maxY, getLandmarkSettings(this.config).enabled ? getLandmarkSettings(this.config).targetHeight : 0),
+      maxY: (Math.max(maxHeight, waterLevel) + 1) * layerHeight + bounds.maxY,
     }
   }
 
@@ -414,18 +397,6 @@ export default class World {
     if (this.disposed)
       warmup.dispose?.()
     else this.prefabWarmup = warmup
-    if (!this.disposed && this.landmarkAssets) {
-      await warmupLandmarkPipelines({
-        renderer,
-        scene: this.scene,
-        camera,
-        slots: this.terrainChunkManager?.slots ?? [{ landmarkRenderer: this.landmarkRenderer, group: this.group }],
-        renderFrame: async () => {
-          await renderFrame?.()
-          await this.experience.renderer.prepareVisiblePrefabs?.()
-        },
-      })
-    }
     return warmup
   }
 
@@ -441,10 +412,6 @@ export default class World {
     }
     this.terrainChunkManager?.dispose()
     this.terrainChunkManager = null
-    this.landmarkRenderer?.dispose()
-    this.landmarkRenderer = null
-    this.landmarkAssets?.dispose()
-    this.landmarkAssets = null
     this.prefabRegistry?.dispose?.()
     this.materials?.dispose()
     this.materials = null

@@ -79,6 +79,27 @@ for (const id of biomeIds) {
   })
 }
 
+test('desert heights agree when the same world cells are sampled in overlapping chunks', () => {
+  const config = structuredClone(worldConfig)
+  const { size, halo } = config.chunks
+  const { terrainGenerator } = createChunkBuilder(config)
+  const origin = { x: size, z: size * 5 }
+  const offset = Math.floor(size / 2)
+  const first = terrainGenerator.generateChunk({ origin, size, halo })
+  const second = terrainGenerator.generateChunk({
+    origin: { x: origin.x + offset, z: origin.z },
+    size,
+    halo,
+  })
+
+  for (let z = halo; z < halo + size; z++) {
+    assert.deepEqual(
+      first.heightField.values[z].slice(halo + offset, halo + size),
+      second.heightField.values[z].slice(halo, halo + size - offset),
+    )
+  }
+})
+
 test('wetland reeds reject deep water and shore vegetation remains opt-in', () => {
   const biome = { biomeId: 'wetland' }
   const water = { height: 6, slope: 0, isWater: true, isShore: false }
