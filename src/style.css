@@ -295,6 +295,30 @@ kbd { display: inline-flex; align-items: center; justify-content: center; min-wi
 .is-touch .desktop-help, .is-touch .control-hint { display: none; }
 .is-touch .touch-help { display: block; }
 
+.orientation-hint { display: none; }
+@media (pointer: coarse) and (orientation: portrait) {
+    .orientation-hint {
+        position: relative;
+        z-index: 6;
+        display: inline-flex;
+        align-items: center;
+        align-self: center;
+        gap: 7px;
+        margin: 0;
+        padding: 7px 10px;
+        border-radius: 20px;
+        background: #eaf3ed;
+        font-size: 12px;
+        font-weight: 600;
+        visibility: visible;
+    }
+    .orientation-hint svg { flex: 0 0 18px; width: 18px; height: 18px; }
+}
+@media (pointer: coarse) and (orientation: portrait) and (max-width: 760px) {
+    .hud-header { grid-template-columns: minmax(0, 1fr) auto; }
+    .header-tools { grid-column: 1 / -1; }
+}
+
 /* Keep controls readable in browsers without glass compositing, and honor the system setting. */
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
     .surface { background: #eaf3ed; }
@@ -310,8 +334,12 @@ kbd { display: inline-flex; align-items: center; justify-content: center; min-wi
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } .loading-track i { width: 100%; opacity: .6; } }
 
 .webgl {
+    position: fixed;
+    top: 0;
+    left: 0;
     display: block;
     width: 100%;
     height: 100%;
+    height: 100dvh;
     outline: none;
 }

@@ -20,7 +20,7 @@ export default class Experience {
     this.canvas = canvas
 
     this.debug = new Debug()
-    this.sizes = new Sizes()
+    this.sizes = new Sizes(canvas)
     this.time = new Time()
     this.renderer = new Renderer({
       canvas,

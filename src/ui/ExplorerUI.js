@@ -53,6 +53,12 @@ export default class ExplorerUI {
           <span class="brick-mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
           <div><h1>积木旷野<span>BRICKLAND</span></h1><p>一场没有终点的微小冒险</p></div>
         </div>
+        <p class="surface orientation-hint hud-part">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="11" width="18" height="10" rx="2"/><path d="M6 15v2M7 7a6 6 0 0 1 10-2l2 2m0-4v4h-4"/>
+          </svg>
+          建议横屏游玩
+        </p>
         <div class="header-tools">
           <span class="explore-badge hud-part"><i></i><span data-flight-status>自由探索</span></span>
           <nav class="surface action-bar" aria-label="探索工具">

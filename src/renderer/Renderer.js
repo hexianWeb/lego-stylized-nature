@@ -132,11 +132,11 @@ export default class Renderer {
   }
 
   /**
-   * @param {{ width: number, height: number }} sizes
+   * @param {{ width: number, height: number, pixelRatio?: number }} sizes
    */
-  setSizeFromSizes(sizes) {
-    this.instance.setSize(sizes.width, sizes.height)
-    this.instance.setPixelRatio(Math.min(window.devicePixelRatio, 2))
+  setSizeFromSizes({ width, height, pixelRatio = globalThis.devicePixelRatio || 1 }) {
+    // Keep CSS in charge of layout; only resize the drawing buffer.
+    this.instance.setDrawingBufferSize(width, height, Math.min(pixelRatio, 2))
   }
 
   render() {
