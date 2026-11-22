@@ -1,7 +1,9 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
+import { getCockpitTelemetry } from '../src/ui/FlightDeck.js'
 import FlightJoystick, { resolveJoystickDrag } from '../src/ui/FlightJoystick.js'
 import WorldCamera from '../src/world/camera.js'
+import { createAircraftState } from '../src/world/player/aircraftMotion.js'
 import AircraftInput from '../src/world/player/AircraftInput.js'
 import PlayerAircraft from '../src/world/player/PlayerAircraft.js'
 
@@ -176,4 +178,39 @@ test('returning home clears motion and trails while preserving an explicit pause
   assert.equal(player.paused, true)
   assert.equal(cleared, 1)
   player.dispose()
+})
+
+function cockpitTelemetry(state) {
+  const rig = new WorldCamera({ width: 1280, height: 720 })
+  rig.followFlight(state, 'cockpit', 0)
+  return getCockpitTelemetry(state, 0.2, rig.instance)
+}
+
+test('cockpit reads flight speed, boost, world altitude, climb and map heading', () => {
+  const state = createAircraftState({ position: [0, 5.5, 0], yaw: -Math.PI, speed: 5 })
+  state.velocity.set(-4, 3, 0)
+  state.boost = 0.65
+
+  const telemetry = cockpitTelemetry(state)
+  assert.equal(telemetry.speedKmh, 90)
+  assert.equal(telemetry.thrustPercent, 65)
+  assert.equal(telemetry.altitudeM, 27.5)
+  assert.equal(telemetry.verticalSpeedMps, 15)
+  assert.equal(telemetry.headingDeg, 270)
+})
+
+test('cockpit attitude uses the actual view during climbs, banks and inverted flight', () => {
+  const state = createAircraftState()
+  state.pitch = 0.4
+  assert.ok(cockpitTelemetry(state).pitchDeg > 0)
+  state.pitch = -0.4
+  assert.ok(cockpitTelemetry(state).pitchDeg < 0)
+
+  state.pitch = 0
+  state.roll = -0.5
+  assert.ok(cockpitTelemetry(state).horizonRollDeg > 0)
+  state.roll = 0.5
+  assert.ok(cockpitTelemetry(state).horizonRollDeg < 0)
+  state.roll = Math.PI
+  assert.ok(Math.abs(cockpitTelemetry(state).horizonRollDeg) > 179)
 })

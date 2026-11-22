@@ -9,6 +9,7 @@ const ICONS = {
   home: '<path d="m3 11 9-8 9 8M5 10v10h14V10M9 20v-7h6v7"/>',
   help: '<circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 0 1 5 .5c0 1.5-2.5 2-2.5 3.5M12 17h.01"/>',
   fullscreen: '<path d="M8 3H3v5M16 3h5v5M3 16v5h5M21 16v5h-5"/>',
+  map: '<path d="m3 6 6-3 6 3 6-3v15l-6 3-6-3-6 3ZM9 3v15M15 6v15"/>',
   eye: '<path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/>',
   leaf: '<path d="M20 4C8 1 2 8 5 15s16 5 15-11ZM4 21 15 10"/>',
   close: '<path d="m6 6 12 12M6 18 18 6"/>',
@@ -67,6 +68,7 @@ export default class ExplorerUI {
             ${button('view', 'view', '切换视角（空格）', 'disabled')}
             ${button('pause', 'pause', '暂停飞行（P）', 'aria-pressed="false" disabled')}
             ${button('home', 'home', '回到出生点', 'disabled')}
+            ${button('map', 'map', '放大小地图', 'aria-expanded="false" disabled')}
             <span class="tool-divider"></span>
             ${button('sound', 'sound', '静音音效（U）', 'aria-pressed="false"')}
             ${button('help', 'help', '操作帮助', 'disabled')}
@@ -292,11 +294,12 @@ export default class ExplorerUI {
   }
 
   update(timestamp) {
-    if (!this.ready || timestamp - this.lastUpdate < 100) return
-    this.lastUpdate = timestamp
+    if (!this.ready) return
     const player = this.experience.world.playerAircraft
-    if (!player) return
     const cellSize = this.experience.world.config.terrain.cellSize
+    this.deck.renderCockpit(player, cellSize, this.experience.time.getDelta())
+    if (!player || timestamp - this.lastUpdate < 100) return
+    this.lastUpdate = timestamp
     this.deck.update(player, cellSize)
     if (this.root.classList.contains('is-cinema')) return
     const speed = player.enabled ? player.state.velocity.length() : 0
@@ -304,7 +307,7 @@ export default class ExplorerUI {
     this.speedBar.style.width = `${Math.min(100, speed / player.motionConfig.maxSpeed * 100)}%`
     this.x.textContent = String(Math.floor(player.state.position.x / cellSize)).padStart(4, '0')
     this.z.textContent = String(Math.floor(player.state.position.z / cellSize)).padStart(4, '0')
-    this.minimap.update()
+    if (this.mapExpanded || !this.root.classList.contains('has-cockpit-overlay')) this.minimap.update()
     const biomeId = this.minimap.getCurrentBiomeId()
     if (biomeId && this.lastBiomeId && biomeId !== this.lastBiomeId) this.experience.audio?.play('biome')
     if (biomeId) this.lastBiomeId = biomeId
@@ -324,11 +327,12 @@ export default class ExplorerUI {
     this.mapExpanded = expanded
     this.root.classList.toggle('is-map-expanded', expanded)
     this.root.querySelector('.map-card').classList.toggle('is-expanded', expanded)
-    const control = this.root.querySelector('[data-action="map"]')
-    control.setAttribute('aria-expanded', String(expanded))
-    control.setAttribute('aria-label', expanded ? '收起地图' : '放大小地图')
-    control.title = control.getAttribute('aria-label')
-    control.innerHTML = svg(expanded ? 'close' : 'fullscreen')
+    for (const control of this.root.querySelectorAll('[data-action="map"]')) {
+      control.setAttribute('aria-expanded', String(expanded))
+      control.setAttribute('aria-label', expanded ? '收起地图' : '放大小地图')
+      control.title = control.getAttribute('aria-label')
+      control.innerHTML = svg(expanded ? 'close' : control.classList.contains('map-expand') ? 'fullscreen' : 'map')
+    }
     this.syncPause()
     this.minimap.update()
   }
@@ -344,7 +348,7 @@ export default class ExplorerUI {
   dispose() {
     this._cancelReveal?.()
     this.joystick.reset()
-    this.deck.release()
+    this.deck.dispose()
     this.events.abort()
     clearTimeout(this.toastTimer)
     if (this.dialog.open) this.dialog.close()

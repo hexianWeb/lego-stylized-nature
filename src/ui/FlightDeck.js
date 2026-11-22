@@ -1,30 +1,38 @@
+import { createCockpitOverlay } from './cockpit/cockpit-overlay.mjs'
+
 const VIEW_NAMES = { top: '俯视', chase: '追尾', cockpit: '驾驶舱' }
 const STUNT_NAMES = { roll: '翻滚', backLoop: '后空翻', frontLoop: '前空翻' }
+const DEGREES = 180 / Math.PI
 
 export const flightDeckMarkup = `
-  <div class="cockpit-frame" aria-hidden="true" hidden>
-    <svg viewBox="0 0 480 240" preserveAspectRatio="none">
-      <g fill="#25353d" stroke="#657f82" stroke-width="2" stroke-linejoin="bevel">
-        <path d="M0 16 17 16 55 0 69 0 22 25 10 31 0 84Z M480 16 463 16 425 0 411 0 458 25 470 31 480 84Z"/>
-        <path d="M0 149 13 170 40 188 70 217 108 225 145 225 162 238 318 238 335 225 372 225 410 217 440 188 467 170 480 149V240H0Z"/>
-        <path d="M161 240 186 211 200 204H280L294 211 319 240Z"/>
-      </g>
-      <g fill="#f6aa58"><path d="M38 197h8l9 9h-8z M49 208h8l8 8h-8z M442 197h-8l-9 9h8z M431 208h-8l-8 8h8z"/></g>
-      <path d="M198 217h84l9 16H189Z" fill="#152a30" stroke="#548084"/>
-    </svg>
-    <div class="flight-glass"><i></i><b>⌃</b><i></i></div>
-    <span class="cockpit-instruments" data-cockpit-readout></span>
-  </div>
+  <canvas class="cockpit-overlay" aria-hidden="true" hidden></canvas>
   <div class="flight-pads flight-panel hud-part" data-flight-pads aria-label="飞行特技" hidden>
     <button type="button" data-flight-hold>加速</button><button type="button" data-stunt="roll">翻滚</button>
     <button type="button" data-stunt="frontLoop">前空翻</button><button type="button" data-stunt="backLoop">后空翻</button>
   </div>`
 
+export function getCockpitTelemetry(state, cellSize, camera) {
+  // One terrain cell represents one simulated meter. Altitude is relative to world y=0.
+  const metersPerUnit = 1 / cellSize
+  camera.updateWorldMatrix(true, false)
+  const basis = camera.matrixWorld.elements
+  return {
+    speedKmh: state.velocity.length() * metersPerUnit * 3.6,
+    thrustPercent: state.boost * 100,
+    altitudeM: state.position.y * metersPerUnit,
+    verticalSpeedMps: state.velocity.y * metersPerUnit,
+    pitchDeg: Math.asin(Math.max(-1, Math.min(1, -basis[9]))) * DEGREES,
+    // Canvas y points down. Project the world up axis onto the camera's right and up axes.
+    horizonRollDeg: Math.atan2(basis[1], basis[5]) * DEGREES,
+    headingDeg: ((state.yaw * DEGREES + 90) % 360 + 360) % 360,
+  }
+}
+
 export default class FlightDeck {
   constructor(root, getPlayer, options) {
+    this.root = root
     this.getPlayer = getPlayer
-    this.frame = root.querySelector('.cockpit-frame')
-    this.readout = root.querySelector('[data-cockpit-readout]')
+    this.canvas = root.querySelector('.cockpit-overlay')
     this.pads = root.querySelector('[data-flight-pads]')
     this.hold = this.pads.querySelector('[data-flight-hold]')
     this.status = root.querySelector('[data-flight-status]')
@@ -66,6 +74,29 @@ export default class FlightDeck {
     this.pads.hidden = !enabled
   }
 
+  renderCockpit(player, cellSize, delta) {
+    if (player?.enabled && !this.cockpitLoading) {
+      const { maxSpeed, ceiling } = player.motionConfig
+      this.cockpitLoading = createCockpitOverlay(this.canvas, {
+        gaugeRanges: { speed: maxSpeed / cellSize * 3.6, altitude: ceiling / cellSize, climb: maxSpeed / cellSize },
+      }).then((cockpit) => {
+        if (!this.disposed) this.cockpit = cockpit
+      }).catch((error) => {
+        if (!this.disposed) console.warn('[FlightDeck] 驾驶舱仪表加载失败。', error)
+      })
+    }
+
+    const camera = player?.experience.worldCamera
+    const visible = Boolean(this.cockpit && player?.enabled && camera?.insideCockpit)
+    const wasVisible = !this.canvas.hidden
+    if (visible !== wasVisible) {
+      this.canvas.hidden = !visible
+      this.root.classList.toggle('has-cockpit-overlay', visible)
+      if (visible) this.cockpit.reset()
+    }
+    if (visible) this.cockpit.render(delta, getCockpitTelemetry(player.state, cellSize, camera.instance))
+  }
+
   update(player, cellSize) {
     if (!player?.enabled) return
     const s = player.state
@@ -76,10 +107,12 @@ export default class FlightDeck {
       : s.noticeTime > 0 && s.blocked ? (s.blocked === 'ground' ? '下方净空不足' : '已达空翻限高')
         : STUNT_NAMES[s.stunt?.kind] ?? (s.boost > 0.55 ? '加速中' : '自由巡航')
     this.status.textContent = this.panelStatus.textContent = status
-    this.frame.hidden = player.experience.worldCamera.insideCockpit !== true
-    if (!this.frame.hidden) {
-      const heading = (Math.round(s.yaw * 180 / Math.PI + 90) % 360 + 360) % 360
-      this.readout.textContent = `HDG ${String(heading).padStart(3, '0')}°  ·  AGL ${clearance}`
-    }
+  }
+
+  dispose() {
+    this.disposed = true
+    this.release()
+    this.cockpit = null
+    this.canvas.remove()
   }
 }
