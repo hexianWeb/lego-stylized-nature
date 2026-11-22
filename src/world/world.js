@@ -176,6 +176,7 @@ export default class World {
         config: this.config,
         sampleSurface: (x, z) => this.sampleSurface(x, z),
         spawn: this.forestTrialOptions ? forestTrialSpawn : null,
+        weaponsEnabled: !this.forestTrialOptions,
       })
       this.addSystem(this.playerAircraft)
       if (this.forestTrialOptions && this.playerAircraft.enabled) {
@@ -183,7 +184,6 @@ export default class World {
       }
     }
 
-        weaponsEnabled: !this.forestTrialOptions,
     this.regenerate()
   }
 

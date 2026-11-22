@@ -1,5 +1,5 @@
 import * as THREE from 'three/webgpu'
-import { FLIGHT_VIEWS } from '../camera.js'
+import { FLIGHT_POSE_ORDER, FLIGHT_VIEWS } from '../camera.js'
 import AircraftInput from './AircraftInput.js'
 import { createAircraftState, normalizeAircraftConfig, stepAircraftMotion } from './aircraftMotion.js'
 import { computeFlightTurbulence, normalizeVisualAttitudeConfig } from './aircraftVisualAttitude.js'
@@ -89,7 +89,7 @@ export default class PlayerAircraft {
   _applyTransform() {
     const { position, roll, yaw, pitch } = this.state
     this.group.position.copy(position)
-    this.group.rotation.set(roll, -yaw, pitch, 'YZX')
+    this.group.rotation.set(roll, -yaw, pitch, FLIGHT_POSE_ORDER)
   }
 
   syncCamera(delta) {

@@ -29,7 +29,7 @@ function createPlayer(options = {}, sampleSurface = () => 0, asset = createAsset
   })
 }
 
-test('the original airframe spawns over the local surface and follows the simulated track', () => {
+test('the original airframe spawns above the local surface and follows the simulated position and pose', () => {
   const p = createPlayer({}, () => 6)
   assert.deepEqual(p.state.position.toArray(), [10, 6 + p.motionConfig.clearance, 8])
   assert.ok(p.enabled && p.modelRoot.getObjectByProperty('isMesh', true))
@@ -38,7 +38,36 @@ test('the original airframe spawns over the local surface and follows the simula
   assert.ok(p.state.velocity.y > 0 && p.state.position.y > 7)
   assert.ok(p.group.position.equals(p.state.position))
   const nose = new THREE.Vector3(1, 0, 0).applyQuaternion(p.group.quaternion)
-  assert.ok(nose.dot(p.state.velocity.clone().normalize()) > 0.999)
+  assert.ok(Math.abs(nose.y - Math.sin(p.state.pitch)) < 1e-8)
+  assert.ok(Math.abs(p.state.velocity.clone().normalize().y - Math.sin(p.state.pathPitch)) < 1e-8)
+  p.dispose()
+})
+
+test('banking lifts the model nose while the course stays level', () => {
+  const p = createPlayer()
+  const height = p.state.position.y
+  p.input.handleKeyDown({ code: 'KeyD' })
+  for (let i = 0; i < 60; i++) p.update()
+
+  const nose = new THREE.Vector3(1, 0, 0).applyQuaternion(p.group.quaternion)
+  assert.ok(p.state.bank > 0.5 && nose.y > 0.025)
+  assert.ok(Math.abs(p.state.position.y - height) < 1e-8)
+  assert.equal(p.state.velocity.y, 0)
+  p.dispose()
+})
+
+test('the model and cockpit camera share the right axis in a banking climb', () => {
+  const p = createPlayer()
+  p.input.handleKeyDown({ code: 'KeyD' })
+  p.input.handleKeyDown({ code: 'KeyS' })
+  for (let i = 0; i < 50; i++) p.update()
+  assert.ok(p.state.bank > 0.5 && p.state.pitch > 0.2)
+
+  p.view = 'cockpit'
+  p.syncCamera(0)
+  const modelRight = new THREE.Vector3(0, 0, 1).applyQuaternion(p.group.quaternion)
+  const cameraRight = new THREE.Vector3(1, 0, 0).applyQuaternion(p.experience.worldCamera.instance.quaternion)
+  assert.ok(cameraRight.distanceTo(modelRight) < 1e-8)
   p.dispose()
 })
 
@@ -54,6 +83,7 @@ test('changing views mid-loop preserves the track and uses the renderer camera t
       p.update()
       comparison.update()
       assert.ok(p.state.position.distanceTo(comparison.state.position) < 1e-8)
+      assert.equal(p.state.pathPitch, comparison.state.pathPitch)
       assert.equal(p.state.pitch, comparison.state.pitch)
     }
     assert.equal(rig.instance, camera)

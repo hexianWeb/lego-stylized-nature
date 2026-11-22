@@ -4,7 +4,12 @@ const DEFAULT_TARGET = new THREE.Vector3(12.8, 0, 12.8)
 const DEFAULT_VIEW_DIRECTION = new THREE.Vector3(27.2, 40, 27.2).normalize()
 const DEFAULT_FRUSTUM_HEIGHT = 6.4
 const MIN_FRAMING_ASPECT = 0.8
+const CHASE_DOWN_ANGLE = 12 * Math.PI / 180
+const CHASE_PITCH_FOLLOW = 0.9
+const CHASE_HEADING_RESPONSE = 3.4
 export const FLIGHT_VIEWS = ['top', 'chase', 'cockpit']
+// Yaw, then bank, then pitch around the banked right axis.
+export const FLIGHT_POSE_ORDER = 'YXZ'
 
 export default class WorldCamera {
   /**
@@ -18,7 +23,7 @@ export default class WorldCamera {
     this._eye = new THREE.Vector3()
     this._aim = new THREE.Vector3()
     this._up = new THREE.Vector3()
-    this._pose = new THREE.Euler(0, 0, 0, 'YZX')
+    this._pose = new THREE.Euler(0, 0, 0, FLIGHT_POSE_ORDER)
     this._basis = new THREE.Matrix4()
     this._desiredRotation = new THREE.Quaternion()
     this._fromRotation = new THREE.Quaternion()
@@ -68,19 +73,6 @@ export default class WorldCamera {
     this._applyFrustumDistance(DEFAULT_VIEW_DIRECTION)
   }
 
-  screenDirectionToYaw(position, right, up) {
-    const { position: eye, quaternion } = this.instance
-    const direction = this._offset.set(right, up, 0).applyQuaternion(quaternion)
-    // Shift the screen-plane vector along the view ray to keep flight at the
-    // same altitude. This corrects tilt and perspective even off-center.
-    const height = eye.y - position.y
-    const rayScale = Math.abs(height) > 1e-6 ? direction.y / height : 0
-    return Math.atan2(
-      direction.z + (position.z - eye.z) * rayScale,
-      direction.x + (position.x - eye.x) * rayScale,
-    )
-  }
-
   followTarget(target, delta, smoothing = 0) {
     const alpha = smoothing > 0 && delta > 0 ? 1 - Math.exp(-smoothing * delta) : 1
     const movement = this._offset.subVectors(target, this.target).multiplyScalar(alpha)
@@ -101,13 +93,14 @@ export default class WorldCamera {
     }
     const dt = Math.min(Math.max(delta, 0), 0.15)
     const diff = state.yaw - (this._heading ?? state.yaw)
-    this._heading = snap ? state.yaw : this._heading + Math.atan2(Math.sin(diff), Math.cos(diff)) * (1 - Math.exp(-5 * dt))
+    const headingResponse = view === 'chase' ? CHASE_HEADING_RESPONSE : 5
+    this._heading = snap ? state.yaw : this._heading + Math.atan2(Math.sin(diff), Math.cos(diff)) * (1 - Math.exp(-headingResponse * dt))
     const fwdX = Math.cos(this._heading), fwdZ = Math.sin(this._heading)
     const framing = this._framingScale()
     const eye = this._eye, aim = this._aim, up = this._up.set(0, 1, 0)
     let fov
     if (view === 'cockpit') {
-      this._pose.set(state.roll, -state.yaw, state.pitch, 'YZX')
+      this._pose.set(state.roll, -state.yaw, state.pitch)
       eye.set(0.28, 0.24, 0).multiplyScalar(aircraftScale).applyEuler(this._pose)
       aim.set(1, -0.10, 0).normalize().applyEuler(this._pose).multiplyScalar(5).add(eye)
       up.applyEuler(this._pose)
@@ -116,12 +109,26 @@ export default class WorldCamera {
     else {
       const overhead = view === 'top'
       const distanceScale = framing * (overhead ? Math.sqrt(aircraftScale) : aircraftScale)
-      const back = (overhead ? 4.2 : 4.5) * distanceScale
-      eye.set(-back * fwdX, (overhead ? 10.4 : 1.65) * distanceScale, -back * fwdZ)
+      fov = (overhead ? 38 : 48) + state.boost * 5
+      const chaseDistance = 4.8 * distanceScale
+      const centerY = 0.64 - 0.03 * state.boost
+      // Keep the aircraft below center even as the chase camera tilts.
+      const framingPitch = overhead ? 0 : Math.atan((2 * centerY - 1)
+        * Math.tan(THREE.MathUtils.degToRad(fov / 2)))
+      const toJetPitch = overhead ? 0 : CHASE_PITCH_FOLLOW * Math.sin(state.pitch) - CHASE_DOWN_ANGLE - framingPitch
+      const back = overhead ? 4.2 * distanceScale : chaseDistance * Math.cos(toJetPitch)
+      const eyeHeight = overhead ? 10.4 * distanceScale : -chaseDistance * Math.sin(toJetPitch)
+      eye.set(-back * fwdX, eyeHeight, -back * fwdZ)
       const terrain = sampleSurface?.(state.position.x + eye.x, state.position.z + eye.z)
       if (Number.isFinite(terrain)) eye.y = Math.max(eye.y, terrain + 0.28 - state.position.y)
-      aim.set(fwdX * 0.9, overhead ? -0.3 : -0.12, fwdZ * 0.9).multiplyScalar(aircraftScale)
-      fov = (overhead ? 38 : 48) + state.boost * 5
+      if (overhead) {
+        aim.set(fwdX * 0.9, -0.3, fwdZ * 0.9).multiplyScalar(aircraftScale)
+      }
+      else {
+        const lookPitch = Math.atan2(-eye.y, back) + framingPitch
+        const ahead = chaseDistance * Math.cos(lookPitch)
+        aim.set(eye.x + ahead * fwdX, eye.y + chaseDistance * Math.sin(lookPitch), eye.z + ahead * fwdZ)
+      }
     }
     this._desiredRotation.setFromRotationMatrix(this._basis.lookAt(eye, aim, up))
     this._switchTime = Math.min(1, this._switchTime + dt / 0.72)
