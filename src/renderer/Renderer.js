@@ -71,6 +71,7 @@ export default class Renderer {
     this.initialized = false
     this.disposed = false
     this.prefabPreparation = null
+    this.gpuWarmupWaiters = new Set()
   }
 
   /**
@@ -118,17 +119,37 @@ export default class Renderer {
     this.objectResourceCleanup?.releaseGroup(group)
   }
 
-  async prepareVisiblePrefabs() {
+  async prepareVisiblePrefabs({ waitForGPU = false } = {}) {
     // Rendering discovers the exact main and shadow RenderObjects. Preparing one
     // pass may expose another, so drain until a complete render queues no work.
-    if (!this.prefabPreparation)
+    const preparation = this.prefabPreparation
+    if (!preparation)
       return
-    do {
-      await this.prefabPreparation.whenIdle()
-      if (this.disposed)
-        return
-      this.render()
-    } while (this.prefabPreparation.metrics.pending > 0)
+    await preparation.drain(async () => {
+      do {
+        await preparation.whenIdle()
+        if (this.disposed)
+          return
+        this.render()
+      } while (preparation.metrics.pending > 0)
+    })
+    const queue = this.instance.backend?.device?.queue
+    if (waitForGPU && !this.disposed && queue?.onSubmittedWorkDone) {
+      await new Promise((resolve) => {
+        const done = () => {
+          clearTimeout(timeout)
+          this.gpuWarmupWaiters.delete(done)
+          resolve()
+        }
+        const timeout = setTimeout(done, 2000)
+        this.gpuWarmupWaiters.add(done)
+        queue.onSubmittedWorkDone().then(done, done)
+      })
+    }
+  }
+
+  beginInteractivePreparation() {
+    this.prefabPreparation?.beginInteractivePreparation()
   }
 
   /**
@@ -147,6 +168,7 @@ export default class Renderer {
     else {
       this.instance.render(this.scene, this.camera)
     }
+    this.prefabPreparation?.finishFrame()
   }
 
   disposePipeline() {
@@ -169,6 +191,7 @@ export default class Renderer {
       return
     }
     this.disposed = true
+    for (const finish of this.gpuWarmupWaiters ?? []) finish()
     this.prefabPreparation?.dispose()
     this.prefabPreparation = null
     this.disposePipeline()

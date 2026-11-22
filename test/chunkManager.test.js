@@ -40,6 +40,7 @@ function createSlotFactory(calls = []) {
       coord: null,
       group,
       terrainRenderer: { material: { name: `terrain-${index}` } },
+      prefabPlacer: { syncVariantGroupVisibility() {} },
       waterRenderer: null,
       prefabBuilds: 0,
       prefabsBuiltForKey: null,
@@ -86,6 +87,17 @@ function createSlotFactory(calls = []) {
       setPrefabsVisible(visible) {
         this.prefabsVisible = visible
       },
+      beginPreparation() {
+        this.preparing = true
+        this.show()
+      },
+      endPreparation() {
+        this.preparing = false
+      },
+      activatePrepared() {
+        this.endPreparation()
+        this.show()
+      },
       updateInstanceColors() {
         this.instanceColorsUpdated = true
       },
@@ -96,7 +108,7 @@ function createSlotFactory(calls = []) {
   }
 }
 
-function createManager({ calls = [], overrides = {} } = {}) {
+function createManager({ calls = [], overrides = {}, prepareAhead = false, isTerrainReady = null } = {}) {
   return new ChunkManager({
     config: {
       ...config,
@@ -116,19 +128,108 @@ function createManager({ calls = [], overrides = {} } = {}) {
     brickColorResolver: {},
     brickGeometry: new THREE.BoxGeometry(0.2, 0.095, 0.2),
     parentGroup: new THREE.Group(),
-    createSlot: createSlotFactory(calls)
+    createSlot: createSlotFactory(calls),
+    prepareAhead,
+    isTerrainReady,
   })
 }
+
+function primeTestWindow(manager) {
+  manager.bootstrap(5, 3)
+  manager.buildWorkers = {
+    hasIdleWorker: () => false,
+    terminate() {},
+  }
+  manager.primeAhead(4.4, 0)
+  // A staged worker result can complete while the ordinary slots are still
+  // filling. Apply those results first to exercise the worst pool ordering.
+  for (const coord of manager.stagedCoords.values()) manager.loadCoordNow(coord)
+  for (const coord of [...manager.pendingQueue]) manager.loadCoordNow(coord)
+}
+
+test('stages and reuses the approaching strip without exposing it as active', () => {
+  const calls = []
+  const manager = createManager({ calls, prepareAhead: true })
+  primeTestWindow(manager)
+  assert.deepEqual([...manager.stagedSlots.keys()].sort(), ['2:-1', '2:0', '2:1'])
+  assert.equal(manager.activeSlots.size, 9)
+  assert.equal(manager.slots.length, 12)
+  const forward = manager.stagedSlots.get('2:0')
+  assert.equal(forward.preparing, true)
+  assert.equal(manager.isInitialWindowReady(), false)
+
+  manager.update(5, 3, null, 0)
+  while (manager.pendingPrefabBuildQueue.length) manager.update(5, 3, null, 0)
+  assert.equal(manager.isInitialWindowReady(), true)
+  assert.equal(forward.prefabsBuiltForKey, '2:0')
+
+  const count = calls.length
+  manager.update(6.5, 3, null, 0)
+  assert.equal(manager.activeSlots.get('2:0'), forward)
+  assert.equal(forward.preparing, false)
+  assert.equal(manager.stagedSlots.size, 0)
+  assert.equal(manager.slots.length, 12)
+  assert.equal(calls.length, count)
+  assertManagerInvariants(manager)
+})
+
+test('reverses staging direction and respects the same spare-slot cap', () => {
+  const manager = createManager({ prepareAhead: true })
+  primeTestWindow(manager)
+  const outgoing = new Set(manager.stagedSlots.values())
+  manager.primeAhead(-4.4, 0)
+  assert.deepEqual([...manager.stagedCoords.keys()].sort(), ['-2:-1', '-2:0', '-2:1'])
+  assert.equal(manager.stagedSlots.size, 0)
+  for (const slot of outgoing) {
+    assert.equal(slot.group.visible, false)
+    assert.equal(slot.preparing, false)
+  }
+  for (const coord of manager.stagedCoords.values()) manager.loadCoordNow(coord)
+  assert.equal(manager.stagedSlots.size, 3)
+  assert.equal(manager.slots.length, 12)
+  assertManagerInvariants(manager)
+})
+
+test('rebuilding the window clears preparation-only state from recycled slots', () => {
+  const manager = createManager({ prepareAhead: true })
+  primeTestWindow(manager)
+  const staged = [...manager.stagedSlots.values()]
+  assert.ok(staged.length > 0)
+
+  manager.bootstrap(0, 0)
+
+  assert.equal(manager.stagedSlots.size, 0)
+  assert.ok(staged.every(slot => !slot.preparing))
+  assertManagerInvariants(manager)
+})
+
+test('keeps the reveal at its starting position until terrain can be drawn', () => {
+  let ready = false
+  const manager = createManager({ overrides: { transition: { enabled: true } }, isTerrainReady: () => ready })
+  manager.bootstrap(0, 0)
+  const slot = manager.activeSlots.get('0:0')
+  slot.terrainRenderer.mesh = { count: 1 }
+  manager.update(0, 0, null, 0.1)
+  assert.equal(slot.columnTransition.elapsed, 0)
+  assert.equal(slot.group.visible, true)
+  ready = true
+  manager.update(0, 0, null, 0.1)
+  assert.equal(slot.columnTransition.elapsed, 0.1)
+})
 
 function assertManagerInvariants(manager) {
   const activeSlots = new Set(manager.activeSlots.values())
   const freeSlots = new Set(manager.freeSlots)
+  const stagedSlots = new Set(manager.stagedSlots.values())
 
   assert.equal(activeSlots.size, manager.activeSlots.size)
   assert.equal(freeSlots.size, manager.freeSlots.length)
-  assert.equal(activeSlots.size + freeSlots.size, manager.slots.length)
+  assert.equal(activeSlots.size + freeSlots.size + stagedSlots.size, manager.slots.length)
 
   for (const slot of activeSlots) {
+    assert.equal(freeSlots.has(slot) || stagedSlots.has(slot), false)
+  }
+  for (const slot of stagedSlots) {
     assert.equal(freeSlots.has(slot), false)
   }
 

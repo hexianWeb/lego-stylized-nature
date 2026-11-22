@@ -119,6 +119,7 @@ export default class World {
         this.measurePrefabShadowBounds()
 
       if (useChunkTerrain) {
+        const preparation = this.experience.renderer?.prefabPreparation
         this.terrainChunkManager = new ChunkManager({
           config: this.config,
           terrainGenerator: this.terrainGenerator,
@@ -130,6 +131,8 @@ export default class World {
           prefabRegistry,
           materials: this.materials,
           buildWorkers: ChunkBuildWorkerPool.create(this.config.chunks),
+          prepareAhead: preparation?.metrics.enabled === true,
+          isTerrainReady: preparation?.isObjectReady,
         })
       }
       else {

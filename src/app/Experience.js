@@ -141,6 +141,7 @@ export default class Experience {
       this.world.debuggerInit(this.debug)
     }
     if (!deferReady) {
+      this.renderer.beginInteractivePreparation?.()
       this.audio?.setReady()
       this.ui?.setReady()
     }
@@ -156,6 +157,7 @@ export default class Experience {
     }
     this.audio?.setReady()
     if (!this.ui) {
+      this.renderer.beginInteractivePreparation?.()
       return
     }
 
@@ -164,28 +166,54 @@ export default class Experience {
       player.setPaused(true)
     }
 
-    this.ui.setStage('即将穿出云层…')
-    await new Promise((resolve) => {
-      const timer = setTimeout(() => {
-        this._cancelPresent = null
-        resolve()
-      }, 1500)
-      this._cancelPresent = () => {
-        clearTimeout(timer)
-        this._cancelPresent = null
-        resolve()
-      }
-    })
+    this.ui.setStage('正在准备前方航线…')
+    const manager = this.world.terrainChunkManager
+    if (player?.enabled) {
+      const { x, z } = player.state.velocity
+      manager?.primeAhead?.(x, z)
+    }
+    const preparing = performance.now()
+    await this.waitForInitialFlightWindow(manager)
     if (this.disposed) {
       return
     }
 
+    await this.renderer.prepareVisiblePrefabs?.({ waitForGPU: true })
+    if (this.disposed) {
+      return
+    }
+    this.initTimings.flightWindowMs = performance.now() - preparing
+    this.ui.setStage('即将穿出云层…')
     await this.ui.playCloudReveal()
     if (this.disposed) {
       return
     }
 
+    this.renderer.beginInteractivePreparation?.()
     this.ui.setReady()
+  }
+
+  waitForInitialFlightWindow(manager) {
+    const started = performance.now()
+    return new Promise((resolve) => {
+      let timer
+      const finish = () => {
+        clearTimeout(timer)
+        this._cancelPresent = null
+        resolve()
+      }
+      const poll = () => {
+        const elapsed = performance.now() - started
+        if (elapsed >= 6000 || (elapsed >= 1500 && manager?.isInitialWindowReady?.() !== false)) {
+          finish()
+        }
+        else {
+          timer = setTimeout(poll, 50)
+        }
+      }
+      this._cancelPresent = finish
+      poll()
+    })
   }
 
   resize() {

@@ -35,9 +35,11 @@ test('startup drains prefab work discovered in successive main and shadow render
   const renderer = Object.create(Renderer.prototype)
   const metrics = { pending: 1 }
   const calls = []
+  renderer.instance = {}
   renderer.prefabPreparation = {
     metrics,
-    async whenIdle() { calls.push('idle'); metrics.pending = 0 }
+    async drain(work) { calls.push('drain'); await work() },
+    async whenIdle() { calls.push('idle'); metrics.pending = 0 },
   }
   let renders = 0
   renderer.render = () => {
@@ -45,7 +47,7 @@ test('startup drains prefab work discovered in successive main and shadow render
     if (++renders === 1) metrics.pending = 1
   }
   await renderer.prepareVisiblePrefabs()
-  assert.deepEqual(calls, ['idle', 'render', 'idle', 'render'])
+  assert.deepEqual(calls, ['drain', 'idle', 'render', 'idle', 'render'])
 })
 
 test('renderer disposal cancels preparation before backend resources are released', () => {

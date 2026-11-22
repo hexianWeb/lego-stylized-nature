@@ -32,6 +32,7 @@ export default class ChunkRenderSlot {
     this.prefabsBuiltForKey = null
     this.prefabsVisible = false
     this.prefabBuildMs = 0
+    this.preparationMeshes = null
     this.columnTransition = null
     this.buildTimings = { aoMs: 0, instancesMs: 0 }
     this.group = new THREE.Group()
@@ -63,6 +64,52 @@ export default class ChunkRenderSlot {
 
   hide() {
     this.group.visible = false
+  }
+
+  beginPreparation(direction, settings) {
+    if (settings.enabled !== false) {
+      this.startColumnTransition(1, direction, settings, false)
+    }
+    this.show()
+    this.preparationMeshes = new Map()
+    this.collectPreparationMeshes()
+  }
+
+  collectPreparationMeshes() {
+    if (!this.preparationMeshes) return
+    // Register real RenderObjects in the renderer's main/shadow passes while
+    // its preparation gate holds all draws until promotion to the active window.
+    this.group.traverseVisible((object) => {
+      if (!object.userData.streamingChunk && !object.userData.streamingPrefab) return
+      if (this.preparationMeshes.has(object)) return
+      this.preparationMeshes.set(object, object.frustumCulled)
+      object.frustumCulled = false
+      object.userData.streamPreparationOnly = true
+    })
+  }
+
+  endPreparation() {
+    if (!this.preparationMeshes) return
+    for (const [mesh, frustumCulled] of this.preparationMeshes) {
+      mesh.frustumCulled = frustumCulled
+      delete mesh.userData.streamPreparationOnly
+    }
+    this.preparationMeshes = null
+  }
+
+  activatePrepared(direction, settings) {
+    this.endPreparation()
+    if (settings.enabled === false) {
+      this.resetTransition()
+    }
+    else if (this.columnTransition) {
+      // Reuse the captured matrices. A turn can change the actual entering axis.
+      this.columnTransition.start(1, direction, settings)
+    }
+    else {
+      this.startColumnTransition(1, direction, settings, false)
+    }
+    this.show()
   }
 
   startLoading(direction, settings) {
@@ -196,6 +243,7 @@ export default class ChunkRenderSlot {
   }
 
   dispose() {
+    this.endPreparation()
     this.resetTransition()
     this.prefabPlacer?.dispose()
     this.waterRenderer?.dispose()

@@ -67,6 +67,40 @@ test('Experience releases the HDR after PMREM and renders warmup before startup 
   experience.dispose()
 })
 
+test('presentation primes the first flight direction and releases controls after preparation and reveal', async () => {
+  const { experience, calls } = createHarness(new Resources([]))
+  const manager = { primeAhead: (x, z) => calls.push(['prime', x, z]) }
+  experience.world.terrainChunkManager = manager
+  experience.world.playerAircraft = {
+    enabled: true,
+    state: { velocity: { x: 4, z: -1 } },
+    setPaused: paused => calls.push(['pause', paused]),
+  }
+  experience.ui = {
+    setStage() {},
+    async playCloudReveal() { calls.push('reveal') },
+    setReady() { calls.push('ready') },
+  }
+  experience.waitForInitialFlightWindow = async (value) => {
+    assert.equal(value, manager)
+    calls.push('window')
+  }
+  let finishPreparation
+  experience.renderer.prepareVisiblePrefabs = ({ waitForGPU }) => new Promise((resolve) => {
+    assert.equal(waitForGPU, true)
+    calls.push('prepare')
+    finishPreparation = resolve
+  })
+  experience.renderer.beginInteractivePreparation = () => calls.push('interactive')
+
+  const presenting = experience.present()
+  await Promise.resolve()
+  assert.deepEqual(calls, [['pause', true], ['prime', 4, -1], 'window', 'prepare'])
+  finishPreparation()
+  await presenting
+  assert.deepEqual(calls.slice(4), ['reveal', 'interactive', 'ready'])
+})
+
 test('failed renderer initialization cleans consumers without retrying the renderer', async () => {
   const { experience, calls } = createHarness(new Resources([]))
   experience.renderer.init = async () => { throw new Error('No GPU') }

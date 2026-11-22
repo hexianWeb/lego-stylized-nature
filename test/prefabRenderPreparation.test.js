@@ -191,6 +191,81 @@ test('real main and shadow identities prepare independently and skip draws until
   f.adapter.dispose()
 })
 
+test('interactive main and shadow preparation share a single budget grant per actual frame', async () => {
+  const f = fixture()
+  f.adapter.beginInteractivePreparation()
+  f.submit()
+  f.submit(new THREE.NodeMaterial(), f.shadowContext, f.shadowTarget)
+  const nextTask = () => new Promise(resolve => setTimeout(resolve, 0))
+  await nextTask()
+  assert.equal(f.builds.length, 0)
+
+  f.adapter.finishFrame()
+  f.adapter.finishFrame()
+  await nextTask()
+  await nextTask()
+  assert.equal(f.builds.length, 1)
+  assert.equal(f.adapter.metrics.pending, 2)
+  assert.ok(f.adapter.metrics.maxFrameMs > 0)
+
+  await f.adapter.drain(() => f.adapter.whenIdle())
+  assert.equal(f.builds.length, 2)
+  assert.equal(f.adapter.metrics.prepared, 2)
+  f.adapter.dispose()
+})
+
+test('visible work takes priority and a staged mesh draws only after promotion', async () => {
+  const f = fixture({ adapterOptions: { budgetMs: 4 } })
+  const staged = f.mesh
+  staged.userData.streamPreparationOnly = true
+  const visible = staged.clone()
+  visible.userData.streamPreparationOnly = false
+
+  f.submitObject(staged)
+  f.submitObject(visible)
+  assert.equal(f.adapter.isObjectReady(staged), false)
+  await f.adapter.whenIdle()
+  assert.equal(f.adapter.isObjectReady(staged), true)
+  assert.deepEqual(f.builds.map(record => record.renderObject.object), [visible, staged])
+  f.submitObject(staged)
+  assert.deepEqual(f.draws, [])
+
+  staged.userData.streamPreparationOnly = false
+  f.submitObject(staged)
+  assert.equal(f.draws.at(-1).object, staged)
+  assert.equal(f.adapter.metrics.prepared, 2)
+  f.adapter.dispose()
+})
+
+test('a visible builder can finish a shared cache key before a paused staged builder', async () => {
+  const f = fixture()
+  const staged = f.mesh
+  staged.userData.streamPreparationOnly = true
+  const visible = staged.clone()
+  visible.userData.streamPreparationOnly = false
+  const nodes = f.renderer._nodes
+  nodes.getForRenderCacheKey = () => 'shared'
+  const finalizations = []
+  const createState = nodes._createNodeBuilderState
+  nodes._createNodeBuilderState = (builder) => {
+    finalizations.push(builder.result.renderObject.object)
+    return createState(builder)
+  }
+
+  f.adapter.beginInteractivePreparation()
+  f.submitObject(staged)
+  f.adapter.finishFrame()
+  await new Promise(resolve => setTimeout(resolve, 0))
+  assert.equal(f.builds.at(0).renderObject.object, staged)
+  assert.equal(finalizations.length, 0)
+
+  f.submitObject(visible)
+  await f.adapter.drain(() => f.adapter.whenIdle())
+  assert.deepEqual(finalizations, [visible])
+  assert.equal(nodes.nodeBuilderCache.get('shared').usedTimes, 2)
+  f.adapter.dispose()
+})
+
 test('mesh disposal while queued prevents node publication and resolves whenIdle', async () => {
   const f = fixture()
   f.submit()

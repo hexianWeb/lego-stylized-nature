@@ -6,13 +6,20 @@ import { buildNodeBuilderSteps, withInstanceCapacity } from './installObjectReso
 export function installPrefabRenderPreparation(renderer, { budgetMs = 4, maxConcurrentPipelines = 8 } = {}) {
   const nodes = renderer._nodes
   const originalRender = renderer._renderObjectDirect
-  const metrics = { enabled: true, queued: 0, prepared: 0, failed: 0, cancelled: 0, pending: 0, gpuPending: 0, buildMs: 0, maxSliceMs: 0 }
+  budgetMs = Number.isFinite(budgetMs) && budgetMs > 0 ? budgetMs : 4
+  const metrics = {
+    enabled: true, queued: 0, prepared: 0, failed: 0, cancelled: 0, pending: 0, gpuPending: 0,
+    buildMs: 0, maxSliceMs: 0, frameBudgetMs: budgetMs, frameMs: 0, maxFrameMs: 0,
+    maxRuntimeOperation: null,
+  }
   if (REVISION !== '185' || !supportsPreparation(renderer)) {
     metrics.enabled = false
     console.warn('[Prefab preparation] Unsupported Three renderer; using synchronous rendering')
-    return { metrics, whenIdle: () => Promise.resolve(), dispose() {}, releaseGroup() {} }
+    return {
+      metrics, whenIdle: () => Promise.resolve(), drain: work => work(), isObjectReady: () => true,
+      beginInteractivePreparation() {}, finishFrame() {}, dispose() {}, releaseGroup() {},
+    }
   }
-  budgetMs = Number.isFinite(budgetMs) && budgetMs > 0 ? budgetMs : 4
   maxConcurrentPipelines = Number.isFinite(maxConcurrentPipelines) && maxConcurrentPipelines > 0
     ? Math.max(1, Math.floor(maxConcurrentPipelines))
     : 8
@@ -22,8 +29,9 @@ export function installPrefabRenderPreparation(renderer, { budgetMs = 4, maxConc
   const queue = []
   const idleWaiters = []
   const pipelineWaits = new Map()
-  const capacityWaiters = []
-  let running = false
+  let scheduled = null
+  let interactive = false
+  let drainDepth = 0
   let disposed = false
 
   function settleIdle() {
@@ -75,10 +83,6 @@ export function installPrefabRenderPreparation(renderer, { budgetMs = 4, maxConc
     }
   }
 
-  function wakeCapacityWaiters() {
-    for (const resolve of capacityWaiters.splice(0)) resolve()
-  }
-
   function trackPipeline(pipeline, promises) {
     const waiting = Promise.all(promises)
     pipelineWaits.set(pipeline, waiting)
@@ -87,7 +91,7 @@ export function installPrefabRenderPreparation(renderer, { budgetMs = 4, maxConc
       if (pipelineWaits.get(pipeline) === waiting)
         pipelineWaits.delete(pipeline)
       metrics.gpuPending = pipelineWaits.size
-      wakeCapacityWaiters()
+      if (!frameBudgeted()) scheduleSlice()
     }
     // Both fulfillment and rejection release the concurrency slot. Attach the
     // rejection handler immediately; a discarded/cancelled job must stay handled.
@@ -147,14 +151,33 @@ export function installPrefabRenderPreparation(renderer, { budgetMs = 4, maxConc
     queue.push(record)
     metrics.queued++
     metrics.pending++
-    processQueue()
+    if (!frameBudgeted()) scheduleSlice()
     return record
   }
 
-  function slice(record, work) {
+  function measureRuntime(record, operation, work) {
+    if (!operation || !frameBudgeted()) return work()
     const start = performance.now()
     try {
-      return withContext(renderer, record, () => withInstanceCapacity(record.renderObject.object, work))
+      return work()
+    }
+    finally {
+      const ms = performance.now() - start
+      if (ms > (metrics.maxRuntimeOperation?.ms ?? 0)) {
+        const object = record.renderObject.object
+        metrics.maxRuntimeOperation = {
+          ms, operation, object: object.name || object.type,
+          material: record.material.type, staged: object.userData.streamPreparationOnly === true,
+        }
+      }
+    }
+  }
+
+  function slice(record, operation, work) {
+    const start = performance.now()
+    try {
+      return withContext(renderer, record, () => withInstanceCapacity(record.renderObject.object,
+        () => measureRuntime(record, operation, work)))
     }
     finally {
       const elapsed = performance.now() - start
@@ -163,32 +186,18 @@ export function installPrefabRenderPreparation(renderer, { budgetMs = 4, maxConc
     }
   }
 
-  async function prepare(record) {
+  function* prepare(record) {
     const renderObject = record.renderObject
     const key = nodes.getForRenderCacheKey(renderObject)
-    let state = nodes.get(renderObject).nodeBuilderState ?? nodes.nodeBuilderCache.get(key)
-    if (!state) {
-      const builder = slice(record, () => nodes._createNodeBuilder(renderObject, record.material))
+    const data = nodes.get(renderObject)
+    let builder
+    if (!data.nodeBuilderState && !nodes.nodeBuilderCache.has(key)) {
+      builder = slice(record, 'create node builder', () => nodes._createNodeBuilder(renderObject, record.material))
       const steps = buildNodeBuilderSteps(builder)
-      let done = false
-      while (!done && !record.cancelled && !disposed) {
-        if (!isRenderable(renderObject.object)) {
-          releaseRecord(record)
-          return
-        }
-        const started = performance.now()
-        // The budget bounds batches. One recursive TSL node build is indivisible;
-        // maxSliceMs records those overruns instead of pretending they are bounded.
-        do {
-          done = slice(record, () => steps.next().done)
-        } while (!done && !record.cancelled && !disposed && performance.now() - started < budgetMs)
-        metrics.maxSliceMs = Math.max(metrics.maxSliceMs, performance.now() - started)
-        if (!done)
-          await yieldToBrowser()
-      }
-      if (record.cancelled || disposed)
-        return
-      state = nodes.nodeBuilderCache.get(key) ?? slice(record, () => nodes._createNodeBuilderState(builder))
+      // Each recursive TSL step is indivisible. The scheduler can pause between
+      // steps and reuse whatever a different record finished in the meantime.
+      yield
+      while (!nodes.nodeBuilderCache.has(key) && !slice(record, 'build shader node', () => steps.next().done)) yield
     }
     if (record.cancelled || disposed)
       return
@@ -200,26 +209,30 @@ export function installPrefabRenderPreparation(renderer, { budgetMs = 4, maxConc
 
     // Publish only after the complete build and cancellation check. Three's
     // normal disposal path now owns cache reference counts and binding cleanup.
-    const data = nodes.get(renderObject)
     if (!data.nodeBuilderState) {
+      const state = nodes.nodeBuilderCache.get(key) ?? slice(record, 'finalize node state', () => nodes._createNodeBuilderState(builder))
+      if (record.cancelled || disposed)
+        return
       nodes.nodeBuilderCache.set(key, state)
       state.usedTimes++
       data.nodeBuilderState = state
     }
+    yield
+
     const pipelinePromises = []
     let pipeline
-    slice(record, () => {
-      renderer._geometries.updateForRender(renderObject)
+    slice(record, null, () => {
+      measureRuntime(record, 'upload geometry', () => renderer._geometries.updateForRender(renderObject))
       if (record.cancelled || disposed)
         return
-      nodes.updateForRender(renderObject)
+      measureRuntime(record, 'update render nodes', () => nodes.updateForRender(renderObject))
       if (record.cancelled || disposed)
         return
-      renderer._bindings.updateForRender(renderObject)
+      measureRuntime(record, 'update GPU bindings', () => renderer._bindings.updateForRender(renderObject))
       if (record.cancelled || disposed)
         return
-      pipeline = withPipelineErrorScopes(renderer.backend, () =>
-        renderer._pipelines.getForRender(renderObject, pipelinePromises))
+      pipeline = measureRuntime(record, 'request GPU pipeline', () => withPipelineErrorScopes(renderer.backend, () =>
+        renderer._pipelines.getForRender(renderObject, pipelinePromises)))
     })
     // updateBefore intentionally runs in the next real render, where shadow
     // draws pass through this same gate with their genuine nested context.
@@ -239,46 +252,73 @@ export function installPrefabRenderPreparation(renderer, { budgetMs = 4, maxConc
     }
   }
 
-  async function processQueue() {
-    if (running || disposed)
+  function frameBudgeted() {
+    return interactive && drainDepth === 0
+  }
+
+  function cancelSlice() {
+    clearTimeout(scheduled?.timer)
+    scheduled = null
+  }
+
+  function scheduleSlice() {
+    if (disposed || scheduled !== null || queue.length === 0 || pipelineWaits.size >= maxConcurrentPipelines)
       return
-    running = true
-    await yieldToBrowser()
-    try {
-      while (queue.length && !disposed) {
-        const next = queue[0]
-        if (next.cancelled || !isRenderable(next.renderObject.object)) {
-          queue.shift()
-          releaseRecord(next)
-          continue
-        }
-        if (pipelineWaits.size >= maxConcurrentPipelines) {
-          await new Promise(resolve => capacityWaiters.push(resolve))
-          continue
-        }
-        const record = queue.shift()
-        if (record.cancelled)
-          continue
-        try {
-          await prepare(record)
-        }
-        catch (error) {
-          fail(record, error)
-        }
-        if (queue.length)
-          await yieldToBrowser()
-      }
+    const task = { timer: null }
+    scheduled = task
+    const run = () => {
+      if (scheduled !== task) return
+      scheduled = null
+      processSlice(frameBudgeted())
+      if (!frameBudgeted()) scheduleSlice()
     }
-    finally {
-      running = false
-      settleIdle()
+    if (!frameBudgeted() && globalThis.scheduler?.yield) {
+      // Startup can drain independently of animation frames. scheduler.yield()
+      // gives each batch its own task without the nested timer clamp.
+      globalThis.scheduler.yield().then(run, () => {
+        if (scheduled === task) task.timer = setTimeout(run, 0)
+      })
+    }
+    else {
+      task.timer = setTimeout(run, 0)
     }
   }
 
+  function processSlice(isFrame) {
+    const start = performance.now()
+    do {
+      // A promoted object may already be queued from the preparation band.
+      // Read its live flag so it immediately joins visible work.
+      const visibleIndex = queue.findIndex(record => record.renderObject.object.userData.streamPreparationOnly !== true)
+      const index = Math.max(0, visibleIndex)
+      const record = queue[index]
+      if (record.cancelled || !isRenderable(record.renderObject.object)) {
+        queue.splice(index, 1)
+        releaseRecord(record)
+        continue
+      }
+      try {
+        record.work ??= prepare(record)
+        if (record.work.next().done) queue.splice(index, 1)
+      }
+      catch (error) {
+        queue.splice(index, 1)
+        fail(record, error)
+      }
+    } while (queue.length && !disposed && pipelineWaits.size < maxConcurrentPipelines && performance.now() - start < budgetMs)
+    if (isFrame) {
+      metrics.frameMs = performance.now() - start
+      metrics.maxFrameMs = Math.max(metrics.maxFrameMs, metrics.frameMs)
+    }
+    settleIdle()
+  }
+
   const gate = function (object, material, scene, camera, lightsNode, group, clippingContext, passId) {
-    const streamed = object.userData?.streamingPrefab === true || object.userData?.streamingChunk === true
+    const preparationOnly = object.userData?.streamPreparationOnly === true
+    const streamed = preparationOnly || object.userData?.streamingPrefab === true || object.userData?.streamingChunk === true
     if (disposed || !streamed || failedObjects.has(object)) {
-      return originalRender.apply(this, arguments)
+      if (!preparationOnly) return originalRender.apply(this, arguments)
+      return
     }
     if (!isRenderable(object))
       return
@@ -286,30 +326,63 @@ export function installPrefabRenderPreparation(renderer, { budgetMs = 4, maxConc
     renderObject.drawRange = object.geometry.drawRange
     renderObject.group = group
     const record = records.get(renderObject) ?? enqueue(renderObject)
-    if (record.status === 'ready')
+    if (!preparationOnly && record.status === 'ready')
       return originalRender.apply(this, arguments)
   }
   renderer._renderObjectDirect = gate
 
   return {
     metrics,
+    beginInteractivePreparation() {
+      if (interactive) return
+      interactive = true
+      if (frameBudgeted()) cancelSlice()
+    },
+    finishFrame() {
+      if (!frameBudgeted()) return
+      metrics.frameMs = 0
+      // Grant one batch after the actual frame submission, including all its
+      // passes. A slow timer collapses multiple renders into a single grant.
+      scheduleSlice()
+    },
+    async drain(work) {
+      drainDepth++
+      scheduleSlice()
+      try {
+        return await work()
+      }
+      finally {
+        drainDepth--
+        if (frameBudgeted()) cancelSlice()
+      }
+    },
     whenIdle() {
       if (metrics.pending === 0)
         return Promise.resolve()
       return new Promise(resolve => idleWaiters.push(resolve))
+    },
+    isObjectReady(object) {
+      if (failedObjects.has(object)) return true
+      let hasMainPass = false
+      for (const record of objects.get(object)?.records ?? []) {
+        if (record.material.isShadowPassMaterial) continue
+        if (record.status !== 'ready') return false
+        hasMainPass = true
+      }
+      return hasMainPass
     },
     releaseGroup(group) { group.traverse(releaseObject) },
     dispose() {
       if (disposed)
         return
       disposed = true
+      cancelSlice()
       if (renderer._renderObjectDirect === gate)
         renderer._renderObjectDirect = originalRender
       for (const object of [...objects.keys()]) releaseObject(object)
       queue.length = 0
       pipelineWaits.clear()
       metrics.gpuPending = 0
-      wakeCapacityWaiters()
       settleIdle()
     },
   }
@@ -384,12 +457,6 @@ function withContext(renderer, record, work) {
     record.renderObject.material = previousMaterial
     apply(previous)
   }
-}
-
-function yieldToBrowser() {
-  if (globalThis.scheduler?.yield)
-    return globalThis.scheduler.yield()
-  return new Promise(resolve => setTimeout(resolve, 0))
 }
 
 // r185 pops its validation scope after awaiting GPU compilation. Parallel

@@ -16,6 +16,43 @@ function createRenderer() {
   }
 }
 
+test('prepared terrain and late-built prefabs become normally culled on activation', () => {
+  const terrain = createRenderer()
+  const prefabPlacer = createRenderer()
+  const land = new THREE.Object3D()
+  const tree = new THREE.Object3D()
+  const inactiveTree = new THREE.Object3D()
+  land.userData.streamingChunk = true
+  tree.userData.streamingPrefab = true
+  tree.frustumCulled = false
+  inactiveTree.userData.streamingPrefab = true
+  inactiveTree.visible = false
+  terrain.group.add(land)
+  prefabPlacer.group.add(tree, inactiveTree)
+
+  const slot = new ChunkRenderSlot({ index: 0, chunkSize: 2, cellSize: 1, terrainRenderer: terrain, prefabPlacer })
+  const direction = { x: 1, z: 0 }
+  const settings = { enabled: false }
+  slot.setPrefabsVisible(false)
+  slot.beginPreparation(direction, settings)
+  assert.equal(land.userData.streamPreparationOnly, true)
+  assert.equal(land.frustumCulled, false)
+  assert.equal(tree.userData.streamPreparationOnly, undefined)
+
+  slot.setPrefabsVisible(true)
+  slot.collectPreparationMeshes()
+  assert.equal(tree.userData.streamPreparationOnly, true)
+  assert.equal(inactiveTree.userData.streamPreparationOnly, undefined)
+
+  slot.activatePrepared(direction, settings)
+  assert.equal(slot.group.visible, true)
+  assert.equal(land.userData.streamPreparationOnly, undefined)
+  assert.equal(tree.userData.streamPreparationOnly, undefined)
+  assert.equal(land.frustumCulled, true)
+  assert.equal(tree.frustumCulled, false)
+  slot.dispose()
+})
+
 test('chunk render slot delays prefab build until requested and resets on repopulate', () => {
   let prefabBuilds = 0
   const prefabPlacer = {
