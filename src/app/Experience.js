@@ -96,13 +96,14 @@ export default class Experience {
     const started = performance.now()
     this.renderer.attachPipeline(this.scene, this.worldCamera.instance)
     await this.renderer.init()
-    this.ui?.setStage('正在收集积木与树木…')
+    this.ui?.setStage(0.24, '正在收集积木与树木…')
     const rendererReady = performance.now()
     this.initTimings.rendererMs = rendererReady - started
     await this.resources.ready
     const resourcesReady = performance.now()
     this.initTimings.resourcesWaitMs = resourcesReady - rendererReady
     this.resources.assertRequired()
+    this.ui?.setStage(0.46, '正在搭建水岸与地形…')
     this.environment.applyEnvironmentMap(
       this.renderer.instance,
       this.resources.items.studioEnvMap,
@@ -111,7 +112,7 @@ export default class Experience {
     const environmentReady = performance.now()
     this.initTimings.environmentMs = environmentReady - resourcesReady
     this.world.build()
-    this.ui?.setStage('正在点亮这片旷野…')
+    this.ui?.setStage(0.70, '正在种植树木与花草…')
     const worldReady = performance.now()
     this.initTimings.worldMs = worldReady - environmentReady
 
@@ -167,7 +168,7 @@ export default class Experience {
       player.setPaused(true)
     }
 
-    this.ui.setStage('正在准备前方航线…')
+    this.ui.setStage(0.88, '正在准备飞行…')
     const manager = this.world.terrainChunkManager
     if (player?.enabled) {
       const { x, z } = player.state.velocity
@@ -184,7 +185,6 @@ export default class Experience {
       return
     }
     this.initTimings.flightWindowMs = performance.now() - preparing
-    this.ui.setStage('即将穿出云层…')
     await this.ui.playCloudReveal()
     if (this.disposed) {
       return

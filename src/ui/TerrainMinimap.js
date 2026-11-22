@@ -1,18 +1,18 @@
-const WIDTH = 248
+const WIDTH = 254
 const HEIGHT = 180
 const MAP_PADDING = 20
 const REFRESH_INTERVAL = 500
 const SAMPLE_SIZE = 3
-const BACKGROUND = '#c9d8c3'
+const BACKGROUND = '#173b40'
 
 const BIOME_COLORS = {
-  forest: [105, 145, 100],
-  autumnForest: [184, 151, 89],
-  desert: [217, 194, 140],
-  volcano: [126, 122, 104],
-  snowForest: [211, 225, 211],
-  meadow: [149, 174, 112],
-  wetland: [109, 156, 138],
+  forest: [74, 151, 65],
+  autumnForest: [183, 136, 55],
+  desert: [203, 159, 64],
+  volcano: [120, 108, 81],
+  snowForest: [199, 220, 206],
+  meadow: [128, 168, 65],
+  wetland: [65, 147, 94],
 }
 
 function getMapBounds(map) {
@@ -59,16 +59,16 @@ function getSampleColor(sample, config) {
     return null
   const { surface, biome } = sample
   if (surface?.isLava)
-    return '#ce9168'
+    return '#e78248'
   if (surface?.isWater && config.water?.enableWater !== false)
-    return '#79b7bd'
+    return '#4dbed1'
   if (surface?.isShore)
-    return '#ddce9d'
+    return '#f4e2a0'
 
   const base = BIOME_COLORS[biome?.biomeId] ?? BIOME_COLORS.forest
   const height = surface?.height ?? 0
   const maxHeight = Math.max(1, config.terrain?.maxHeight ?? 32)
-  const shade = 0.9 + Math.min(1, height / maxHeight) * 0.25
+  const shade = 0.84 + Math.min(1, height / maxHeight) * 0.3
   return `rgb(${base.map(value => Math.round(value * shade)).join(',')})`
 }
 
@@ -177,37 +177,41 @@ export default class TerrainMinimap {
       this.height + MAP_PADDING * 2,
     )
 
-    context.strokeStyle = 'rgba(248, 246, 221, 0.17)'
+    context.strokeStyle = 'rgba(248, 251, 234, 0.26)'
     context.lineWidth = 1
     context.beginPath()
-    for (let x = 0.5; x < this.width; x += 24) {
+    for (let column = 1; column < 10; column++) {
+      const x = Math.floor(column * this.width / 10) + 0.5
       context.moveTo(x, 0)
       context.lineTo(x, this.height)
     }
-    for (let y = 0.5; y < this.height; y += 24) {
+    for (let row = 1; row < 8; row++) {
+      const y = Math.floor(row * this.height / 8) + 0.5
       context.moveTo(0, y)
       context.lineTo(this.width, y)
     }
     context.stroke()
 
-    context.fillStyle = '#f9f4df'
-    context.font = '600 9px system-ui, sans-serif'
+    const markerSize = Math.max(0.7, Math.min(1.3, this.width / WIDTH))
+    context.fillStyle = '#f9fcf6'
+    context.font = `900 ${Math.round(18 * markerSize)}px Arial, sans-serif`
     context.textAlign = 'center'
-    context.fillText('N', this.width / 2, 13)
+    context.fillText('N', this.width / 2, 24 * markerSize)
     context.save()
     context.translate(this.width / 2, this.height / 2)
     // Canvas +Y follows world +Z; aircraft yaw 0 points along +X (east).
     context.rotate(state?.yaw ?? 0)
+    context.scale(markerSize, markerSize)
     context.shadowColor = 'rgba(37, 66, 47, 0.45)'
     context.shadowBlur = 4
     context.beginPath()
-    context.moveTo(8, 0)
-    context.lineTo(-5, -5)
-    context.lineTo(-2.5, 0)
-    context.lineTo(-5, 5)
+    context.moveTo(12, 0)
+    context.lineTo(-8, -9)
+    context.lineTo(-4.5, 0)
+    context.lineTo(-8, 9)
     context.closePath()
-    context.fillStyle = '#fff7d9'
-    context.strokeStyle = '#486849'
+    context.fillStyle = '#fafcf4'
+    context.strokeStyle = '#456b60'
     context.lineWidth = 1.5
     context.fill()
     context.stroke()

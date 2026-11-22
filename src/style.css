@@ -1,3 +1,6 @@
+@import './ui/flight-combat.css';
+@import './ui/flight-loading.css';
+
 html,
 body {
     width: 100%;
@@ -5,339 +8,28 @@ body {
     margin: 0;
     overflow: hidden;
     background: #b3c8be;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif;
-    color: #203e35;
+    font-family: 'Segoe UI', 'Microsoft YaHei', 'PingFang SC', system-ui, sans-serif;
+    color: #f5f9f7;
 }
 
 * { box-sizing: border-box; }
-button { font: inherit; color: inherit; cursor: pointer; -webkit-tap-highlight-color: transparent; }
-button:disabled { opacity: .4; cursor: default; }
-button:focus-visible, .webgl:focus-visible { outline: 3px solid #326c62; outline-offset: 4px; }
-button svg { width: 20px; height: 20px; }
 [hidden] { display: none !important; }
-
-.explorer-ui {
-    --glass: linear-gradient(145deg, rgba(255, 255, 255, .65), rgba(233, 246, 240, .45));
-    --glass-border: rgba(255, 255, 255, .68);
-    --glass-shadow: inset 0 1px 0 rgba(255, 255, 255, .8), inset 0 -1px 0 rgba(255, 255, 255, .18), 0 12px 32px rgba(12, 42, 31, .12), 0 2px 7px rgba(12, 42, 31, .07);
-    --muted: #506b60;
-    position: fixed;
-    inset: 0;
-    overflow: hidden;
-    pointer-events: none;
-    user-select: none;
-    z-index: 5;
+button {
+    font: inherit;
+    color: inherit;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
 }
-.surface {
-    background: var(--glass, rgba(239, 247, 242, .68));
-    border: 1px solid var(--glass-border, rgba(255, 255, 255, .68));
-    box-shadow: var(--glass-shadow, 0 12px 32px rgba(12, 42, 31, .12));
-    backdrop-filter: blur(26px) saturate(155%);
-    -webkit-backdrop-filter: blur(26px) saturate(155%);
-    border-radius: 26px;
+button:disabled { opacity: .45; cursor: default; }
+button:focus-visible, .webgl:focus-visible {
+    outline: 2px solid #ffac46;
+    outline-offset: 3px;
 }
-.hud-header { position: absolute; top: 28px; left: 30px; right: 30px; display: flex; justify-content: space-between; gap: 18px; align-items: flex-start; }
-.brand { display: flex; align-items: center; gap: 14px; color: #fffef6; text-shadow: 0 2px 12px #15342680; }
-.brand h1 { margin: 0; font-size: 23px; font-weight: 650; letter-spacing: 3px; line-height: 1.2; }
-.brand h1 span { display: inline-block; margin-left: 14px; padding-left: 14px; border-left: 1px solid #fffb; vertical-align: 4px; font-size: 10px; letter-spacing: 2.5px; font-weight: 600; }
-.brand p { margin: 7px 0 0; font-size: 11px; letter-spacing: 2px; opacity: .9; }
-.brick-mark { display: grid; grid-template-columns: repeat(2, 9px); gap: 5px; padding: 9px 10px 12px; background: linear-gradient(145deg, #ffe6a0e6, #f2c966b8); border: 1px solid #fff5c780; border-radius: 13px; box-shadow: inset 0 1px 0 #fffbdab3, inset 0 -3px 0 #bca24f66, 0 4px 18px #1d432929; transform: rotate(-7deg); }
-.brick-mark i { width: 9px; height: 9px; background: #ffe798b8; border-radius: 50%; box-shadow: 0 2px 0 #c6a74780, inset 0 1px 0 #fff7d8; }
-.header-tools { display: flex; gap: 14px; align-items: center; }
-.explore-badge { display: flex; gap: 8px; align-items: center; padding: 12px 17px; background: #214d3c64; color: #f8fcf5; border: 1px solid #ffffff52; box-shadow: inset 0 1px 0 #ffffff38, 0 5px 18px #163b2421; backdrop-filter: blur(24px) saturate(155%); -webkit-backdrop-filter: blur(24px) saturate(155%); border-radius: 30px; font-size: 11px; letter-spacing: 1px; }
-.explore-badge i, .live-dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #d8efbd; box-shadow: 0 0 0 3px #bed69726; }
-.action-bar { display: flex; padding: 6px; gap: 4px; align-items: center; pointer-events: auto; border-radius: 30px; }
-.icon-button { width: 40px; height: 40px; border: 1px solid transparent; background: transparent; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; transition: background .18s, box-shadow .18s, transform .18s; }
-.icon-button:hover:not(:disabled) { background: #ffffff61; border-color: #ffffff6b; box-shadow: inset 0 1px 0 #ffffffb3, 0 2px 8px #20453214; transform: translateY(-1px); }
-.icon-button:active:not(:disabled) { transform: scale(.94); }
-.icon-button[aria-pressed="true"] { background: #ffffff8c; border-color: #ffffff7a; box-shadow: inset 0 1px 0 #ffffffa6, 0 2px 8px #20453212; }
-.tool-divider { flex: 0 0 1px; height: 20px; background: #335b472b; margin: 0 3px; }
-.eyebrow { font-size: 9px; font-weight: 600; letter-spacing: 2px; color: var(--muted, #506b60); }
-.location-card { position: absolute; left: 30px; bottom: 28px; width: 224px; padding: 19px 20px 18px; }
-.location-card .eyebrow { display: flex; justify-content: space-between; align-items: center; letter-spacing: 2px; }
-.location-card .live-dot { background: #45775e; box-shadow: 0 0 0 3px #45775e12; }
-.location-card h2 { font-size: 19px; letter-spacing: 1px; font-weight: 600; margin: 12px 0 16px; display: flex; align-items: center; gap: 8px; }
-.location-card h2 svg { width: 19px; height: 19px; color: #4f7861; flex-shrink: 0; }
-.flight-readings { display: flex; align-items: center; justify-content: space-between; gap: 20px; }
-.flight-readings strong { font-size: 31px; font-weight: 400; letter-spacing: -1px; line-height: 1; font-variant-numeric: tabular-nums; }
-.flight-readings strong + span { margin-left: 5px; font-size: 9px; color: var(--muted); }
-.coordinates { display: grid; gap: 4px; color: var(--muted); font: 10px Consolas, monospace; }
-.coordinates b { font-weight: 400; color: #315544; margin-left: 8px; font-variant-numeric: tabular-nums; }
-.speed-track { margin-top: 14px; height: 3px; background: #31563e1f; border-radius: 4px; overflow: hidden; }
-.speed-track i { display: block; height: 100%; background: #527d61; transition: width .1s linear; width: 0; border-radius: inherit; }
-.control-hint { position: absolute; bottom: 28px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; padding: 13px 17px; gap: 15px; white-space: nowrap; border-radius: 24px; }
-kbd { display: inline-flex; align-items: center; justify-content: center; min-width: 23px; height: 23px; padding: 0 5px; border: 1px solid #ffffff9c; border-radius: 7px; background: linear-gradient(145deg, #ffffff80, #eff8f04d); box-shadow: inset 0 1px 0 #ffffffa6, 0 2px 3px #214b3321; color: #31543f; font: 11px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
-.key-cluster { display: grid; justify-items: center; gap: 3px; }
-.key-cluster > span { display: flex; gap: 3px; }
-.key-cluster kbd { height: 20px; min-width: 20px; font-size: 10px; }
-.hint-copy { display: grid; gap: 6px; }
-.hint-copy b { font-size: 12px; font-weight: 600; letter-spacing: 1px; }
-.hint-copy > span { font-size: 10px; color: var(--muted); }
-.text-button { pointer-events: auto; background: transparent; border: 0; font-size: 10px; margin-left: 12px; padding: 10px 0 10px 14px; border-left: 1px solid #31563e26; }
-.text-button:hover { color: #1c694d; }
-.text-button span { margin-left: 6px; }
-.map-card { position: absolute; right: 30px; bottom: 28px; padding: 15px; width: 280px; pointer-events: auto; }
-.map-heading { display: flex; align-items: center; justify-content: space-between; min-height: 27px; margin: 0 1px 11px; font-size: 12px; font-weight: 600; gap: 12px; }
-.map-heading > div { display: flex; align-items: baseline; gap: 10px; }
-.map-heading .eyebrow { font-size: 8px; letter-spacing: 1px; font-weight: 500; }
-.map-expand { flex: 0 0 28px; display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; padding: 0; border: 1px solid #ffffff59; background: #ffffff2e; border-radius: 50%; box-shadow: inset 0 1px 0 #ffffff7a; transition: background .18s, transform .18s; }
-.map-expand svg { width: 15px; height: 15px; }
-.map-expand:hover { background: #ffffff85; }
-.map-expand:active { transform: scale(.92); }
-.terrain-minimap { display: block; width: 100%; height: 180px; border-radius: 16px; border: 1px solid #ffffff80; box-shadow: 0 1px 0 #ffffff80; }
-.map-footer { display: flex; justify-content: space-between; margin: 11px 2px 1px; font-size: 9px; color: #3f6050; gap: 10px; }
-.map-footer i { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #fff4cf; border: 1px solid #66794d; margin-right: 4px; }
-.map-card.is-expanded { position: absolute; top: 50%; right: auto; bottom: auto; left: 50%; transform: translate(-50%, -50%); width: min(640px, calc(100vw - 48px)); padding: 20px; z-index: 2; box-shadow: var(--glass-shadow), 0 24px 80px #143c2b33; }
-.map-card.is-expanded .map-heading { margin-bottom: 14px; font-size: 15px; }
-.map-card.is-expanded .map-heading .eyebrow { font-size: 10px; }
-.map-card.is-expanded .terrain-minimap { height: min(420px, 55vh); }
-.map-card.is-expanded .map-expand { width: 32px; height: 32px; flex-basis: 32px; }
-.map-card.is-expanded .map-footer { font-size: 10px; margin-top: 13px; }
-.flight-joystick {
-    position: absolute;
-    left: var(--touch-left);
-    bottom: var(--touch-bottom);
-    width: var(--joystick-size);
-    height: var(--joystick-size);
-    display: grid;
-    place-items: center;
-    border-radius: 50%;
-    color: #315c45;
-    backdrop-filter: blur(10px) saturate(120%);
-    -webkit-backdrop-filter: blur(10px) saturate(120%);
-    pointer-events: auto;
-    touch-action: none;
-    -webkit-touch-callout: none;
-    cursor: grab;
-}
-.flight-joystick.is-dragging { cursor: grabbing; }
-.flight-joystick svg { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
-.flight-joystick-thumb {
-    width: 38%;
-    aspect-ratio: 1;
-    pointer-events: none;
-    border-radius: 50%;
-    border: 1px solid #fffde5;
-    background: radial-gradient(circle at 43% 36%, #fff5cd, #dfbe69);
-    box-shadow: inset 0 -3px 0 #89662b32, 0 3px 11px #143c2b48;
-    transform: translate(var(--stick-x, 0px), var(--stick-y, 0px));
-    transition: transform .16s ease-out;
-}
-.flight-joystick.is-dragging .flight-joystick-thumb { transition: none; }
-.loading-card { position: absolute; left: 50%; top: 50%; z-index: 5; transform: translate(-50%, -50%); padding: 32px 36px; text-align: center; width: min(360px, calc(100% - 32px)); }
-.loading-card h2 { font-size: 24px; font-weight: 500; letter-spacing: 3px; margin: 18px 0 12px; }
-.loading-card p { font-size: 12px; color: var(--muted); margin: 0 0 23px; }
-.loading-track { height: 4px; background: #31563e1f; overflow: hidden; border-radius: 4px; }
-.loading-track i { display: block; width: 35%; height: 100%; background: #527d61; animation: growing 1.8s ease-in-out infinite; border-radius: inherit; }
-@keyframes growing { from { transform: translateX(-100%); } to { transform: translateX(390%); } }
-.explorer-ui:not(.is-ready) .flight-panel,
-.explorer-ui:not(.is-ready) .hud-header { visibility: hidden; }
-.is-ready .loading-card { display: none; }
-.is-ready .flight-panel,
-.is-ready .hud-header { animation: flight-arrive .5s ease both; }
-@keyframes flight-arrive { from { opacity: 0; } to { opacity: 1; } }
-
-@property --cloud-hole {
-    syntax: '<percentage>';
-    inherits: false;
-    initial-value: -32%;
-}
-.cloud-veil { position: absolute; inset: 0; z-index: 4; overflow: hidden; pointer-events: auto; }
-.cloud-sky, .cloud-burst, .cloud-field { position: absolute; inset: 0; pointer-events: none; }
-.cloud-sky {
-    background:
-        radial-gradient(ellipse 42% 28% at 18% 30%, rgba(255, 255, 255, .96), transparent 70%),
-        radial-gradient(ellipse 48% 30% at 80% 24%, rgba(255, 255, 255, .94), transparent 72%),
-        radial-gradient(ellipse 56% 28% at 48% 82%, rgba(255, 255, 255, .92), transparent 70%),
-        radial-gradient(ellipse 36% 24% at 50% 48%, rgba(255, 255, 255, .88), transparent 68%),
-        linear-gradient(180deg, #d4e4f2 0%, #e7f3ee 40%, #f7fbf8 100%);
-}
-.cloud-burst { inset: auto; left: 50%; top: 46%; width: 28vmin; height: 28vmin; border-radius: 50%; opacity: 0; transform: translate(-50%, -50%) scale(.2); background: radial-gradient(circle, rgba(255, 255, 255, .95) 0%, rgba(255, 255, 255, 0) 70%); }
-.puff { position: absolute; left: var(--x); top: var(--y); width: var(--w); height: var(--h); border-radius: 50%; background: #fffef9; box-shadow: 0 22px 36px rgba(74, 116, 104, .14); transform: translate(-50%, -50%); }
-.puff::before, .puff::after { content: ""; position: absolute; border-radius: 50%; background: inherit; }
-.puff::before { width: 62%; height: 84%; left: -18%; top: -36%; }
-.puff::after { width: 54%; height: 72%; right: -16%; top: -24%; }
-.puff:nth-child(3n) { background: #f3faf6; }
-.puff:nth-child(3n+1) { background: #fff; }
-.is-revealing .cloud-sky {
-    --cloud-hole: -32%;
-    -webkit-mask-image: radial-gradient(circle at 50% 46%, transparent var(--cloud-hole), #000 calc(var(--cloud-hole) + 14%));
-    mask-image: radial-gradient(circle at 50% 46%, transparent var(--cloud-hole), #000 calc(var(--cloud-hole) + 14%));
-    animation: cloud-open 1.25s cubic-bezier(.42, .05, .18, 1) .22s forwards;
-}
-.is-revealing .puff { animation: puff-out 1.25s cubic-bezier(.42, .05, .18, 1) .22s forwards; }
-.is-revealing .cloud-burst { animation: cloud-burst 1.25s ease-out .22s forwards; }
-.is-revealing .loading-card { animation: lift-away .2s ease forwards; }
-@keyframes cloud-open { 0% { --cloud-hole: -32%; opacity: 1; } 72% { opacity: 1; } 100% { --cloud-hole: 138%; opacity: 0; } }
-@keyframes puff-out { 0% { opacity: 1; transform: translate(-50%, -50%) scale(1); } 55% { opacity: 1; } 100% { opacity: 0; transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(1.42); } }
-@keyframes cloud-burst { 0% { opacity: 0; transform: translate(-50%, -50%) scale(.2); } 22% { opacity: .85; } 100% { opacity: 0; transform: translate(-50%, -50%) scale(8); } }
-@keyframes lift-away { from { opacity: 1; transform: translate(-50%, -50%); } to { opacity: 0; visibility: hidden; transform: translate(-50%, -62%); } }
-.is-paused .explore-badge i { background: #f6d78b; }
-.is-cinema .hud-part, .is-cinema .action-bar > :not([data-action="cinema"]) { display: none; }
-.is-cinema .hud-header { justify-content: flex-end; }
-.hud-toast { position: absolute; left: 50%; top: 105px; transform: translateX(-50%); font-size: 12px; padding: 13px 23px; text-align: center; line-height: 1.6; border-radius: 24px; z-index: 3; }
-.help-dialog { pointer-events: auto; padding: 36px; width: min(440px, calc(100% - 32px)); max-height: calc(100% - 32px); color: #203e35; }
-.help-dialog::backdrop { background: #163a2c3d; backdrop-filter: blur(7px); -webkit-backdrop-filter: blur(7px); }
-.help-dialog > .icon-button { position: absolute; top: 12px; right: 12px; background: #ffffff2e; border-color: #ffffff59; }
-.help-dialog h2 { font-weight: 500; font-size: 25px; letter-spacing: 1px; margin: 17px 0 12px; }
-.help-intro { font-size: 12px; line-height: 1.8; color: #506b60; margin: 0; }
-.help-keys { margin: 24px 0 20px; }
-.help-keys > div { display: flex; justify-content: space-between; align-items: center; min-height: 43px; border-bottom: 1px solid #31563e21; gap: 12px; font-size: 11px; }
-.help-keys dt { color: #506b60; }
-.help-keys dd { margin: 0; }
-.help-note { font-size: 10px; line-height: 1.8; color: #506b60; }
-.touch-help { display: none; }
-.primary-button { width: 100%; display: flex; justify-content: space-between; align-items: center; border: 1px solid #ffffff52; border-radius: 24px; padding: 14px 18px; background: linear-gradient(145deg, #31694ee8, #295840c9); color: #f6fff6; box-shadow: inset 0 1px 0 #ffffff38, 0 4px 12px #1f523224; font-size: 12px; margin-top: 23px; }
-.primary-button:hover { background: #326c50; }
-.startup-error { position: fixed; inset: 0; z-index: 10; display: grid; place-items: center; background: #b3c8be; }
-.error-card { max-width: 400px; padding: 30px; margin: 20px; }
-.error-card h1 { font-size: 24px; font-weight: 500; }
-.error-card p { font-size: 13px; line-height: 1.9; color: #506b60; }
-
-@media (max-width: 1120px) {
-    .hud-header { top: 22px; left: 22px; right: 22px; }
-    .location-card { left: 22px; bottom: 22px; width: 194px; padding: 16px; }
-    .map-card { right: 22px; bottom: 22px; }
-    .control-hint { bottom: 22px; padding: 12px 15px; gap: 11px; }
-    .control-hint .text-button { display: none; }
-    .hint-copy > span { font-size: 9px; }
-    .brand h1 span { display: none; }
-}
-@media (max-width: 980px) { .control-hint { display: none; } }
-@media (max-width: 760px) {
-    .hud-header { top: max(16px, env(safe-area-inset-top)); left: 14px; right: 14px; display: grid; grid-template-columns: 1fr; gap: 13px; }
-    .brand { gap: 10px; }
-    .brand h1 { font-size: 18px; letter-spacing: 2px; }
-    .brand p { font-size: 9px; letter-spacing: 1px; margin-top: 6px; }
-    .brick-mark { padding: 7px 8px 10px; gap: 4px; grid-template-columns: repeat(2, 7px); border-radius: 11px; }
-    .brick-mark i { width: 7px; height: 7px; }
-    .header-tools { justify-self: end; }
-    .explore-badge { display: none; }
-    .action-bar { gap: 3px; padding: 5px; }
-    .icon-button { width: 36px; height: 36px; }
-    .icon-button svg { width: 18px; height: 18px; }
-    .tool-divider { margin: 0 3px; }
-    .location-card { left: 14px; bottom: max(16px, env(safe-area-inset-bottom)); width: 142px; padding: 14px; border-radius: 23px; }
-    .location-card .eyebrow { font-size: 8px; letter-spacing: 1px; }
-    .location-card h2 { font-size: 15px; margin: 10px 0 13px; gap: 6px; letter-spacing: 0; }
-    .location-card h2 svg { width: 16px; height: 16px; }
-    .flight-readings { gap: 7px; }
-    .flight-readings strong { font-size: 25px; }
-    .flight-readings strong + span { font-size: 8px; margin-left: 3px; }
-    .coordinates { font-size: 8px; }
-    .coordinates b { margin-left: 2px; }
-    .map-card { right: 14px; bottom: max(16px, env(safe-area-inset-bottom)); padding: 14px; width: 206px; border-radius: 24px; }
-    .map-heading { margin-bottom: 9px; font-size: 11px; gap: 5px; }
-    .map-heading > div { flex-direction: column; gap: 3px; }
-    .map-heading .eyebrow { font-size: 7px; }
-    .map-expand { width: 27px; height: 27px; flex-basis: 27px; }
-    .terrain-minimap { height: 140px; border-radius: 13px; }
-    .map-footer { font-size: 8px; margin-top: 10px; gap: 4px; }
-    .map-card.is-expanded { padding: 16px; width: calc(100vw - 28px); }
-    .map-card.is-expanded .map-heading > div { flex-direction: row; gap: 10px; }
-    .is-map-expanded .location-card { visibility: hidden; }
-    .help-dialog { padding: 30px 24px; }
-    .hud-toast { top: 139px; width: max-content; max-width: calc(100% - 28px); }
-    .is-cinema .hud-header { display: flex; }
-}
-@media (min-width: 371px) and (max-width: 389px) { .location-card { width: 132px; padding: 12px; } }
-@media (max-width: 370px) {
-    .hud-header { left: 12px; right: 12px; }
-    .location-card { left: 12px; width: 88px; padding: 12px 10px; border-radius: 21px; }
-    .location-card .eyebrow { font-size: 7px; letter-spacing: 0; }
-    .location-card .live-dot { width: 4px; height: 4px; }
-    .location-card h2 { font-size: 13px; margin-bottom: 12px; }
-    .location-card h2 svg, .coordinates { display: none; }
-    .flight-readings { display: block; }
-    .flight-readings strong { font-size: 24px; }
-    .flight-readings strong + span { display: block; margin: 5px 0 0; font-size: 7px; }
-    .map-card { right: 12px; width: 198px; padding: 11px; }
-    .map-card.is-expanded { width: calc(100vw - 24px); padding: 14px; }
-    .map-card.is-expanded .map-heading > div { gap: 8px; }
-    .map-card.is-expanded .map-heading .eyebrow { font-size: 8px; }
-    .map-card.is-expanded .map-heading { font-size: 13px; }
-}
-@media (min-width: 580px) and (max-height: 500px) {
-    .hud-header { top: 12px; }
-    .location-card { bottom: 14px; padding: 12px 16px; }
-    .location-card h2 { margin: 8px 0; }
-    .map-card { bottom: 14px; width: 232px; padding: 11px; }
-    .terrain-minimap { height: 112px; }
-    .map-footer { display: none; }
-    .control-hint { display: none; }
-    .map-card.is-expanded { bottom: auto; width: min(580px, calc(100vw - 48px)); padding: 14px; }
-    .map-card.is-expanded .terrain-minimap { height: 53vh; }
-}
-@media (min-width: 580px) and (max-width: 760px) and (max-height: 500px) {
-    .hud-header { display: flex; }
-    .hud-toast { top: 76px; }
-}
-
-.is-touch {
-    --touch-left: max(16px, calc(env(safe-area-inset-left) + 10px));
-    --touch-right: max(16px, calc(env(safe-area-inset-right) + 10px));
-    --touch-bottom: max(16px, calc(env(safe-area-inset-bottom) + 10px));
-    --joystick-size: clamp(104px, 31vmin, 136px);
-}
-.is-touch .hud-header {
-    top: max(16px, calc(env(safe-area-inset-top) + 10px));
-    left: var(--touch-left);
-    right: var(--touch-right);
-}
-.is-touch .location-card { left: var(--touch-left); bottom: var(--touch-bottom); }
-.has-flight-joystick .location-card { bottom: calc(var(--touch-bottom) + var(--joystick-size) + 12px); }
-.is-touch .map-card:not(.is-expanded) {
-    right: var(--touch-right);
-    bottom: var(--touch-bottom);
-    max-width: calc(100% - var(--touch-left) - var(--touch-right) - var(--joystick-size) - 16px);
-}
-.is-touch .map-card.is-expanded { max-width: calc(100% - var(--touch-left) - var(--touch-right)); }
-.is-touch .desktop-help, .is-touch .control-hint { display: none; }
-.is-touch .touch-help { display: block; }
-
-.orientation-hint { display: none; }
-@media (pointer: coarse) and (orientation: portrait) {
-    .orientation-hint {
-        position: relative;
-        z-index: 6;
-        display: inline-flex;
-        align-items: center;
-        align-self: center;
-        gap: 7px;
-        margin: 0;
-        padding: 7px 10px;
-        border-radius: 20px;
-        background: #eaf3ed;
-        font-size: 12px;
-        font-weight: 600;
-        visibility: visible;
-    }
-    .orientation-hint svg { flex: 0 0 18px; width: 18px; height: 18px; }
-}
-@media (pointer: coarse) and (orientation: portrait) and (max-width: 760px) {
-    .hud-header { grid-template-columns: minmax(0, 1fr) auto; }
-    .header-tools { grid-column: 1 / -1; }
-}
-
-/* Keep controls readable in browsers without glass compositing, and honor the system setting. */
-@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-    .surface { background: #eaf3ed; }
-    .explore-badge { background: #315946; }
-    kbd { background: #f4f8f1; }
-}
-@media (prefers-reduced-transparency: reduce) {
-    .surface { background: #eaf3ed; backdrop-filter: none; -webkit-backdrop-filter: none; }
-    .explore-badge { background: #315946; backdrop-filter: none; -webkit-backdrop-filter: none; }
-    kbd { background: #f4f8f1; }
-    .help-dialog::backdrop { backdrop-filter: none; -webkit-backdrop-filter: none; background: #163a2c99; }
-}
-@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } .loading-track i { width: 100%; opacity: .6; } }
 
 .webgl {
     touch-action: none;
     position: fixed;
-    top: 0;
-    left: 0;
+    inset: 0;
     display: block;
     width: 100%;
     height: 100%;
@@ -345,30 +37,708 @@ kbd { display: inline-flex; align-items: center; justify-content: center; min-wi
     outline: none;
 }
 
-.flight-altimeter { display: flex; justify-content: space-between; gap: 6px; margin-top: 9px; color: #36564c; font: 11px ui-monospace, monospace; }
-.flight-altimeter b { font-variant-numeric: tabular-nums; }
-.cockpit-overlay { position: absolute; inset: 0; width: 100%; height: 100%; z-index: -1; pointer-events: none; }
-.action-bar [data-action="map"] { display: none; }
-.has-cockpit-overlay:not(.is-cinema) .action-bar [data-action="map"] { display: inline-flex; }
-.has-cockpit-overlay .location-card,
-.has-cockpit-overlay .control-hint,
-.has-cockpit-overlay .map-card:not(.is-expanded) { display: none; }
-@media (max-width: 360px) {
-    .has-cockpit-overlay .action-bar { gap: 2px; }
-    .has-cockpit-overlay .action-bar .icon-button { width: 32px; }
-    .has-cockpit-overlay .action-bar .tool-divider { display: none; }
+.explorer-ui {
+    --hud-unit: clamp(.72px, .0532vw, 1.12px);
+    --hud-top: max(calc(20 * var(--hud-unit)), calc(env(safe-area-inset-top) + 8px));
+    --hud-bottom: max(calc(30 * var(--hud-unit)), calc(env(safe-area-inset-bottom) + 8px));
+    --hud-edge: calc(24 * var(--hud-unit));
+    --hud-left: max(var(--hud-edge), calc(env(safe-area-inset-left) + 8px));
+    --hud-right: max(var(--hud-edge), calc(env(safe-area-inset-right) + 8px));
+    --hud-ink: #f5f9f7;
+    --hud-dark: #09212b;
+    --hud-line: #638594;
+    --hud-orange: #ff850b;
+    --hud-fill: linear-gradient(156deg, #07151ee8 0%, #142b35f2 57%, #051d2bf2 100%);
+    --hud-label-shadow: 0 2px 2px #021017;
+    position: fixed;
+    inset: 0;
+    z-index: 5;
+    overflow: hidden;
+    pointer-events: none;
+    user-select: none;
+    color: var(--hud-ink);
 }
-.flight-pads { position: absolute; right: var(--touch-right); bottom: var(--touch-bottom); display: grid; grid-template-columns: repeat(2, 1fr); gap: 5px; pointer-events: auto; }
-.flight-pads button { border: 1px solid #bed5c9; border-radius: 8px; min-width: 54px; min-height: 40px; padding: 6px; color: #effff6; background: #243d3ce8; font: 600 12px monospace; touch-action: none; }
-.flight-pads button:active, .flight-pads button.held { background: #ffd392; color: #323a38; }
-.has-flight-joystick .map-card:not(.is-expanded) { bottom: calc(var(--touch-bottom) + 94px); }
-.has-cockpit-overlay.is-touch .flight-joystick,
-.has-cockpit-overlay.is-touch .flight-pads { bottom: max(var(--touch-bottom), min(49.2vh, 27.7vw)); }
-@media (pointer: coarse) and (max-height: 520px) {
-    .is-touch .map-card:not(.is-expanded) { width: 142px; padding: 7px; }
-    .is-touch .map-card:not(.is-expanded) .map-heading { margin: 0 0 4px; }
-    .is-touch .map-card:not(.is-expanded) .map-heading .eyebrow { display: none; }
-    .is-touch .map-card:not(.is-expanded) .terrain-minimap { height: 54px; border-radius: 9px; }
-    .has-flight-joystick .location-card { padding: 9px 12px; width: 140px; }
-    .has-flight-joystick .coordinates { display: none; }
+
+/* Draw the bevel and fill separately so the game remains visible at cut corners. */
+:is(.location-card, .flight-map, .flight-compass-window, .icon-button) {
+    --frame-cut: calc(18 * var(--hud-unit));
+    --frame-inner-cut: calc(var(--frame-cut) - 1px);
+    --frame-edge: linear-gradient(140deg, #b0c5cb 0%, #486270 19%, #172a33 49%, #759bab 100%);
+    isolation: isolate;
+    filter: drop-shadow(0 2px 3px #0010198f);
+}
+
+:is(.location-card, .flight-map, .flight-compass-window, .icon-button)::before,
+:is(.location-card, .flight-map, .flight-compass-window, .icon-button)::after {
+    content: '';
+    position: absolute;
+    z-index: -1;
+    pointer-events: none;
+    clip-path: polygon(
+        var(--cut) 0, calc(100% - var(--cut)) 0, 100% var(--cut),
+        100% calc(100% - var(--cut)), calc(100% - var(--cut)) 100%,
+        var(--cut) 100%, 0 calc(100% - var(--cut)), 0 var(--cut)
+    );
+}
+
+:is(.location-card, .flight-map, .flight-compass-window, .icon-button)::before {
+    --cut: var(--frame-cut);
+    inset: 0;
+    background: var(--frame-edge);
+}
+
+:is(.location-card, .flight-map, .flight-compass-window, .icon-button)::after {
+    --cut: var(--frame-inner-cut);
+    inset: max(1px, calc(2 * var(--hud-unit)));
+    background: var(--hud-fill);
+}
+
+.hud-header {
+    position: absolute;
+    inset: var(--hud-top) var(--hud-right) auto var(--hud-left);
+    z-index: 2;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.brand {
+    display: flex;
+    align-items: center;
+    gap: calc(9 * var(--hud-unit));
+    width: max-content;
+    padding: calc(2 * var(--hud-unit)) calc(18 * var(--hud-unit)) calc(3 * var(--hud-unit)) calc(4 * var(--hud-unit));
+    background: linear-gradient(90deg, #07180ee8 0%, #03170e96 75%, transparent 100%);
+    text-shadow: 0 2px 4px #020d06;
+    white-space: nowrap;
+}
+
+.brand-copy {
+    padding-left: calc(8 * var(--hud-unit));
+    border-left: 1px solid #ff971986;
+}
+
+.brand h1 {
+    margin: 0;
+    font-size: calc(31 * var(--hud-unit));
+    font-weight: 900;
+    letter-spacing: .025em;
+    line-height: 1.08;
+}
+
+.brand p {
+    margin: calc(3 * var(--hud-unit)) 0 0;
+    font-size: calc(15 * var(--hud-unit));
+    font-weight: 800;
+    line-height: 1.22;
+    letter-spacing: .015em;
+}
+.brand p > [aria-hidden] { padding-inline: .16em; }
+.is-paused .brand [data-flight-status] { color: #ffd58a; }
+
+.brick-mark {
+    position: relative;
+    flex: none;
+    display: grid;
+    grid-template-columns: repeat(2, calc(13 * var(--hud-unit)));
+    align-content: center;
+    justify-content: center;
+    gap: calc(7 * var(--hud-unit));
+    width: calc(52 * var(--hud-unit));
+    height: calc(53 * var(--hud-unit));
+    padding-bottom: calc(3 * var(--hud-unit));
+    isolation: isolate;
+    filter: drop-shadow(0 2px 3px #0009);
+}
+
+.brick-mark::before,
+.brick-mark::after {
+    content: '';
+    position: absolute;
+    clip-path: polygon(18% 0, 84% 0, 100% 17%, 100% 82%, 82% 100%, 16% 100%, 0 84%, 0 18%);
+}
+.brick-mark::before {
+    z-index: -2;
+    inset: 0;
+    background: #0d1f17;
+}
+.brick-mark::after {
+    z-index: -1;
+    inset: calc(3 * var(--hud-unit));
+    background: linear-gradient(155deg, #ffba24 2%, #ff8507 45%, #ea5802 100%);
+    box-shadow: inset 0 -4px 0 #bc430c, inset 0 2px 0 #ffd05c;
+}
+.brick-mark i {
+    width: calc(13 * var(--hud-unit));
+    aspect-ratio: 1;
+    background: linear-gradient(150deg, #ffe37b, #ffc13b 70%);
+    border-radius: 50%;
+    box-shadow: 0 2px 0 #c85215;
+}
+
+.action-bar { display: flex; align-items: center; gap: calc(14 * var(--hud-unit)); }
+.icon-button {
+    --frame-cut: calc(14 * var(--hud-unit));
+    --frame-edge: linear-gradient(135deg, #a1bac2, #557582 38%, #17262a 58%, #85a8b5);
+    --hud-fill: linear-gradient(135deg, #0c2631ef, #071b25f5 64%, #123e4fea);
+    position: relative;
+    display: grid;
+    place-items: center;
+    width: calc(55 * var(--hud-unit));
+    height: calc(55 * var(--hud-unit));
+    padding: 0;
+    border: 0;
+    background: transparent;
+    pointer-events: auto;
+    transition: transform .15s, color .15s;
+}
+
+.icon-button::before, .icon-button::after {
+    clip-path: polygon(var(--cut) 0, 100% 0, 100% calc(100% - var(--cut)), calc(100% - var(--cut)) 100%, 0 100%, 0 var(--cut));
+}
+
+.icon-button svg {
+    width: calc(30 * var(--hud-unit));
+    height: calc(30 * var(--hud-unit));
+    filter: drop-shadow(0 2px 1px #001116);
+}
+.icon-button:hover:not(:disabled), .icon-button:focus-visible {
+    --frame-edge: linear-gradient(140deg, #d8f9ff, #6eaebc 55%, #c5f5ff);
+    color: #fff;
+}
+.icon-button:active:not(:disabled) { transform: translateY(1px); }
+.icon-button[aria-pressed='true'] { color: #ffd083; }
+.action-bar [data-action='cinema'], .action-bar [data-action='map'] { display: none; }
+.has-cockpit-overlay:not(.is-cinema) .action-bar [data-action='map'] { display: grid; }
+.is-cinema .hud-part, .is-cinema .action-bar > :not([data-action='cinema']) { display: none; }
+.is-cinema .action-bar [data-action='cinema'] { display: grid; }
+.is-cinema .hud-header { justify-content: flex-end; }
+
+.flight-compass {
+    position: absolute;
+    top: var(--hud-top);
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1;
+    width: min(calc(464 * var(--hud-unit)), 35vw);
+}
+
+.flight-compass-window {
+    --frame-cut: calc(23 * var(--hud-unit));
+    --frame-edge: linear-gradient(155deg, #a4b5c0 3%, #455867 42%, #315360 66%, #a4b5c0 100%);
+    height: calc(46 * var(--hud-unit));
+}
+
+.flight-compass-strip { display: block; width: 100%; height: 100%; }
+.flight-compass-caret {
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    width: calc(27 * var(--hud-unit));
+    height: calc(31 * var(--hud-unit));
+    transform: translate(-50%, -57%);
+    filter: drop-shadow(0 2px 2px #000b);
+}
+
+.flight-compass-caret::before,
+.flight-compass-caret::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    clip-path: polygon(50% 0, 100% 100%, 0 100%);
+}
+.flight-compass-caret::before { background: #17252b; }
+.flight-compass-caret::after {
+    inset: calc(3 * var(--hud-unit));
+    background: linear-gradient(105deg, #ffab25, #ff850d 53%, #d85d06);
+}
+
+.location-card {
+    --frame-cut: calc(19 * var(--hud-unit));
+    position: absolute;
+    left: var(--hud-left);
+    bottom: var(--hud-bottom);
+    z-index: 1;
+    width: calc(284 * var(--hud-unit));
+    padding: calc(12 * var(--hud-unit)) calc(19 * var(--hud-unit)) calc(11 * var(--hud-unit));
+    text-shadow: var(--hud-label-shadow);
+}
+
+.flight-readings {
+    display: grid;
+    grid-template-columns: 1.05fr 1fr;
+    margin: 0;
+    font-weight: 800;
+}
+.flight-readings > div + div {
+    border-left: 1px solid #88c4cdd6;
+    padding-left: calc(18 * var(--hud-unit));
+}
+
+.flight-readings dt {
+    font-size: calc(19 * var(--hud-unit));
+    line-height: 1.12;
+}
+.flight-readings dd {
+    display: flex;
+    align-items: baseline;
+    gap: calc(4 * var(--hud-unit));
+    margin: calc(3 * var(--hud-unit)) 0 0;
+    white-space: nowrap;
+}
+.flight-readings strong {
+    font-size: calc(40 * var(--hud-unit));
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+    letter-spacing: -.045em;
+}
+.flight-readings dd span { font-size: calc(14 * var(--hud-unit)); }
+
+.speed-track {
+    position: relative;
+    display: flex;
+    justify-content: space-between;
+    align-items: end;
+    height: calc(17 * var(--hud-unit));
+    margin: calc(10 * var(--hud-unit)) calc(1 * var(--hud-unit)) calc(8 * var(--hud-unit));
+    padding-bottom: calc(3 * var(--hud-unit));
+    color: #12e9f4;
+}
+.speed-track::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: var(--speed, 0);
+    height: 1px;
+    background: currentColor;
+    opacity: .75;
+}
+.speed-track i {
+    width: max(1px, calc(2 * var(--hud-unit)));
+    height: 33%;
+    background: currentColor;
+}
+.speed-track i:nth-child(3n) { height: 53%; }
+.speed-track i:nth-child(6n + 1) { height: 72%; }
+.speed-track i:first-child, .speed-track i:last-child { height: 100%; }
+
+.biome-reading {
+    display: flex;
+    align-items: center;
+    gap: calc(7 * var(--hud-unit));
+    margin: 0;
+    font-size: calc(19 * var(--hud-unit));
+    font-weight: 850;
+    line-height: 1.25;
+}
+.biome-reading svg {
+    width: calc(20 * var(--hud-unit));
+    height: calc(20 * var(--hud-unit));
+    color: var(--hud-orange);
+}
+
+.flight-map {
+    --frame-edge: linear-gradient(145deg, #819dad, #11252c 36%, #294a56 73%, #5b7a88);
+    position: absolute;
+    right: var(--hud-right);
+    bottom: var(--hud-bottom);
+    z-index: 1;
+    width: calc(287 * var(--hud-unit));
+    padding: calc(10 * var(--hud-unit)) calc(16 * var(--hud-unit)) calc(15 * var(--hud-unit));
+    text-shadow: var(--hud-label-shadow);
+}
+
+.flight-map-header {
+    position: relative;
+    z-index: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 5px;
+    min-height: calc(25 * var(--hud-unit));
+    margin-bottom: calc(13 * var(--hud-unit));
+    padding-left: calc(7 * var(--hud-unit));
+    font-size: calc(18 * var(--hud-unit));
+    line-height: 1.15;
+    white-space: nowrap;
+}
+.flight-map-header::before {
+    content: '';
+    position: absolute;
+    top: calc(-7 * var(--hud-unit));
+    left: calc(-13 * var(--hud-unit));
+    width: calc(27 * var(--hud-unit));
+    height: calc(27 * var(--hud-unit));
+    background: linear-gradient(135deg, #ffb54b 15%, var(--hud-orange) 55%, #b64a03);
+    clip-path: polygon(40% 0, 100% 0, 0 100%, 0 42%);
+}
+.flight-map-header strong { font-weight: 850; }
+.flight-map-coordinates {
+    display: flex;
+    gap: calc(15 * var(--hud-unit));
+    font-size: calc(15 * var(--hud-unit));
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+}
+
+.flight-map-frame {
+    --map-cut: calc(6 * var(--hud-unit));
+    position: relative;
+    aspect-ratio: 254 / 180;
+}
+.flight-map-frame::before,
+.flight-map-canvas {
+    clip-path: polygon(
+        var(--map-cut) 0, calc(100% - var(--map-cut)) 0, 100% var(--map-cut),
+        100% calc(100% - var(--map-cut)), calc(100% - var(--map-cut)) 100%,
+        var(--map-cut) 100%, 0 calc(100% - var(--map-cut)), 0 var(--map-cut)
+    );
+}
+.flight-map-frame::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: #daf2ed;
+}
+.flight-map-canvas {
+    display: block;
+    position: absolute;
+    inset: 1px;
+    width: calc(100% - 2px);
+    height: calc(100% - 2px);
+    background: #155976;
+    image-rendering: pixelated;
+}
+.flight-map-tick {
+    position: absolute;
+    z-index: 1;
+    display: block;
+    width: calc(5 * var(--hud-unit));
+    height: calc(13 * var(--hud-unit));
+    transform: translate(-50%, -50%);
+    background: #f7fff6;
+    filter: drop-shadow(0 1px 1px #13232f);
+}
+.flight-map-tick[data-edge='north'] { top: 0; left: 50%; }
+.flight-map-tick[data-edge='south'] { top: 100%; left: 50%; }
+.flight-map-tick[data-edge='east'] { top: 50%; left: 100%; transform: translate(-50%, -50%) rotate(90deg); }
+.flight-map-tick[data-edge='west'] { top: 50%; left: 0; transform: translate(-50%, -50%) rotate(90deg); }
+
+.flight-map-toggle {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    border: 0;
+    padding: 0;
+    background: transparent;
+    pointer-events: auto;
+}
+.flight-map-toggle:focus-visible { outline-offset: -4px; }
+.flight-map-toggle:hover { background: #b6f1ff0b; }
+.flight-map-close { display: none; }
+.flight-map.is-expanded {
+    z-index: 4;
+    left: 50%;
+    right: auto;
+    bottom: auto;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: min(620px, calc(100% - 36px));
+    padding: 16px 18px 18px;
+}
+.flight-map.is-expanded .flight-map-frame { max-height: 64dvh; }
+.flight-map.is-expanded .flight-map-header { margin-right: 36px; }
+.flight-map.is-expanded .flight-map-close {
+    position: absolute;
+    top: 9px;
+    right: 13px;
+    display: grid;
+    place-items: center;
+    width: 32px;
+    height: 32px;
+    border: 1px solid var(--hud-line);
+    background: var(--hud-dark);
+    font: 700 24px/1 system-ui, sans-serif;
+}
+.map-shade {
+    position: absolute;
+    inset: 0;
+    z-index: 3;
+    pointer-events: auto;
+    background: #020b11aa;
+}
+.cockpit-overlay { position: absolute; inset: 0; width: 100%; height: 100%; z-index: -1; pointer-events: none; }
+.has-cockpit-overlay .location-card,
+.has-cockpit-overlay .flight-compass,
+.has-cockpit-overlay .flight-map:not(.is-expanded) { display: none; }
+
+.surface {
+    --hud-fill: linear-gradient(150deg, #19343e, #081e28 45%, #07151e);
+    margin: 0;
+    background: var(--hud-fill);
+    border: 1px solid #6b8a98;
+    color: #f5f9f7;
+    box-shadow: 0 14px 28px #00101866;
+}
+.explorer-ui:not(.is-ready) :is(.flight-panel, .flight-compass, .hud-header) { visibility: hidden; }
+.is-ready :is(.flight-panel, .flight-compass, .hud-header) { animation: flight-arrive .4s ease both; }
+@keyframes flight-arrive { from { opacity: 0; } to { opacity: 1; } }
+
+.hud-toast {
+    position: absolute;
+    left: 50%;
+    top: calc(var(--hud-top) + 118 * var(--hud-unit));
+    z-index: 5;
+    width: max-content;
+    max-width: calc(100% - 28px);
+    transform: translateX(-50%);
+    padding: 8px 15px;
+    text-align: center;
+    font-size: 13px;
+}
+
+.help-dialog {
+    pointer-events: auto;
+    width: min(490px, calc(100% - 24px));
+    max-height: calc(100dvh - 24px);
+    margin: auto;
+    padding: 24px 26px;
+    border-top: 3px solid var(--hud-orange);
+    overflow: auto;
+    scrollbar-width: thin;
+}
+.help-dialog::backdrop { background: #030c13c8; }
+.help-dialog > .icon-button { position: absolute; top: 10px; right: 10px; }
+.help-dialog h2 { margin: 0 38px 10px 0; font-size: 24px; }
+.help-intro, .help-note { color: #c1d2d8; font-size: 13px; line-height: 1.6; }
+.help-intro { margin: 0; }
+.help-keys { margin: 17px 0 11px; }
+.help-keys > div {
+    display: grid;
+    grid-template-columns: 1fr 1.05fr;
+    align-items: baseline;
+    gap: 12px;
+    padding: 8px 0;
+    border-bottom: 1px solid #68899659;
+    font-size: 12px;
+}
+.help-keys dd { margin: 0; color: #daeaee; }
+kbd {
+    display: inline-block;
+    min-width: 1.55em;
+    padding: 1px .3em;
+    border: 1px solid #7794a3;
+    border-radius: 3px;
+    text-align: center;
+    font: 700 11px/1.25 'Segoe UI', sans-serif;
+    background: #08222f;
+}
+.help-note { margin: 0 0 14px; }
+.help-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.help-actions button, .primary-button {
+    border: 1px solid #668594;
+    background: #132f3c;
+    padding: 7px 9px;
+    font-size: 12px;
+    font-weight: 700;
+}
+.help-actions button { display: inline-flex; justify-content: center; align-items: center; gap: 4px; min-height: 34px; }
+.help-actions svg { width: 16px; height: 16px; }
+.help-actions [data-view]:not(:empty) { color: #ffd084; font-weight: 500; }
+.help-actions button:hover:not(:disabled), .primary-button:hover { background: #254957; }
+.primary-button {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 13px;
+    padding: 10px 14px;
+    width: 100%;
+    border-color: #da891f;
+}
+.primary-button span { color: #ffd084; }
+.startup-error {
+    position: fixed;
+    inset: 0;
+    z-index: 10;
+    display: grid;
+    place-items: center;
+    background: #142b36;
+}
+.error-card { max-width: 440px; padding: 26px; margin: 20px; border-top: 3px solid #ff850b; }
+.error-card h1 { margin-top: 0; font-size: 24px; }
+.error-card p { font-size: 14px; line-height: 1.7; color: #c1d2d8; }
+
+@media (max-width: 960px) {
+    .action-bar { gap: calc(9 * var(--hud-unit)); }
+    .flight-map { width: calc(250 * var(--hud-unit)); }
+    .flight-map-coordinates { gap: 6px; }
+}
+
+@media (max-width: 760px) {
+    .explorer-ui { --hud-edge: 12px; }
+    .brand { padding-right: 11px; }
+    .brand h1 { font-size: max(17px, calc(25 * var(--hud-unit))); }
+    .brand p { font-size: 11px; }
+    .brick-mark {
+        width: 36px;
+        height: 37px;
+        grid-template-columns: repeat(2, 9px);
+        gap: 5px;
+    }
+    .brick-mark i { width: 9px; }
+    .icon-button { width: 38px; height: 38px; }
+    .icon-button svg { width: 22px; height: 22px; }
+    .flight-compass {
+        top: calc(var(--hud-top) + 50px);
+        width: min(62vw, calc(464 * var(--hud-unit)));
+    }
+    .flight-compass-window { height: 32px; }
+    .hud-toast { top: calc(var(--hud-top) + 122px); }
+    .location-card { width: 158px; padding: 9px 10px 8px; }
+    .flight-readings > div + div { padding-left: 8px; }
+    .flight-readings strong { font-size: 24px; }
+    .flight-readings dd span { font-size: 9px; }
+    .flight-readings dt, .biome-reading { font-size: 13px; }
+    .flight-map { width: 150px; padding: 7px 9px 9px; }
+    .flight-map-header { padding-left: 4px; gap: 4px; margin-bottom: 7px; font-size: 12px; }
+    .flight-map-header::before { left: -7px; top: -5px; width: 13px; height: 13px; }
+    .flight-map-coordinates { font-size: 9px; }
+    .flight-map.is-expanded .flight-map-coordinates { font-size: 11px; }
+}
+
+@media (max-width: 680px) {
+    .has-weapons:not(.has-cockpit-overlay) :is(.location-card, .flight-map:not(.is-expanded)) {
+        bottom: calc(var(--hud-bottom) + 80px);
+    }
+    .action-bar { gap: 5px; }
+}
+
+@media (max-width: 470px) {
+    .has-cockpit-overlay .action-bar [data-action='map'] {
+        position: absolute;
+        top: 44px;
+        right: 0;
+    }
+}
+
+@media (max-width: 350px) {
+    .explorer-ui { --hud-edge: 8px; }
+    .brand { gap: 4px; padding-left: 1px; }
+    .brand-copy { padding-left: 4px; }
+    .brand h1 { font-size: 16px; }
+    .brand p { font-size: 10px; }
+    .icon-button { width: 34px; height: 36px; }
+    .location-card { width: 144px; padding-inline: 8px; }
+    .flight-map { width: 138px; }
+    .help-dialog { padding: 16px; }
+}
+
+@media (max-height: 470px) and (min-width: 621px) {
+    .explorer-ui { --hud-top: max(9px, env(safe-area-inset-top)); --hud-bottom: max(10px, env(safe-area-inset-bottom)); }
+    .flight-map { width: 150px; padding: 6px 9px 8px; }
+    .flight-map-header { margin-bottom: 6px; font-size: 12px; }
+    .flight-map-coordinates { font-size: 9px; }
+    .flight-map-frame { aspect-ratio: 2 / 1; }
+    .flight-map.is-expanded .flight-map-frame { aspect-ratio: 254 / 180; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+
+/* Keep the on-screen controls available for aircraft input that supports touch. */
+.has-flight-joystick {
+    --joystick-size: clamp(104px, 29vmin, 134px);
+}
+.flight-joystick {
+    position: absolute;
+    left: var(--hud-left);
+    bottom: var(--hud-bottom);
+    z-index: 2;
+    display: grid;
+    place-items: center;
+    width: var(--joystick-size);
+    height: var(--joystick-size);
+    border-radius: 50%;
+    background: #0b2533e8;
+    color: #b5d5df;
+    cursor: grab;
+    pointer-events: auto;
+    touch-action: none;
+    -webkit-touch-callout: none;
+}
+.flight-joystick.is-dragging { cursor: grabbing; }
+.flight-joystick svg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+}
+.flight-joystick-thumb {
+    width: 38%;
+    aspect-ratio: 1;
+    border: 1px solid #ffce87;
+    border-radius: 50%;
+    background: radial-gradient(circle at 43% 36%, #ffd588, #f38d28);
+    box-shadow: 0 2px 8px #020e16;
+    transform: translate(var(--stick-x, 0px), var(--stick-y, 0px));
+    transition: transform .16s ease-out;
+    pointer-events: none;
+}
+.flight-joystick.is-dragging .flight-joystick-thumb { transition: none; }
+
+.flight-pads {
+    position: absolute;
+    right: var(--hud-right);
+    bottom: var(--hud-bottom);
+    z-index: 2;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 5px;
+    pointer-events: auto;
+}
+.flight-pads button {
+    min-width: 54px;
+    min-height: 40px;
+    padding: 6px;
+    border: 1px solid var(--hud-line);
+    background: #102b37ee;
+    color: var(--hud-ink);
+    font-size: 12px;
+    font-weight: 700;
+    touch-action: none;
+}
+.flight-pads button:is(:active, .held) { background: #ffcf87; color: #132833; }
+.has-flight-joystick .location-card { bottom: calc(var(--hud-bottom) + var(--joystick-size) + 12px); }
+.has-flight-joystick .flight-map:not(.is-expanded) { bottom: calc(var(--hud-bottom) + 94px); }
+.has-cockpit-overlay.has-flight-joystick :is(.flight-joystick, .flight-pads) {
+    bottom: max(var(--hud-bottom), min(49.2vh, 27.7vw));
+}
+.touch-help { display: none; }
+.is-touch .desktop-help { display: none; }
+.is-touch .touch-help { display: block; }
+
+@media (max-height: 470px) {
+    .has-flight-joystick .location-card { width: 150px; padding-inline: 10px; }
+    .has-flight-joystick .flight-readings strong { font-size: 24px; }
+    .has-flight-joystick .flight-readings > div + div { padding-left: 7px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .flight-joystick-thumb { transition: none; }
+}
+
+
+.touch-view { display: none; }
+.has-flight-joystick:not(.is-cinema) .touch-view { display: block; }
+@media (max-width: 470px) {
+    .has-flight-joystick .touch-view {
+        position: absolute;
+        top: 44px;
+        right: 0;
+    }
+    .has-cockpit-overlay.has-flight-joystick .touch-view { right: 43px; }
 }

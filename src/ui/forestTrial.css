@@ -1,6 +1,6 @@
 .forest-trial-hud {
     position: absolute;
-    top: max(91px, calc(env(safe-area-inset-top) + 70px));
+    top: calc(var(--hud-top) + 65 * var(--hud-unit));
     left: 50%;
     display: flex;
     align-items: center;
@@ -8,16 +8,16 @@
     width: max-content;
     max-width: min(358px, 100% - 28px);
     padding: 8px 12px 8px 9px;
-    border: 1px solid #cfdecd;
-    border-radius: 14px;
-    background: #f0f5e9;
-    box-shadow: 0 3px 14px #14362a24;
-    color: #253f33;
+    border: 1px solid var(--hud-line);
+    background: var(--hud-fill);
+    box-shadow: 0 3px 10px #001019a0;
+    color: var(--hud-ink);
     transform: translateX(-50%);
     pointer-events: none;
 }
 
 .explorer-ui:not(.is-ready) .forest-trial-hud,
+.explorer-ui.is-cinema .forest-trial-hud,
 .explorer-ui.is-map-expanded .forest-trial-hud {
     visibility: hidden;
 }
@@ -27,9 +27,9 @@
     flex: 0 0 34px;
     height: 34px;
     place-items: center;
-    border-radius: 50%;
-    background: #284637;
-    color: #f7d98c;
+    background: #213b47;
+    color: #ffd07c;
+    clip-path: polygon(25% 0, 100% 0, 100% 75%, 75% 100%, 0 100%, 0 25%);
     font-size: 19px;
     font-weight: 700;
 }
@@ -44,7 +44,7 @@
 .forest-trial-hud__copy { min-width: 0; }
 .forest-trial-hud__copy strong { display: block; font-size: 14px; line-height: 1.35; }
 .forest-trial-hud__title,
-.forest-trial-hud__detail { margin: 0; color: #4b6357; font-size: 11px; line-height: 1.35; }
+.forest-trial-hud__detail { margin: 0; color: #bad2da; font-size: 11px; line-height: 1.35; }
 .forest-trial-hud__detail { margin-top: 2px; }
 .forest-trial-hud__detail:empty,
 .forest-trial-hud__bearing > :empty { display: none; }
@@ -54,18 +54,14 @@
     flex: 0 0 auto;
     min-width: 46px;
     padding-left: 7px;
-    border-left: 1px solid #d4dfd3;
+    border-left: 1px solid #648490;
     font-size: 12px;
     font-variant-numeric: tabular-nums;
     text-align: center;
     white-space: nowrap;
 }
-.forest-trial-hud__bearing > :first-child { color: #4b6357; font-size: 10px; }
+.forest-trial-hud__bearing > :first-child { color: #bad2da; font-size: 10px; }
 
-@media (max-width: 760px) and (min-height: 501px) {
-    .forest-trial-hud { top: max(132px, calc(env(safe-area-inset-top) + 116px)); }
-}
-
-@media (max-height: 500px) {
-    .forest-trial-hud { top: max(69px, calc(env(safe-area-inset-top) + 58px)); }
+@media (max-width: 760px) {
+    .forest-trial-hud { top: calc(var(--hud-top) + 91px); }
 }

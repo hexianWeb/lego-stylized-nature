@@ -1,20 +1,23 @@
 import FlightJoystick from './FlightJoystick.js'
 import FlightDeck, { flightDeckMarkup } from './FlightDeck.js'
-import TerrainMinimap from './TerrainMinimap.js'
+import FlightNavigation, { flightNavigationMarkup } from './FlightNavigation.js'
+import AircraftWeaponHUD, { aircraftWeaponMarkup } from './AircraftWeaponHUD.js'
+import LoadingScreen, { loadingScreenMarkup } from './LoadingScreen.js'
 
 const ICONS = {
   view: '<path d="m3 8 9-5 9 5-9 5zM3 12l9 5 9-5M3 16l9 5 9-5"/>',
-  pause: '<path d="M8 5v14M16 5v14"/>',
-  play: '<path d="m8 5 11 7-11 7Z"/>',
+  pause: '<path fill="currentColor" stroke="none" d="M4 3h6v18H4zm10 0h6v18h-6z"/>',
+  play: '<path fill="currentColor" stroke="none" d="m6 3 15 9-15 9Z"/>',
   home: '<path d="m3 11 9-8 9 8M5 10v10h14V10M9 20v-7h6v7"/>',
-  help: '<circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 0 1 5 .5c0 1.5-2.5 2-2.5 3.5M12 17h.01"/>',
-  fullscreen: '<path d="M8 3H3v5M16 3h5v5M3 16v5h5M21 16v5h-5"/>',
+  help: '<path stroke-width="3.6" d="M7.5 6a4.8 4.8 0 0 1 9.2 1.7c0 3.1-4.7 3.1-4.7 6.4"/><circle cx="12" cy="20" r="1.8" fill="currentColor" stroke="none"/>',
+  fullscreen: '<path stroke-width="2.8" stroke-linecap="square" d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5"/>',
+  restore: '<path stroke-width="2.8" stroke-linecap="square" d="M3 8h5V3m13 5h-5V3M8 21v-5H3m13 5v-5h5"/>',
   map: '<path d="m3 6 6-3 6 3 6-3v15l-6 3-6-3-6 3ZM9 3v15M15 6v15"/>',
   eye: '<path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/>',
-  leaf: '<path d="M20 4C8 1 2 8 5 15s16 5 15-11ZM4 21 15 10"/>',
+  terrain: '<path fill="currentColor" stroke="none" d="M3 4h18l-7 6h6l-7 6h5l3 4H2l2-4h5l-5-4 4-3H2z"/>',
   close: '<path d="m6 6 12 12M6 18 18 6"/>',
-  sound: '<path d="m11 4-6 5H2v6h3l6 5ZM15 8a6 6 0 0 1 0 8M18 5a10 10 0 0 1 0 14"/>',
-  muted: '<path d="m11 4-6 5H2v6h3l6 5ZM16 9l6 6M16 15l6-6"/>',
+  sound: '<path fill="currentColor" stroke="none" d="m12 3-7 5H1v8h4l7 5Z"/><path stroke-width="2.4" d="M16 8a6 6 0 0 1 0 8m3-11a10 10 0 0 1 0 14"/>',
+  muted: '<path fill="currentColor" stroke="none" d="m12 3-7 5H1v8h4l7 5Z"/><path stroke-width="2.4" d="m16 9 6 6m-6 0 6-6"/>',
 }
 const BIOMES = {
   forest: '青翠森林', autumnForest: '秋日林地', desert: '金色沙丘',
@@ -22,24 +25,6 @@ const BIOMES = {
 }
 const svg = name => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[name]}</svg>`
 const button = (action, icon, label, extra = '') => `<button type="button" class="icon-button" data-action="${action}" title="${label}" aria-label="${label}" ${extra}>${svg(icon)}</button>`
-const CLOUD_REVEAL_MS = 1800
-const CLOUD_PUFFS = [
-  ['16%', '24%', '46vw', '26vw', '-38vw', '-22vh'],
-  ['50%', '12%', '52vw', '24vw', '2vw', '-34vh'],
-  ['86%', '22%', '44vw', '26vw', '40vw', '-20vh'],
-  ['6%', '52%', '38vw', '30vw', '-44vw', '2vh'],
-  ['32%', '46%', '34vw', '22vw', '-26vw', '-4vh'],
-  ['70%', '48%', '34vw', '22vw', '28vw', '2vh'],
-  ['96%', '54%', '40vw', '28vw', '46vw', '6vh'],
-  ['18%', '80%', '46vw', '26vw', '-30vw', '32vh'],
-  ['52%', '88%', '54vw', '26vw', '4vw', '36vh'],
-  ['86%', '78%', '42vw', '24vw', '36vw', '30vh'],
-]
-const cloudVeilMarkup = () => {
-  const puffs = CLOUD_PUFFS.map(([x, y, w, h, dx, dy]) => `<span class="puff" style="--x:${x};--y:${y};--w:${w};--h:${h};--dx:${dx};--dy:${dy}"></span>`).join('')
-  return `<div class="cloud-veil" aria-hidden="true"><div class="cloud-sky"></div><div class="cloud-burst"></div><div class="cloud-field">${puffs}</div></div>`
-}
-
 export default class ExplorerUI {
   constructor(root, experience) {
     this.root = root
@@ -54,47 +39,29 @@ export default class ExplorerUI {
       <header class="hud-header">
         <div class="brand hud-part">
           <span class="brick-mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
-          <div><h1>旷野飞行队<span>KESTREL · 01</span></h1><p>积木旷野 / 自由试飞</p></div>
+          <div class="brand-copy"><h1>旷野飞行队</h1><p>KESTREL-01 <span aria-hidden="true">·</span> <span data-flight-status>自由巡航</span></p></div>
         </div>
-        <p class="surface orientation-hint hud-part">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <rect x="3" y="11" width="18" height="10" rx="2"/><path d="M6 15v2M7 7a6 6 0 0 1 10-2l2 2m0-4v4h-4"/>
-          </svg>
-          建议横屏游玩
-        </p>
-        <div class="header-tools">
-          <span class="explore-badge hud-part"><i></i><span data-flight-status>自由探索</span></span>
-          <nav class="surface action-bar" aria-label="探索工具">
-            ${button('view', 'view', '切换视角（空格）', 'disabled')}
-            ${button('pause', 'pause', '暂停飞行（P）', 'aria-pressed="false" disabled')}
-            ${button('home', 'home', '回到出生点', 'disabled')}
-            ${button('map', 'map', '放大小地图', 'aria-expanded="false" disabled')}
-            <span class="tool-divider"></span>
-            ${button('sound', 'sound', '静音音效（U）', 'aria-pressed="false"')}
-            ${button('help', 'help', '操作帮助', 'disabled')}
-            ${button('fullscreen', 'fullscreen', '切换全屏')}
-            ${button('cinema', 'eye', '隐藏界面（H）', 'aria-pressed="false"')}
-          </nav>
-        </div>
+        <nav class="action-bar" aria-label="飞行工具">
+          ${button('pause', 'pause', '暂停飞行（P）', 'aria-pressed="false" disabled')}
+          ${button('sound', 'sound', '静音音效（U）', 'aria-pressed="false"')}
+          ${button('help', 'help', '操作帮助', 'aria-haspopup="dialog" disabled')}
+          ${button('fullscreen', 'fullscreen', '切换全屏')}
+          <span class="touch-view">${button('view', 'view', '切换视角', 'disabled')}</span>
+          ${button('map', 'map', '放大小地图', 'aria-expanded="false" disabled')}
+          ${button('cinema', 'eye', '显示界面（H）', 'aria-pressed="false"')}
+        </nav>
       </header>
-      <section class="surface location-card hud-part flight-panel" aria-label="飞行信息">
-        <div class="eyebrow"><span data-panel-status>自由巡航</span><span class="live-dot"></span></div>
-        <h2>${svg('leaf')}<span data-biome>旷野之间</span></h2>
-        <div class="flight-readings"><div><strong data-speed>0.0</strong><span>格 / 秒</span></div><div class="coordinates"><span>X <b data-x>—</b></span><span>Z <b data-z>—</b></span></div></div>
-        <div class="speed-track" aria-hidden="true"><i data-speed-bar></i></div>
-        <div class="flight-altimeter"><span>离地 <b data-alt>—</b> 格</span><b data-view>俯视</b></div>
+      <section class="location-card hud-part flight-panel" aria-label="飞行信息">
+        <dl class="flight-readings">
+          <div><dt>空速</dt><dd><strong data-speed>—</strong><span>格/秒</span></dd></div>
+          <div><dt>离地</dt><dd><strong data-alt>—</strong><span>格</span></dd></div>
+        </dl>
+        <div class="speed-track" data-speed-bar aria-hidden="true">${'<i></i>'.repeat(48)}</div>
+        <p class="biome-reading">${svg('terrain')}<span data-biome>旷野之间</span></p>
       </section>
-      <div class="surface control-hint hud-part flight-panel" aria-label="操作提示">
-        <span class="key-cluster"><kbd>W</kbd><span><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></span></span>
-        <span class="hint-copy"><b>S 拉起 · W 下压 · A/D 转向</b><span>Shift 加速 · R 翻滚 · F/G 空翻 · 空格切镜</span></span>
-        <button type="button" data-action="help" class="text-button">操作指南 <span>↗</span></button>
-      </div>
-      <aside class="surface map-card hud-part flight-panel" aria-label="周边地形小地图">
-        <div class="map-heading"><div><span>旷野一隅</span><span class="eyebrow">LOCAL MAP</span></div><button type="button" class="map-expand" data-action="map" aria-label="放大小地图" title="放大小地图" aria-expanded="false">${svg('fullscreen')}</button></div>
-        <canvas class="terrain-minimap" aria-label="周边已探索地形与飞行朝向"></canvas>
-        <div class="map-footer"><span><i></i> 你的位置</span><span data-seed></span></div>
-      </aside>
-      <div class="surface flight-joystick hud-part flight-panel" data-flight-joystick role="group" aria-label="飞行摇杆，横向转弯，纵向控制俯仰" hidden>
+      <div class="map-shade" data-action="map" aria-hidden="true" hidden></div>
+      ${flightNavigationMarkup}
+      <div class="flight-joystick hud-part flight-panel" data-flight-joystick role="group" aria-label="飞行摇杆，横向转弯，纵向控制俯仰" hidden>
         <svg viewBox="0 0 100 100" fill="none" stroke="currentColor" aria-hidden="true">
           <circle cx="50" cy="50" r="30" stroke-dasharray="1 4" opacity=".55"/>
           <path d="m46 15 4-4 4 4m-8 70 4 4 4-4M15 46l-4 4 4 4m70-8 4 4-4 4" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
@@ -102,45 +69,54 @@ export default class ExplorerUI {
         <span class="flight-joystick-thumb" aria-hidden="true"></span>
       </div>
       ${flightDeckMarkup}
-      ${cloudVeilMarkup()}
-      <div class="loading-card surface" role="status"><span class="eyebrow">A LITTLE WORLD, A BIG ADVENTURE</span><h2>旷野正在生长</h2><p data-stage>正在唤醒这片小世界…</p><div class="loading-track"><i></i></div></div>
+      ${aircraftWeaponMarkup}
+      ${loadingScreenMarkup}
       <div class="hud-toast surface" role="status" hidden></div>
       <dialog class="help-dialog surface" aria-labelledby="help-title">
         ${button('close-help', 'close', '关闭操作帮助')}
-        <span class="eyebrow">KESTREL / FLIGHT MANUAL</span><h2 id="help-title">红隼试飞手册</h2><p class="help-intro">飞机会自动巡航。绕过山丘，拉起机头，看看空翻顶点的旷野。</p>
+        <h2 id="help-title">红隼试飞手册</h2><p class="help-intro">飞机会自动巡航。用下方操作控制转向、升降和特技。</p>
         <dl class="help-keys desktop-help">
-          <div><dt><kbd>A</kbd> / <kbd>D</kbd> 或鼠标左右</dt><dd>压坡转向</dd></div>
-          <div><dt><kbd>S</kbd> / <kbd>W</kbd> 或鼠标下 / 上</dt><dd>拉起 / 下压（方向键等价）</dd></div>
-          <div><dt><kbd>Shift</kbd> / 按住左键</dt><dd>加速，松开回到巡航</dd></div>
-          <div><dt><kbd>R</kbd> / 轻点左键</dt><dd>纵轴翻滚</dd></div>
+          <div><dt><kbd>A</kbd> / <kbd>D</kbd> 或 <kbd>←</kbd> / <kbd>→</kbd><span data-mouse-flight hidden> 或鼠标左右</span></dt><dd>压坡转向</dd></div>
+          <div><dt><kbd>S</kbd> / <kbd>W</kbd> 或 <kbd>↓</kbd> / <kbd>↑</kbd><span data-mouse-flight hidden> 或鼠标下 / 上</span></dt><dd>拉起 / 下压</dd></div>
+          <div><dt><kbd>Shift</kbd><span data-mouse-flight hidden> / 按住左键</span></dt><dd>加速，松开回到巡航</dd></div>
+          <div><dt><kbd>R</kbd><span data-mouse-flight hidden> / 轻点左键</span></dt><dd>纵轴翻滚</dd></div>
           <div><dt><kbd>F</kbd> / <kbd>G</kbd></dt><dd>后空翻 / 前空翻</dd></div>
+          <div data-weapon-help hidden><dt>按住左键 / 单击右键或 <kbd>M</kbd></dt><dd>机炮连射 / 发射导弹。屏幕边缘箭头指示敌机方位，持续瞄准可锁定</dd></div>
           <div><dt><kbd>Space</kbd> / <kbd>P</kbd></dt><dd>切换视角 / 暂停</dd></div>
           <div><dt><kbd>H</kbd> / <kbd>U</kbd></dt><dd>切换界面 / 音效</dd></div>
-          <div><dt>小地图右上角 / <kbd>Esc</kbd></dt><dd>展开 / 收起地图</dd></div>
+          <div><dt>点击区域地图 / <kbd>Esc</kbd></dt><dd>展开 / 收起地图</dd></div>
         </dl>
         <dl class="help-keys touch-help">
           <div><dt>左右拨杆</dt><dd>压坡转弯</dd></div>
           <div><dt>向下拉 / 向上推</dt><dd>爬升 / 俯冲</dd></div>
           <div><dt>右侧动作区</dt><dd>按住加速，点按特技</dd></div>
           <div><dt>顶部视角按钮</dt><dd>俯视 → 追尾 → 驾驶舱</dd></div>
+          <div><dt>点按区域地图</dt><dd>展开 / 收起地图</dd></div>
         </dl>
-        <p class="help-note">加速时持续拉满或推满也能触发空翻。前空翻需要下方净空；靠近地面时会自动拉平。</p><button type="button" class="primary-button" data-action="close-help">返回飞行 <span>→</span></button>
+        <p class="help-note">加速时持续拉满或推满也能触发空翻。靠近地面时会自动拉平。</p>
+        <div class="help-actions">
+          <button type="button" data-action="view">${svg('view')}切换视角<span data-view></span></button>
+          <button type="button" data-action="home">${svg('home')}回到出生点</button>
+          <button type="button" data-action="cinema">${svg('eye')}隐藏界面</button>
+        </div>
+        <button type="button" class="primary-button" data-action="close-help">返回飞行 <span aria-hidden="true">→</span></button>
       </dialog>`
     this.speed = root.querySelector('[data-speed]')
     this.speedBar = root.querySelector('[data-speed-bar]')
     this.biome = root.querySelector('[data-biome]')
-    this.x = root.querySelector('[data-x]')
-    this.z = root.querySelector('[data-z]')
+    this.map = root.querySelector('[data-flight-map]')
     this.dialog = root.querySelector('dialog')
-    this.minimap = new TerrainMinimap(root.querySelector('.terrain-minimap'), experience)
+    this.loading = new LoadingScreen(root)
+    this.navigation = new FlightNavigation(root, experience)
     this.syncAudioControl()
-    root.querySelector('[data-seed]').textContent = `# ${experience.world.config.seed}`
     const options = { signal: this.events.signal }
-    this.deck = new FlightDeck(root, () => this.experience.world.playerAircraft, options)
+    const getPlayer = () => this.experience.world.playerAircraft
+    this.deck = new FlightDeck(root, getPlayer, options)
+    this.weaponHUD = new AircraftWeaponHUD(root, experience.sizes)
     this.touchMedia = window.matchMedia('(pointer: coarse)')
     this.joystick = new FlightJoystick(
       root.querySelector('[data-flight-joystick]'),
-      (x, y) => this.experience.world.playerAircraft?.input.setJoystick(x, y),
+      (x, y) => getPlayer()?.input.setJoystick?.(x, y),
       options,
     )
     this.syncTouchControls()
@@ -156,44 +132,33 @@ export default class ExplorerUI {
     document.addEventListener('fullscreenchange', () => {
       this.joystick.reset()
       const control = root.querySelector('[data-action="fullscreen"]')
-      control.setAttribute('aria-label', document.fullscreenElement ? '退出全屏' : '切换全屏')
+      const fullscreen = Boolean(document.fullscreenElement)
+      control.title = fullscreen ? '退出全屏' : '切换全屏'
+      control.setAttribute('aria-label', control.title)
+      control.innerHTML = svg(fullscreen ? 'restore' : 'fullscreen')
     }, options)
     if (!document.fullscreenEnabled) root.querySelector('[data-action="fullscreen"]').hidden = true
   }
 
-  setStage(message) {
-    this.root.querySelector('[data-stage]').textContent = message
+  setStage(progress, message) {
+    this.loading?.setStage(progress, message)
   }
 
   playCloudReveal() {
-    const sky = this.root.querySelector('.cloud-sky')
-    const reduceMotion = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches
-    if (!sky || reduceMotion || this.ready) return Promise.resolve()
-    this.root.classList.add('is-revealing')
-    return new Promise((resolve) => {
-      let settled = false
-      const finish = () => {
-        if (settled) return
-        settled = true
-        sky.removeEventListener('animationend', onEnd)
-        clearTimeout(timer)
-        this._cancelReveal = null
-        resolve()
-      }
-      const onEnd = (event) => {
-        if (event.target === sky) finish()
-      }
-      const timer = setTimeout(finish, CLOUD_REVEAL_MS)
-      this._cancelReveal = finish
-      sky.addEventListener('animationend', onEnd)
-    })
+    return this.loading?.reveal()
   }
 
   setReady() {
     this.ready = true
     this.root.classList.add('is-ready')
-    this.root.classList.remove('is-revealing')
-    this.root.querySelector('.cloud-veil')?.remove()
+    this.loading?.dispose()
+    this.loading = null
+    const world = this.experience.world
+    const hasWeapons = Boolean(world.aircraftWeapons)
+    const hasMouseFlight = !hasWeapons && typeof world.playerAircraft?.input.setJoystick === 'function'
+    this.root.classList.toggle('has-weapons', hasWeapons)
+    for (const hint of this.root.querySelectorAll('[data-weapon-help]')) hint.hidden = !hasWeapons
+    for (const hint of this.root.querySelectorAll('[data-mouse-flight]')) hint.hidden = !hasMouseFlight
     for (const control of this.root.querySelectorAll('button[disabled]')) control.disabled = false
     if (!this.experience.world.playerAircraft?.enabled) {
       for (const control of this.root.querySelectorAll('[data-action="view"], [data-action="pause"], [data-action="home"]')) control.disabled = true
@@ -204,8 +169,8 @@ export default class ExplorerUI {
 
   syncTouchControls() {
     const player = this.experience.world.playerAircraft
-    const touch = this.touchMedia.matches
-    const available = touch && this.ready && player?.enabled === true
+    const touch = this.touchMedia.matches && typeof player?.input.setJoystick === 'function'
+    const available = touch && this.ready && player.enabled
     this.root.classList.toggle('is-touch', touch)
     this.root.classList.toggle('has-flight-joystick', available)
     const enabled = available && !player.paused && !this.mapExpanded && !this.root.classList.contains('is-cinema')
@@ -216,15 +181,15 @@ export default class ExplorerUI {
   syncPause() {
     const paused = this.experience.platformPaused || this.flightPaused || this.dialog.open || this.mapExpanded
     const player = this.experience.world.playerAircraft
-    this.joystick.reset()
-    if (player && (this.ready || paused)) player.setPaused(paused)
+    if (player && player.paused !== paused && (this.ready || paused)) player.setPaused(paused)
     this.syncTouchControls()
+    if (paused) this.weaponHUD.hide()
     const control = this.root.querySelector('[data-action="pause"]')
     control.setAttribute('aria-pressed', String(this.flightPaused))
     control.setAttribute('aria-label', this.flightPaused ? '继续飞行（P）' : '暂停飞行（P）')
     control.title = control.getAttribute('aria-label')
     control.innerHTML = svg(this.flightPaused ? 'play' : 'pause')
-    this.root.querySelector('[data-flight-status]').textContent = !player?.enabled ? '风景漫游' : this.flightPaused ? '飞行已暂停' : '自由探索'
+    this.root.querySelector('[data-flight-status]').textContent = !player?.enabled ? '风景漫游' : paused ? '飞行已暂停' : '自由巡航'
     this.root.classList.toggle('is-paused', this.flightPaused)
   }
 
@@ -239,6 +204,10 @@ export default class ExplorerUI {
     }
     audio?.play(action === 'pause' ? this.flightPaused ? 'resume' : 'pause' : action === 'home' ? 'home' : 'click')
     if (action === 'cinema') {
+      if (this.dialog.open) {
+        this.dialog.close()
+        this.syncPause()
+      }
       if (this.mapExpanded) this.toggleMap(false)
       const hidden = this.root.classList.toggle('is-cinema')
       this.syncTouchControls()
@@ -249,20 +218,29 @@ export default class ExplorerUI {
       return
     }
     if (action === 'fullscreen') {
-      const operation = document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen()
-      operation.catch(() => this.toast('当前浏览器暂时无法切换全屏'))
+      if (document.fullscreenEnabled) {
+        const operation = document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen()
+        operation.catch(() => this.toast('当前浏览器暂时无法切换全屏'))
+      }
       return
     }
     if (!this.ready) return
     if (action === 'map') this.toggleMap()
-    if (action === 'help') {
+    if (action === 'help' && !this.dialog.open) {
+      if (this.mapExpanded) this.toggleMap(false)
       this.dialog.showModal()
       this.syncPause()
     }
-    if (action === 'close-help') this.dialog.close()
+    if (['close-help', 'view', 'home'].includes(action) && this.dialog.open) {
+      this.dialog.close()
+      this.syncPause()
+    }
     const player = this.experience.world.playerAircraft
     if (!player?.enabled) return
-    if (action === 'view' && !player.paused) player.input.request('view')
+    if (action === 'view') {
+      if (player.paused) this.toast('继续飞行后可切换视角')
+      else player.input.request('view')
+    }
     if (action === 'pause') {
       this.flightPaused = !this.flightPaused
       this.syncPause()
@@ -299,20 +277,26 @@ export default class ExplorerUI {
 
   update(timestamp) {
     if (!this.ready) return
-    const player = this.experience.world.playerAircraft
-    const cellSize = this.experience.world.config.terrain.cellSize
+    const world = this.experience.world
+    const player = world.playerAircraft
+    const cellSize = world.config.terrain.cellSize
     this.deck.renderCockpit(player, cellSize, this.experience.time.getDelta())
-    if (!player || timestamp - this.lastUpdate < 100) return
+    const hudVisible = !this.root.classList.contains('is-cinema')
+    if (hudVisible) {
+      this.navigation.updateHeading(player)
+      this.weaponHUD.update(player, world, this.experience.worldCamera.instance)
+    }
+    if (timestamp >= this.lastUpdate && timestamp - this.lastUpdate < 100) return
     this.lastUpdate = timestamp
     this.deck.update(player, cellSize)
-    if (this.root.classList.contains('is-cinema')) return
-    const speed = player.enabled ? player.state.velocity.length() : 0
-    this.speed.textContent = (speed / cellSize).toFixed(1)
-    this.speedBar.style.width = `${Math.min(100, speed / player.motionConfig.maxSpeed * 100)}%`
-    this.x.textContent = String(Math.floor(player.state.position.x / cellSize)).padStart(4, '0')
-    this.z.textContent = String(Math.floor(player.state.position.z / cellSize)).padStart(4, '0')
-    if (this.mapExpanded || !this.root.classList.contains('has-cockpit-overlay')) this.minimap.update()
-    const biomeId = this.minimap.getCurrentBiomeId()
+    if (!hudVisible) return
+    this.navigation.update(player, world)
+    if (player?.enabled) {
+      const speed = player.state.velocity.length()
+      this.speed.textContent = (speed / cellSize).toFixed(1)
+      this.speedBar.style.setProperty('--speed', Math.min(100, speed / player.motionConfig.maxSpeed * 100) + '%')
+    }
+    const biomeId = this.navigation.getCurrentBiomeId()
     if (biomeId && this.lastBiomeId && biomeId !== this.lastBiomeId) this.experience.audio?.play('biome')
     if (biomeId) this.lastBiomeId = biomeId
     this.biome.textContent = BIOMES[biomeId] ?? '旷野之间'
@@ -330,15 +314,17 @@ export default class ExplorerUI {
   toggleMap(expanded = !this.mapExpanded) {
     this.mapExpanded = expanded
     this.root.classList.toggle('is-map-expanded', expanded)
-    this.root.querySelector('.map-card').classList.toggle('is-expanded', expanded)
-    for (const control of this.root.querySelectorAll('[data-action="map"]')) {
+    this.map.classList.toggle('is-expanded', expanded)
+    this.root.querySelector('.map-shade').hidden = !expanded
+    for (const control of this.root.querySelectorAll('button[data-action="map"]')) {
       control.setAttribute('aria-expanded', String(expanded))
       control.setAttribute('aria-label', expanded ? '收起地图' : '放大小地图')
       control.title = control.getAttribute('aria-label')
-      control.innerHTML = svg(expanded ? 'close' : control.classList.contains('map-expand') ? 'fullscreen' : 'map')
     }
     this.syncPause()
-    this.minimap.update()
+    this.navigation.updateMap()
+    if (expanded) this.map.querySelector('button').focus({ preventScroll: true })
+    else if (this.root.classList.contains('has-cockpit-overlay')) this.root.querySelector('.action-bar [data-action="map"]').focus({ preventScroll: true })
   }
 
   toast(message) {
@@ -350,13 +336,14 @@ export default class ExplorerUI {
   }
 
   dispose() {
-    this._cancelReveal?.()
+    this.loading?.dispose()
+    this.loading = null
     this.joystick.reset()
     this.deck.dispose()
     this.events.abort()
     clearTimeout(this.toastTimer)
     if (this.dialog.open) this.dialog.close()
-    this.minimap.dispose()
+    this.navigation.dispose()
     this.root.replaceChildren()
   }
 }

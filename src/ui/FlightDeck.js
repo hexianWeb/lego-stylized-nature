@@ -1,4 +1,5 @@
 import { createCockpitOverlay } from './cockpit/cockpit-overlay.mjs'
+import { getHeadingDegrees } from './FlightNavigation.js'
 
 const VIEW_NAMES = { top: '俯视', chase: '追尾', cockpit: '驾驶舱' }
 const STUNT_NAMES = { roll: '翻滚', backLoop: '后空翻', frontLoop: '前空翻' }
@@ -24,7 +25,7 @@ export function getCockpitTelemetry(state, cellSize, camera) {
     pitchDeg: Math.asin(Math.max(-1, Math.min(1, -basis[9]))) * DEGREES,
     // Canvas y points down. Project the world up axis onto the camera's right and up axes.
     horizonRollDeg: Math.atan2(basis[1], basis[5]) * DEGREES,
-    headingDeg: ((state.yaw * DEGREES + 90) % 360 + 360) % 360,
+    headingDeg: getHeadingDegrees(state.yaw),
   }
 }
 
@@ -36,7 +37,6 @@ export default class FlightDeck {
     this.pads = root.querySelector('[data-flight-pads]')
     this.hold = this.pads.querySelector('[data-flight-hold]')
     this.status = root.querySelector('[data-flight-status]')
-    this.panelStatus = root.querySelector('[data-panel-status]')
     this.alt = root.querySelector('[data-alt]')
     this.view = root.querySelector('[data-view]')
     this.hold.addEventListener('pointerdown', e => {
@@ -63,10 +63,11 @@ export default class FlightDeck {
   release() {
     const id = this.finger
     this.finger = null
+    if (id == null) return
     const player = this.getPlayer()
     if (player) player.input.touchBoost = false
     this.hold.classList.remove('held')
-    if (id != null && this.hold.hasPointerCapture(id)) this.hold.releasePointerCapture(id)
+    if (this.hold.hasPointerCapture(id)) this.hold.releasePointerCapture(id)
   }
 
   setTouchEnabled(enabled) {
@@ -106,7 +107,7 @@ export default class FlightDeck {
     const status = player.paused ? '飞行已暂停'
       : s.noticeTime > 0 && s.blocked ? (s.blocked === 'ground' ? '下方净空不足' : '已达空翻限高')
         : STUNT_NAMES[s.stunt?.kind] ?? (s.boost > 0.55 ? '加速中' : '自由巡航')
-    this.status.textContent = this.panelStatus.textContent = status
+    if (this.status.textContent !== status) this.status.textContent = status
   }
 
   dispose() {

@@ -1,0 +1,184 @@
+:is(.flight-loading, #explorer-ui:empty) {
+    --loading-sky: linear-gradient(180deg, #f5f9f1 0%, #e8f5ef 54%, #d2ebe3 100%);
+}
+
+#explorer-ui:empty {
+    position: fixed;
+    inset: 0;
+    background: var(--loading-sky);
+}
+
+.flight-loading {
+    --loading-unit: min(1.12px, .171vw, .1462dvh);
+    --loading-accent: #ffb862;
+    position: absolute;
+    inset: 0;
+    z-index: 6;
+    overflow: hidden;
+    pointer-events: auto;
+}
+
+.loading-defs { position: absolute; }
+
+.loading-curtain {
+    position: absolute;
+    inset-block: 0;
+    width: 60%;
+    background: var(--loading-sky);
+    pointer-events: none;
+}
+
+.loading-curtain::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+}
+
+.loading-curtain-left {
+    left: 0;
+    clip-path: url(#flight-cloud-left);
+    transform: translateX(calc(-100% * var(--cloud-open, 0)));
+}
+
+.loading-curtain-right {
+    right: 0;
+    clip-path: url(#flight-cloud-right);
+    transform: translateX(calc(100% * var(--cloud-open, 0)));
+}
+
+.loading-curtain-left::before {
+    background:
+        radial-gradient(ellipse 19% 18% at 2% 13%, #fafaf0 99%, transparent),
+        radial-gradient(ellipse 15% 19% at 12% 12%, #fafaf0 99%, transparent),
+        radial-gradient(ellipse 13% 20% at 31% 1.5%, #fafaf0 99%, transparent),
+        radial-gradient(ellipse 12% 14% at 46% -1%, #fafaf0 99%, transparent),
+        radial-gradient(ellipse 22% 36% at 17% 97%, #eff8f2 99%, transparent),
+        radial-gradient(ellipse 19% 24% at 29% 77%, #eff8f2 99%, transparent),
+        radial-gradient(ellipse 30% 32% at 32% 102%, #eff8f2 99%, transparent);
+}
+
+.loading-curtain-right::before {
+    background:
+        radial-gradient(ellipse 16% 23% at 72% -6%, #f8fbf4 99%, transparent),
+        radial-gradient(ellipse 14% 23% at 87% 4%, #f8fbf4 99%, transparent),
+        radial-gradient(ellipse 14% 23% at 96% 12%, #f8fbf4 99%, transparent),
+        radial-gradient(ellipse 17% 22% at 94% 90%, #e2f2e9ad 99%, transparent),
+        radial-gradient(ellipse 26% 28% at 88% 104%, #e2f2e9de 99%, transparent);
+}
+
+.loading-content {
+    position: absolute;
+    top: calc(50% + 15 * var(--loading-unit));
+    left: 50%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    transform: translate(-50%, -50%);
+    opacity: var(--loading-opacity, 1);
+    pointer-events: none;
+}
+
+.loading-island {
+    display: block;
+    width: min(calc(760 * var(--loading-unit)), 100vw);
+    height: calc(390 * var(--loading-unit));
+}
+
+.loading-card {
+    --loading-cut: calc(15 * var(--loading-unit));
+    --loading-shape: polygon(
+        var(--loading-cut) 0, calc(100% - var(--loading-cut)) 0, 100% var(--loading-cut),
+        100% calc(100% - var(--loading-cut)), calc(100% - var(--loading-cut)) 100%,
+        var(--loading-cut) 100%, 0 calc(100% - var(--loading-cut)), 0 var(--loading-cut)
+    );
+    position: relative;
+    isolation: isolate;
+    width: max(240px, calc(422 * var(--loading-unit)));
+    max-width: calc(100vw - 24px);
+    padding: max(12px, calc(18 * var(--loading-unit))) max(16px, calc(30 * var(--loading-unit)))
+        max(14px, calc(24 * var(--loading-unit)));
+    filter: drop-shadow(0 calc(6 * var(--loading-unit)) 0 #527e793b);
+    color: #f7faf4;
+}
+
+.loading-card::before,
+.loading-card::after {
+    content: '';
+    position: absolute;
+    z-index: -1;
+    clip-path: var(--loading-shape);
+}
+
+.loading-card::before {
+    inset: 0;
+    background: linear-gradient(145deg, #658b89, #274452 60%, #527c7d);
+}
+
+.loading-card::after {
+    inset: 1px;
+    background: linear-gradient(160deg, #132f39, #0b2530 60%, #07202b);
+}
+
+.loading-heading {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.loading-heading::before {
+    content: '';
+    position: absolute;
+    top: 1px;
+    left: 1px;
+    width: calc(49 * var(--loading-unit));
+    height: calc(44 * var(--loading-unit));
+    background: var(--loading-accent);
+    clip-path: polygon(29% 0, 100% 0, 84% 18%, 34% 18%, 14% 40%, 14% 100%, 0 100%, 0 33%);
+}
+
+.loading-heading h2 {
+    margin: 0;
+    font-size: max(17px, calc(26 * var(--loading-unit)));
+    font-weight: 800;
+    letter-spacing: .055em;
+    line-height: 1.24;
+}
+
+.loading-heading span {
+    color: var(--loading-accent);
+    font: 800 max(17px, calc(27 * var(--loading-unit))) / 1.15 Consolas, 'Courier New', monospace;
+    font-variant-numeric: tabular-nums;
+}
+
+.loading-card p {
+    margin: calc(5 * var(--loading-unit)) 0 max(5px, calc(8 * var(--loading-unit)));
+    color: #b5cdd1;
+    font-size: max(10px, calc(14 * var(--loading-unit)));
+    line-height: 1.35;
+}
+
+.loading-progress {
+    display: grid;
+    grid-template-columns: repeat(16, 1fr);
+    gap: max(2px, calc(5 * var(--loading-unit)));
+    height: max(4px, calc(7 * var(--loading-unit)));
+}
+
+.loading-progress i {
+    position: relative;
+    overflow: hidden;
+    border-radius: 1px;
+    background: #3a5761;
+}
+
+.loading-progress i::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    transform: scaleX(clamp(0, calc(var(--load-progress, 0) - var(--segment)), 1));
+    transform-origin: left center;
+    background: var(--loading-accent);
+}
+
+.flight-loading.is-launching { --loading-accent: #b2eac7; }
