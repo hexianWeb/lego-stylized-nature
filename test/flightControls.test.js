@@ -1,96 +1,11 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
+import { PerspectiveCamera, Vector3 } from 'three/webgpu'
+import { enemyBearing, projectEnemyMarker } from '../src/ui/AircraftWeaponHUD.js'
 import { getCockpitTelemetry } from '../src/ui/FlightDeck.js'
-import FlightJoystick, { resolveJoystickDrag } from '../src/ui/FlightJoystick.js'
 import WorldCamera from '../src/world/camera.js'
 import { createAircraftState } from '../src/world/player/aircraftMotion.js'
-import AircraftInput from '../src/world/player/AircraftInput.js'
 import PlayerAircraft from '../src/world/player/PlayerAircraft.js'
-
-test('joystick and keyboard release independently and blur clears both sources', () => {
-  const target = new EventTarget()
-  const input = new AircraftInput(target)
-  input.attach()
-  input.handleKeyDown({ code: 'KeyW' })
-  input.setJoystick(0.3, 0.5)
-  input.handleKeyUp({ code: 'KeyW' })
-  assert.equal(input.getKeys().KeyW, false)
-  assert.deepEqual(input.getJoystick(), { x: 0.3, y: 0.5 })
-  input.handleKeyDown({ code: 'KeyA' })
-  input.setJoystick(0, 0)
-  assert.equal(input.getKeys().KeyA, true)
-  input.setJoystick(0.7, -0.2)
-  target.dispatchEvent(new Event('blur'))
-  assert.ok(Object.values(input.getKeys()).every(value => value === false))
-  assert.deepEqual(input.getJoystick(), { x: 0, y: 0 })
-  input.setJoystick(2, Number.NaN)
-  assert.deepEqual(input.getJoystick(), { x: 1, y: 0 })
-  input.dispose()
-})
-
-test('joystick ignores small jitters, ramps up and clamps diagonal movement in a circle', () => {
-  assert.deepEqual(resolveJoystickDrag(0, 4, 40), { offsetX: 0, offsetY: 4, x: 0, y: 0 })
-  const half = resolveJoystickDrag(20, 0, 40)
-  assert.ok(half.x > 0 && half.x < 0.5)
-  assert.equal(resolveJoystickDrag(0, 50, 40).y, -1)
-  assert.equal(resolveJoystickDrag(-50, 0, 40).x, -1)
-
-  const diagonal = resolveJoystickDrag(400, -400, 40)
-  assert.ok(Math.abs(Math.hypot(diagonal.offsetX, diagonal.offsetY) - 40) < 1e-9)
-  assert.ok(Math.abs(Math.hypot(diagonal.x, diagonal.y) - 1) < 1e-9)
-  assert.ok(diagonal.x > 0 && diagonal.y > 0)
-})
-
-function createJoystick() {
-  const element = new EventTarget()
-  const classes = new Set()
-  const styles = new Map()
-  let captured = null
-  let axes = [0, 0]
-  Object.assign(element, {
-    hidden: true,
-    getBoundingClientRect: () => ({ width: 120, height: 120 }),
-    classList: { add: name => classes.add(name), remove: name => classes.delete(name) },
-    style: { setProperty: (key, value) => styles.set(key, value), removeProperty: key => styles.delete(key) },
-    setPointerCapture: id => { captured = id },
-    hasPointerCapture: id => captured === id,
-    releasePointerCapture: () => { captured = null },
-  })
-  const joystick = new FlightJoystick(element, (x, y) => { axes = [x, y] })
-  const send = (type, pointerId, clientX = 0, clientY = 0) => {
-    const event = new Event(type, { cancelable: true })
-    element.dispatchEvent(Object.assign(event, { pointerId, clientX, clientY, button: 0 }))
-    return event
-  }
-  return { joystick, element, send, classes, styles, axes: () => axes }
-}
-
-test('a single finger owns the stick and release, cancellation or hiding always clears it', () => {
-  const { joystick, element, send, classes, styles, axes } = createJoystick()
-  assert.equal(send('pointerdown', 1).defaultPrevented, false)
-  joystick.setEnabled(true)
-  for (const end of ['pointerup', 'pointercancel', 'lostpointercapture', 'hide']) {
-    assert.equal(send('pointerdown', 1, 20, 40).defaultPrevented, true)
-    assert.deepEqual(axes(), [0, 0]) // an off-center grab starts neutral
-    assert.ok(element.hasPointerCapture(1))
-    send('pointerdown', 2)
-    send('pointermove', 2, -100, 100)
-    send('pointerup', 2)
-    assert.deepEqual(axes(), [0, 0])
-    assert.ok(element.hasPointerCapture(1))
-    send('pointermove', 1, 20, -30)
-    assert.deepEqual(axes(), [0, 1])
-    assert.ok(styles.has('--stick-y'))
-    if (end === 'hide') joystick.setEnabled(false)
-    else send(end, 1)
-    send('pointermove', 1, 20, -30)
-    assert.deepEqual(axes(), [0, 0])
-    assert.equal(element.hasPointerCapture(1), false)
-    assert.equal(classes.has('is-dragging'), false)
-    assert.equal(styles.size, 0)
-  }
-  assert.equal(element.hidden, true)
-})
 
 function createPlayer(sizes = { width: 390, height: 844 }) {
   const experience = {
@@ -107,17 +22,61 @@ function createPlayer(sizes = { width: 390, height: 844 }) {
   return player
 }
 
-test('the same stick commands bank and pitch in all three views and both screen orientations', () => {
+test('enemy pointers keep the correct screen side before and after crossing behind the camera', () => {
+  const camera = new PerspectiveCamera(60, 16 / 9, 0.1, 100)
+  camera.updateWorldMatrix(true, false)
+  const cameraPoint = new Vector3()
+  const marker = (x, y, z) => {
+    const result = {}
+    projectEnemyMarker(new Vector3(x, y, z), camera, cameraPoint, result)
+    return result
+  }
+  assert.equal(marker(0, 0, -10).edge, false)
+  assert.equal(marker(15, 0, -2).x, 1)
+  assert.equal(marker(15, 0, 2).x, 1)
+  assert.equal(marker(-15, 0, 2).x, -1)
+  assert.equal(marker(0, 10, -2).y, -1)
+  assert.equal(marker(0, 0, 10).y, 1)
+  assert.ok(Number.isFinite(marker(0, 0, 0).angle))
+
+  assert.equal(enemyBearing(1, 0, 0, 0), '正前')
+  assert.equal(enemyBearing(-1, 0, 1, 0), '右后')
+  assert.equal(enemyBearing(-1, 0, -1, 0), '左后')
+  assert.equal(enemyBearing(1, 0, 0, Math.PI), '正后')
+  assert.equal(enemyBearing(0, -3, 0, 0), '正下')
+})
+
+test('a pursuer behind the plane stays marked over its model if the chase camera can see it', () => {
+  const player = createPlayer({ width: 1280, height: 720 })
+  player.view = 'chase'
+  player.syncCamera(0)
+  const camera = player.experience.worldCamera.instance
+  camera.updateWorldMatrix(true, false)
+  const pursuer = player.state.position.clone().add(new Vector3(-0.4, 0, 0))
+  const result = {}
+  projectEnemyMarker(pursuer, camera, new Vector3(), result)
+  assert.equal(result.edge, false)
+  player.dispose()
+})
+
+test('the same held keys fly the same route in all three views and both screen orientations', () => {
+  let pose
   for (const sizes of [{ width: 390, height: 844 }, { width: 844, height: 390 }]) {
     for (const view of ['top', 'chase', 'cockpit']) {
       const player = createPlayer(sizes)
       player.view = view
-      player.input.setJoystick(0.6, -0.8)
+      player.input.handleKeyDown({ code: 'KeyD' })
+      player.input.handleKeyDown({ code: 'KeyS' })
       for (let i = 0; i < 20; i++) player.update()
       assert.ok(player.state.bank > 0.3 && player.state.yaw > 0)
       assert.ok(player.state.position.y > player.motionConfig.height + 0.8)
-      player.input.setJoystick(0, 0)
-      for (let i = 0; i < 40; i++) player.update()
+      const { position, yaw, pathPitch } = player.state
+      const nextPose = { position: position.toArray(), yaw, pathPitch }
+      if (pose) assert.deepEqual(nextPose, pose)
+      else pose = nextPose
+      player.input.handleKeyUp({ code: 'KeyD' })
+      player.input.handleKeyUp({ code: 'KeyS' })
+      for (let i = 0; i < 100; i++) player.update()
       assert.ok(Math.abs(player.state.bank) < 0.001 && Math.abs(player.state.pitch) < 0.001)
       assert.ok(Math.abs(player.state.speed - player.motionConfig.cruiseSpeed) < 0.01)
       player.dispose()
@@ -125,26 +84,11 @@ test('the same stick commands bank and pitch in all three views and both screen 
   }
 })
 
-test('keyboard controls resume when an active joystick is centered', () => {
-  const player = createPlayer()
-  player.input.setJoystick(-1, 0)
-  player.input.handleKeyDown({ code: 'KeyD' })
-  player.update()
-  assert.ok(player.state.angularVelocity < 0)
-
-  player.input.setJoystick(0, 0)
-  const yaw = player.state.yaw
-  for (let i = 0; i < 10; i++) player.update()
-  assert.ok(player.state.yaw > yaw)
-  assert.ok(player.state.angularVelocity > 0)
-  player.dispose()
-})
-
 test('pause freezes motion, drops held input and safely reconnects on resume', () => {
   const player = createPlayer()
   player.input.attach()
   player.input.handleKeyDown({ code: 'KeyW' })
-  player.input.setJoystick(0.4, 0.6)
+  player.input.handleKeyDown({ code: 'ShiftLeft' })
   player.state.velocity.set(4, 0, 0)
   const before = player.state.position.clone()
   player.setPaused(true)
@@ -152,11 +96,11 @@ test('pause freezes motion, drops held input and safely reconnects on resume', (
   assert.ok(player.state.position.equals(before))
   assert.equal(player.input.isAttached, false)
   assert.equal(player.input.getKeys().KeyW, false)
-  assert.deepEqual(player.input.getJoystick(), { x: 0, y: 0 })
+  assert.equal(player.input.consume().boost, false)
   player.setPaused(false)
   assert.equal(player.input.isAttached, true)
   assert.equal(player.input.getKeys().KeyW, false)
-  assert.deepEqual(player.input.getJoystick(), { x: 0, y: 0 })
+  assert.equal(player.input.consume().boost, false)
   player.dispose()
 })
 

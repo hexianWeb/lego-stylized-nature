@@ -183,6 +183,7 @@ export default class World {
       }
     }
 
+        weaponsEnabled: !this.forestTrialOptions,
     this.regenerate()
   }
 

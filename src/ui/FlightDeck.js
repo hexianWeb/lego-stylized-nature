@@ -5,12 +5,7 @@ const VIEW_NAMES = { top: '俯视', chase: '追尾', cockpit: '驾驶舱' }
 const STUNT_NAMES = { roll: '翻滚', backLoop: '后空翻', frontLoop: '前空翻' }
 const DEGREES = 180 / Math.PI
 
-export const flightDeckMarkup = `
-  <canvas class="cockpit-overlay" aria-hidden="true" hidden></canvas>
-  <div class="flight-pads flight-panel hud-part" data-flight-pads aria-label="飞行特技" hidden>
-    <button type="button" data-flight-hold>加速</button><button type="button" data-stunt="roll">翻滚</button>
-    <button type="button" data-stunt="frontLoop">前空翻</button><button type="button" data-stunt="backLoop">后空翻</button>
-  </div>`
+export const flightDeckMarkup = '<canvas class="cockpit-overlay" aria-hidden="true" hidden></canvas>'
 
 export function getCockpitTelemetry(state, cellSize, camera) {
   // One terrain cell represents one simulated meter. Altitude is relative to world y=0.
@@ -30,49 +25,12 @@ export function getCockpitTelemetry(state, cellSize, camera) {
 }
 
 export default class FlightDeck {
-  constructor(root, getPlayer, options) {
+  constructor(root) {
     this.root = root
-    this.getPlayer = getPlayer
     this.canvas = root.querySelector('.cockpit-overlay')
-    this.pads = root.querySelector('[data-flight-pads]')
-    this.hold = this.pads.querySelector('[data-flight-hold]')
     this.status = root.querySelector('[data-flight-status]')
     this.alt = root.querySelector('[data-alt]')
     this.view = root.querySelector('[data-view]')
-    this.hold.addEventListener('pointerdown', e => {
-      if (this.pads.hidden || this.finger != null || e.button !== 0) return
-      e.preventDefault()
-      this.finger = e.pointerId
-      this.hold.setPointerCapture(e.pointerId)
-      getPlayer().input.touchBoost = true
-      this.hold.classList.add('held')
-    }, options)
-    for (const type of ['pointerup', 'pointercancel', 'lostpointercapture']) {
-      this.hold.addEventListener(type, e => {
-        if (e.pointerId === this.finger) this.release()
-      }, options)
-    }
-    this.pads.addEventListener('click', e => {
-      const stunt = e.target.closest('[data-stunt]')?.dataset.stunt
-      if (stunt && !this.pads.hidden) getPlayer()?.input.request(stunt)
-    }, options)
-    window.addEventListener('blur', () => this.release(), options)
-    document.addEventListener('visibilitychange', () => { if (document.hidden) this.release() }, options)
-  }
-
-  release() {
-    const id = this.finger
-    this.finger = null
-    if (id == null) return
-    const player = this.getPlayer()
-    if (player) player.input.touchBoost = false
-    this.hold.classList.remove('held')
-    if (this.hold.hasPointerCapture(id)) this.hold.releasePointerCapture(id)
-  }
-
-  setTouchEnabled(enabled) {
-    if (!enabled) this.release()
-    this.pads.hidden = !enabled
   }
 
   renderCockpit(player, cellSize, delta) {
@@ -112,7 +70,6 @@ export default class FlightDeck {
 
   dispose() {
     this.disposed = true
-    this.release()
     this.cockpit = null
     this.canvas.remove()
   }

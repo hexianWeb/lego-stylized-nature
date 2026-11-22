@@ -23,7 +23,11 @@ export default class PlayerAircraft {
     this.wingAirflow = null
     this.enabled = config.enabled !== false
     this.paused = false
-    this.input = new AircraftInput(options.inputTarget === undefined ? globalThis.window : options.inputTarget, experience.canvas)
+    this.input = new AircraftInput(
+      options.inputTarget === undefined ? globalThis.window : options.inputTarget,
+      experience.canvas,
+      { weaponsEnabled: options.weaponsEnabled },
+    )
     this.group = new THREE.Group()
     this.group.name = 'PlayerAircraft'
     this.visualRoot = new THREE.Group()

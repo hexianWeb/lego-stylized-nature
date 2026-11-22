@@ -1,4 +1,3 @@
-import FlightJoystick from './FlightJoystick.js'
 import FlightDeck, { flightDeckMarkup } from './FlightDeck.js'
 import FlightNavigation, { flightNavigationMarkup } from './FlightNavigation.js'
 import AircraftWeaponHUD, { aircraftWeaponMarkup } from './AircraftWeaponHUD.js'
@@ -46,7 +45,6 @@ export default class ExplorerUI {
           ${button('sound', 'sound', '静音音效（U）', 'aria-pressed="false"')}
           ${button('help', 'help', '操作帮助', 'aria-haspopup="dialog" disabled')}
           ${button('fullscreen', 'fullscreen', '切换全屏')}
-          <span class="touch-view">${button('view', 'view', '切换视角', 'disabled')}</span>
           ${button('map', 'map', '放大小地图', 'aria-expanded="false" disabled')}
           ${button('cinema', 'eye', '显示界面（H）', 'aria-pressed="false"')}
         </nav>
@@ -61,37 +59,23 @@ export default class ExplorerUI {
       </section>
       <div class="map-shade" data-action="map" aria-hidden="true" hidden></div>
       ${flightNavigationMarkup}
-      <div class="flight-joystick hud-part flight-panel" data-flight-joystick role="group" aria-label="飞行摇杆，横向转弯，纵向控制俯仰" hidden>
-        <svg viewBox="0 0 100 100" fill="none" stroke="currentColor" aria-hidden="true">
-          <circle cx="50" cy="50" r="30" stroke-dasharray="1 4" opacity=".55"/>
-          <path d="m46 15 4-4 4 4m-8 70 4 4 4-4M15 46l-4 4 4 4m70-8 4 4-4 4" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-        <span class="flight-joystick-thumb" aria-hidden="true"></span>
-      </div>
       ${flightDeckMarkup}
       ${aircraftWeaponMarkup}
       ${loadingScreenMarkup}
       <div class="hud-toast surface" role="status" hidden></div>
       <dialog class="help-dialog surface" aria-labelledby="help-title">
         ${button('close-help', 'close', '关闭操作帮助')}
-        <h2 id="help-title">红隼试飞手册</h2><p class="help-intro">飞机会自动巡航。用下方操作控制转向、升降和特技。</p>
-        <dl class="help-keys desktop-help">
-          <div><dt><kbd>A</kbd> / <kbd>D</kbd> 或 <kbd>←</kbd> / <kbd>→</kbd><span data-mouse-flight hidden> 或鼠标左右</span></dt><dd>压坡转向</dd></div>
-          <div><dt><kbd>S</kbd> / <kbd>W</kbd> 或 <kbd>↓</kbd> / <kbd>↑</kbd><span data-mouse-flight hidden> 或鼠标下 / 上</span></dt><dd>拉起 / 下压</dd></div>
-          <div><dt><kbd>Shift</kbd><span data-mouse-flight hidden> / 按住左键</span></dt><dd>加速，松开回到巡航</dd></div>
-          <div><dt><kbd>R</kbd><span data-mouse-flight hidden> / 轻点左键</span></dt><dd>纵轴翻滚</dd></div>
+        <h2 id="help-title">红隼试飞手册</h2><p class="help-intro">飞机会自动巡航。用键盘控制转向、升降和特技。</p>
+        <dl class="help-keys">
+          <div><dt><kbd>A</kbd> / <kbd>D</kbd> 或 <kbd>←</kbd> / <kbd>→</kbd></dt><dd>压坡转向</dd></div>
+          <div><dt><kbd>S</kbd> / <kbd>W</kbd> 或 <kbd>↓</kbd> / <kbd>↑</kbd></dt><dd>拉起 / 下压</dd></div>
+          <div><dt><kbd>Shift</kbd></dt><dd>加速，松开回到巡航</dd></div>
+          <div><dt><kbd>R</kbd></dt><dd>纵轴翻滚</dd></div>
           <div><dt><kbd>F</kbd> / <kbd>G</kbd></dt><dd>后空翻 / 前空翻</dd></div>
           <div data-weapon-help hidden><dt>按住左键 / 单击右键或 <kbd>M</kbd></dt><dd>机炮连射 / 发射导弹。屏幕边缘箭头指示敌机方位，持续瞄准可锁定</dd></div>
           <div><dt><kbd>Space</kbd> / <kbd>P</kbd></dt><dd>切换视角 / 暂停</dd></div>
           <div><dt><kbd>H</kbd> / <kbd>U</kbd></dt><dd>切换界面 / 音效</dd></div>
           <div><dt>点击区域地图 / <kbd>Esc</kbd></dt><dd>展开 / 收起地图</dd></div>
-        </dl>
-        <dl class="help-keys touch-help">
-          <div><dt>左右拨杆</dt><dd>压坡转弯</dd></div>
-          <div><dt>向下拉 / 向上推</dt><dd>爬升 / 俯冲</dd></div>
-          <div><dt>右侧动作区</dt><dd>按住加速，点按特技</dd></div>
-          <div><dt>顶部视角按钮</dt><dd>俯视 → 追尾 → 驾驶舱</dd></div>
-          <div><dt>点按区域地图</dt><dd>展开 / 收起地图</dd></div>
         </dl>
         <p class="help-note">加速时持续拉满或推满也能触发空翻。靠近地面时会自动拉平。</p>
         <div class="help-actions">
@@ -110,27 +94,12 @@ export default class ExplorerUI {
     this.navigation = new FlightNavigation(root, experience)
     this.syncAudioControl()
     const options = { signal: this.events.signal }
-    const getPlayer = () => this.experience.world.playerAircraft
-    this.deck = new FlightDeck(root, getPlayer, options)
+    this.deck = new FlightDeck(root)
     this.weaponHUD = new AircraftWeaponHUD(root, experience.sizes)
-    this.touchMedia = window.matchMedia('(pointer: coarse)')
-    this.joystick = new FlightJoystick(
-      root.querySelector('[data-flight-joystick]'),
-      (x, y) => getPlayer()?.input.setJoystick?.(x, y),
-      options,
-    )
-    this.syncTouchControls()
-    this.touchMedia.addEventListener('change', () => this.syncTouchControls(), options)
-    window.addEventListener('blur', () => this.joystick.reset(), options)
-    window.addEventListener('resize', () => this.joystick.reset(), options)
-    document.addEventListener('visibilitychange', () => {
-      if (document.hidden) this.joystick.reset()
-    }, options)
     root.addEventListener('click', event => this.onAction(event.target.closest('[data-action]')?.dataset.action), options)
     window.addEventListener('keydown', event => this.onKeyDown(event), { ...options, capture: true })
     this.dialog.addEventListener('close', () => this.syncPause(), options)
     document.addEventListener('fullscreenchange', () => {
-      this.joystick.reset()
       const control = root.querySelector('[data-action="fullscreen"]')
       const fullscreen = Boolean(document.fullscreenElement)
       control.title = fullscreen ? '退出全屏' : '切换全屏'
@@ -153,12 +122,8 @@ export default class ExplorerUI {
     this.root.classList.add('is-ready')
     this.loading?.dispose()
     this.loading = null
-    const world = this.experience.world
-    const hasWeapons = Boolean(world.aircraftWeapons)
-    const hasMouseFlight = !hasWeapons && typeof world.playerAircraft?.input.setJoystick === 'function'
-    this.root.classList.toggle('has-weapons', hasWeapons)
-    for (const hint of this.root.querySelectorAll('[data-weapon-help]')) hint.hidden = !hasWeapons
-    for (const hint of this.root.querySelectorAll('[data-mouse-flight]')) hint.hidden = !hasMouseFlight
+    this.root.classList.toggle('has-weapons', Boolean(this.experience.world.aircraftWeapons))
+    for (const hint of this.root.querySelectorAll('[data-weapon-help]')) hint.hidden = !this.experience.world.aircraftWeapons
     for (const control of this.root.querySelectorAll('button[disabled]')) control.disabled = false
     if (!this.experience.world.playerAircraft?.enabled) {
       for (const control of this.root.querySelectorAll('[data-action="view"], [data-action="pause"], [data-action="home"]')) control.disabled = true
@@ -167,22 +132,10 @@ export default class ExplorerUI {
     this.update(0)
   }
 
-  syncTouchControls() {
-    const player = this.experience.world.playerAircraft
-    const touch = this.touchMedia.matches && typeof player?.input.setJoystick === 'function'
-    const available = touch && this.ready && player.enabled
-    this.root.classList.toggle('is-touch', touch)
-    this.root.classList.toggle('has-flight-joystick', available)
-    const enabled = available && !player.paused && !this.mapExpanded && !this.root.classList.contains('is-cinema')
-    this.joystick.setEnabled(enabled)
-    this.deck.setTouchEnabled(enabled)
-  }
-
   syncPause() {
     const paused = this.experience.platformPaused || this.flightPaused || this.dialog.open || this.mapExpanded
     const player = this.experience.world.playerAircraft
     if (player && player.paused !== paused && (this.ready || paused)) player.setPaused(paused)
-    this.syncTouchControls()
     if (paused) this.weaponHUD.hide()
     const control = this.root.querySelector('[data-action="pause"]')
     control.setAttribute('aria-pressed', String(this.flightPaused))
@@ -210,7 +163,6 @@ export default class ExplorerUI {
       }
       if (this.mapExpanded) this.toggleMap(false)
       const hidden = this.root.classList.toggle('is-cinema')
-      this.syncTouchControls()
       const control = this.root.querySelector('[data-action="cinema"]')
       control.setAttribute('aria-pressed', String(hidden))
       control.setAttribute('aria-label', hidden ? '显示界面（H）' : '隐藏界面（H）')
@@ -250,7 +202,6 @@ export default class ExplorerUI {
         window.location.reload()
         return
       }
-      this.joystick.reset()
       player.reset()
       this.experience.world.regenerate()
       this.toast('已回到出发的地方')
@@ -338,7 +289,6 @@ export default class ExplorerUI {
   dispose() {
     this.loading?.dispose()
     this.loading = null
-    this.joystick.reset()
     this.deck.dispose()
     this.events.abort()
     clearTimeout(this.toastTimer)
