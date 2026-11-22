@@ -19,6 +19,7 @@ import { isTerrainPreview } from './bricks/terrainColorScheme.js'
 import WaterBrickRenderer from './bricks/WaterBrickRenderer.js'
 import ChunkBuildWorkerPool from './chunks/ChunkBuildWorkerPool.js'
 import ChunkManager from './chunks/ChunkManager.js'
+import ForestTrial, { forestTrialSpawn, getForestTrialConfig } from './levels/ForestTrial.js'
 import PlayerAircraft from './player/PlayerAircraft.js'
 import { warmupPrefabPipelines } from './prefabs/PrefabPipelineWarmup.js'
 import PrefabPlacer from './prefabs/PrefabPlacer.js'
@@ -32,7 +33,7 @@ export default class World {
   /**
    * @param {import('../app/Experience.js').default} experience
    */
-  constructor(experience) {
+  constructor(experience, forestTrial = null) {
     this.experience = experience
     this.scene = experience.scene
     this.group = new THREE.Group()
@@ -40,7 +41,8 @@ export default class World {
     this.scene.add(this.group)
 
     this.children = []
-    this.config = worldConfig
+    this.forestTrialOptions = forestTrial
+    this.config = forestTrial ? getForestTrialConfig(worldConfig, forestTrial.mode) : worldConfig
     this.terrainMap = null
     this.terrainPlacements = []
 
@@ -173,8 +175,12 @@ export default class World {
       this.playerAircraft = new PlayerAircraft(this.experience, {
         config: this.config,
         sampleSurface: (x, z) => this.sampleSurface(x, z),
+        spawn: this.forestTrialOptions ? forestTrialSpawn : null,
       })
       this.addSystem(this.playerAircraft)
+      if (this.forestTrialOptions && this.playerAircraft.enabled) {
+        this.forestTrial = new ForestTrial(this, this.forestTrialOptions)
+      }
     }
 
     this.regenerate()
@@ -352,9 +358,11 @@ export default class World {
     }
   }
 
-  update() {
+  update(timestamp) {
+    const flightPose = this.forestTrial?.getFlightPose(timestamp)
     for (const child of this.children) {
-      child.update?.()
+      if (child === this.playerAircraft) child.update(flightPose)
+      else child.update?.()
     }
 
     if (this.terrainChunkManager && this.playerAircraft?.enabled) {
@@ -379,6 +387,7 @@ export default class World {
       this.experience.worldCamera.instance,
       this.experience.renderer?.instance,
     )
+    this.forestTrial?.update()
   }
 
   measurePrefabShadowBounds() {
@@ -440,6 +449,7 @@ export default class World {
       return
     this.disposed = true
     this.experience.renderer?.releaseSceneObjects?.(this.group)
+    this.forestTrial?.dispose()
     this.prefabWarmup?.dispose()
     this.prefabWarmup = null
     for (const child of this.children) {

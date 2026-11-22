@@ -1,11 +1,13 @@
 import Experience from './Experience.js'
 import { attachPlatform } from './platform.js'
+import { readForestTrial } from '../world/levels/ForestTrial.js'
+import '../ui/forestTrial.css'
 
 /**
  * @param {HTMLCanvasElement} canvas
  */
 export async function bootstrap(canvas) {
-  const experience = new Experience(canvas)
+  const experience = new Experience(canvas, readForestTrial(window.location.search))
 
   if (import.meta.env.DEV && typeof window !== 'undefined') {
     window.__experience = experience
@@ -17,6 +19,7 @@ export async function bootstrap(canvas) {
     await experience.init({ deferReady: true })
     experience.start()
     await experience.present()
+    experience.world.forestTrial?.activate()
     platform.reportLoaded()
   }
   catch (err) {

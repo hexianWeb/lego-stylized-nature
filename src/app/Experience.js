@@ -16,7 +16,7 @@ export default class Experience {
   /**
    * @param {HTMLCanvasElement} canvas
    */
-  constructor(canvas) {
+  constructor(canvas, forestTrial = null) {
     this.canvas = canvas
 
     this.debug = new Debug()
@@ -36,7 +36,7 @@ export default class Experience {
     this.scene.add(this.worldCamera.instance)
 
     this.resources = new Resources()
-    this.world = new World(this)
+    this.world = new World(this, forestTrial)
     this.audio = new ExplorerAudio(this)
     const uiRoot = document.getElementById('explorer-ui')
     this.ui = uiRoot ? new ExplorerUI(uiRoot, this) : null
@@ -73,6 +73,7 @@ export default class Experience {
    */
   setPlatformPaused(paused) {
     this.platformPaused = Boolean(paused)
+    if (this.platformPaused) this.world.forestTrial?.benchmark?.pause()
     if (this.ui) {
       this.ui.syncPause()
     }
@@ -236,7 +237,7 @@ export default class Experience {
     if (this.platformPaused) {
       return
     }
-    this.world.update()
+    this.world.update(timestamp)
     this.audio?.update(timestamp)
     this.ui?.update(timestamp)
     this.renderer.render()

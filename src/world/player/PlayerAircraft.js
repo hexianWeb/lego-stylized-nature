@@ -14,6 +14,7 @@ export default class PlayerAircraft {
     const config = this.worldConfig.player?.aircraft ?? {}
     this.motionConfig = normalizeAircraftConfig(config)
     this.sampleSurface = options.sampleSurface
+    this.spawn = options.spawn
     this.cameraFollow = { enabled: config.cameraFollow?.enabled !== false }
     this.initialView = FLIGHT_VIEWS.includes(config.view) ? config.view : 'top'
     this.view = this.initialView
@@ -57,8 +58,8 @@ export default class PlayerAircraft {
 
   reset() {
     const { width = 0, depth = 0, cellSize = 1 } = this.worldConfig.terrain ?? {}
-    const position = [width * cellSize / 2, this.motionConfig.height, depth * cellSize / 2]
-    this.state = createAircraftState({ position, speed: this.motionConfig.cruiseSpeed })
+    const position = this.spawn?.position ?? [width * cellSize / 2, this.motionConfig.height, depth * cellSize / 2]
+    this.state = createAircraftState({ position, yaw: this.spawn?.yaw, speed: this.motionConfig.cruiseSpeed })
     this.view = this.initialView
     this.elapsed = this.turbulencePhase = 0
     this.input.clear()
@@ -94,13 +95,26 @@ export default class PlayerAircraft {
     this.visualRoot.visible = !rig?.insideCockpit
   }
 
-  update() {
+  update(flightPose) {
     if (!this.enabled || this.paused) return
     const delta = Math.min(0.15, Math.max(0, this.experience.time.getDelta()))
     if (!delta) return
     const input = this.input.consume(this.invertY)
-    if (input.view) this.view = FLIGHT_VIEWS[(FLIGHT_VIEWS.indexOf(this.view) + 1) % FLIGHT_VIEWS.length]
-    stepAircraftMotion(this.state, input, this.motionConfig, delta, this.sampleSurface)
+    if (flightPose) {
+      const { x, y, z, yaw, speed } = flightPose
+      const state = this.state
+      state.position.set(x, y, z)
+      state.yaw = yaw
+      state.speed = speed
+      state.velocity.set(Math.cos(yaw) * speed, 0, Math.sin(yaw) * speed)
+      const surface = this.sampleSurface?.(x, z)
+      state.surfaceKnown = Number.isFinite(surface)
+      if (state.surfaceKnown) state.groundHeight = surface
+    }
+    else {
+      if (input.view) this.view = FLIGHT_VIEWS[(FLIGHT_VIEWS.indexOf(this.view) + 1) % FLIGHT_VIEWS.length]
+      stepAircraftMotion(this.state, input, this.motionConfig, delta, this.sampleSurface)
+    }
     // The alternate finite-map scene has no streaming neighbors. Re-enter at
     // the opposite edge with the same course, without drawing a trail across it.
     if (this.worldConfig.chunks?.enabled === false) {

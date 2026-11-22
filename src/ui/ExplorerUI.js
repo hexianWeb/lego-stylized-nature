@@ -268,6 +268,10 @@ export default class ExplorerUI {
       this.syncPause()
     }
     if (action === 'home') {
+      if (this.experience.world.forestTrial?.benchmark) {
+        window.location.reload()
+        return
+      }
       this.joystick.reset()
       player.reset()
       this.experience.world.regenerate()
