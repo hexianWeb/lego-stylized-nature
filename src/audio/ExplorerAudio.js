@@ -30,6 +30,10 @@ const CUES = {
   hit: [{ frequency: 395, endFrequency: 174, duration: 0.09, gain: 0.095, type: 'triangle' }],
   playerHit: [{ frequency: 248, endFrequency: 62, duration: 0.15, gain: 0.2, type: 'sawtooth' }],
   enemyCannon: [{ frequency: 141, endFrequency: 69, duration: 0.075, gain: 0.07, type: 'triangle' }],
+  incomingMissile: [
+    { frequency: 770, duration: 0.1, gain: 0.085, type: 'square' },
+    { frequency: 770, offset: 0.19, duration: 0.14, gain: 0.085, type: 'square' },
+  ],
   destroyed: [
     { frequency: 165, endFrequency: 34, duration: 0.31, gain: 0.155, type: 'sawtooth' },
     { frequency: 525, endFrequency: 98, duration: 0.13, gain: 0.06, type: 'triangle' },

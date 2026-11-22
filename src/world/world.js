@@ -21,6 +21,7 @@ import ChunkBuildWorkerPool from './chunks/ChunkBuildWorkerPool.js'
 import ChunkManager from './chunks/ChunkManager.js'
 import ForestTrial, { forestTrialSpawn, getForestTrialConfig } from './levels/ForestTrial.js'
 import PlayerAircraft from './player/PlayerAircraft.js'
+import { createAircraftTrainingRange } from './player/aircraftTrainingRange.js'
 import { warmupPrefabPipelines } from './prefabs/PrefabPipelineWarmup.js'
 import PrefabPlacer from './prefabs/PrefabPlacer.js'
 import PrefabRegistry from './prefabs/PrefabRegistry.js'
@@ -63,6 +64,7 @@ export default class World {
     this.prefabRegistry = null
     this.prefabShadowBounds = null
     this.playerAircraft = null
+    this.aircraftTrainingRange = null
     this.terrainChunkManager = null
     this.prefabWarmup = null
     this.disposed = false
@@ -74,6 +76,11 @@ export default class World {
       this.group.add(system.group)
     }
   }
+
+  get aircraftWeapons() { return this.aircraftTrainingRange?.weapons }
+  get aircraftWeaponTargets() { return this.aircraftTrainingRange?.targets }
+  get aircraftWeaponFeedback() { return this.aircraftTrainingRange?.feedback }
+  get aircraftCombatStatus() { return this.aircraftTrainingRange?.combatStatus }
 
   build() {
     const resources = this.experience.resources
@@ -182,6 +189,17 @@ export default class World {
       if (this.forestTrialOptions && this.playerAircraft.enabled) {
         this.forestTrial = new ForestTrial(this, this.forestTrialOptions)
       }
+      if (!this.forestTrialOptions && this.playerAircraft.enabled) {
+        this.aircraftTrainingRange = createAircraftTrainingRange({
+          sampleSurface: (x, z) => this.sampleSurface(x, z),
+          playAudio: cue => this.experience.audio?.play(cue),
+          missileScene: resources.items.playerMissileModel?.scene,
+          enemyMissileScene: resources.items.enemyMissileModel?.scene,
+          enemyScene: resources.items.enemyFleetModel?.scene,
+          mountParent: this.playerAircraft.visualRoot,
+        })
+        this.group.add(this.aircraftTrainingRange.group)
+      }
     }
 
     this.regenerate()
@@ -223,6 +241,7 @@ export default class World {
         this.experience.worldCamera.instance,
       )
       this.playerAircraft?.snapToSurface?.()
+      this.aircraftTrainingRange?.reset(this.playerAircraft.state)
       this.refreshAOPreview()
       return
     }
@@ -240,6 +259,7 @@ export default class World {
     this.lavaBrickRenderer.build(this.terrainMap)
     this.prefabPlacer?.build(this.terrainMap)
     this.playerAircraft?.snapToSurface?.()
+    this.aircraftTrainingRange?.reset(this.playerAircraft.state)
 
     this.refreshAOPreview()
   }
@@ -300,6 +320,7 @@ export default class World {
     if (this.playerAircraft?.group) {
       this.playerAircraft.group.visible = !preview
     }
+    if (this.aircraftTrainingRange) this.aircraftTrainingRange.group.visible = !preview
   }
 
   getTerrainColorHistogram() {
@@ -362,7 +383,14 @@ export default class World {
   update(timestamp) {
     const flightPose = this.forestTrial?.getFlightPose(timestamp)
     for (const child of this.children) {
-      if (child === this.playerAircraft) child.update(flightPose)
+      if (child === this.playerAircraft) {
+        if (!child.enabled || child.paused) continue
+        const realDelta = this.experience.time.getDelta()
+        const range = this.aircraftTrainingRange
+        const flightDelta = range ? range.beginFrame(realDelta) : realDelta
+        const input = child.update(flightPose, flightDelta)
+        if (input && range) range.update(flightDelta, child, input, realDelta)
+      }
       else child.update?.()
     }
 
@@ -451,6 +479,8 @@ export default class World {
     this.disposed = true
     this.experience.renderer?.releaseSceneObjects?.(this.group)
     this.forestTrial?.dispose()
+    this.aircraftTrainingRange?.dispose()
+    this.aircraftTrainingRange = null
     this.prefabWarmup?.dispose()
     this.prefabWarmup = null
     for (const child of this.children) {

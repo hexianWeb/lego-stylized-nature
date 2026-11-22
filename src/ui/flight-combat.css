@@ -2,6 +2,7 @@
     --weapon-top: calc(var(--hud-top) + 65 * var(--hud-unit));
     --weapon-frame: linear-gradient(145deg, #7e9ca6, #416270 60%, #284855);
     --weapon-fill: linear-gradient(145deg, #152b38ef, #051a23f7 65%);
+    --counter-color: #88ecdc;
     position: absolute;
     inset: 0;
     color: var(--hud-ink);
@@ -37,6 +38,7 @@
 
 .weapon-enemy[data-alerted] { --enemy-color: #ff7475; }
 .weapon-enemy[data-tracked] { --enemy-color: #ff9c56; }
+.weapon-enemy[data-counter] { --enemy-color: var(--counter-color); }
 .weapon-enemy[data-placement="seen"] { transform: translate(-50%, calc(-100% - 9 * var(--hud-unit))); }
 
 .weapon-enemy-icon {
@@ -61,6 +63,19 @@
 }
 
 .weapon-enemy[data-placement="seen"] .weapon-enemy-label { display: none; }
+.weapon-enemy[data-placement="seen"][data-counter] .weapon-enemy-label {
+    display: block;
+    position: absolute;
+    left: 50%;
+    bottom: calc(100% + 7 * var(--hud-unit));
+    transform: translateX(-50%);
+    padding: .08em .4em;
+    background: #112a30ee;
+    font-size: max(11px, calc(15 * var(--hud-unit)));
+    font-weight: 800;
+    white-space: nowrap;
+}
+.weapon-enemy[data-counter] .weapon-enemy-label { color: var(--counter-color); }
 
 .weapon-enemy[data-placement="edge"] {
     display: flex;
@@ -148,6 +163,60 @@
 }
 
 .weapon-warning svg { width: calc(29 * var(--hud-unit)); height: calc(29 * var(--hud-unit)); color: #ff7476; }
+
+.weapon-incoming,
+.weapon-counter {
+    --action-color: #ffd069;
+    min-width: 0;
+    gap: calc(8 * var(--hud-unit));
+    color: var(--action-color);
+}
+
+.weapon-counter { --action-color: var(--counter-color); }
+.weapon-counter [data-counter-bearing] { color: var(--hud-ink); font-size: .8em; }
+.weapon-incoming::before,
+.weapon-counter::before { background: var(--action-color); }
+.weapon-incoming::after,
+.weapon-counter::after {
+    background: linear-gradient(116deg, #12252c 0 5%, var(--action-color) 5% 7%, #12252c 7% 93%, var(--action-color) 93% 95%, #12252c 95%);
+}
+
+.weapon-incoming-arrow {
+    width: 1.05em;
+    height: 1.05em;
+    background: currentColor;
+    clip-path: polygon(50% 0, 100% 49%, 64% 49%, 64% 100%, 36% 100%, 36% 49%, 0 49%);
+    transform: rotate(var(--incoming-bearing));
+}
+
+.weapon-incoming-eta {
+    color: var(--hud-ink);
+    min-width: 3.4em;
+    text-align: center;
+    font-size: .83em;
+}
+
+.weapon-incoming kbd,
+.weapon-counter kbd {
+    padding: .1em .32em;
+    color: var(--hud-ink);
+    border: 1px solid currentColor;
+    border-radius: 3px;
+    font: inherit;
+    line-height: 1;
+}
+
+.weapon-incoming[data-urgent] { --action-color: #ff8d85; }
+.weapon-incoming[data-urgent] kbd,
+.weapon-counter kbd { background: var(--action-color); color: #11242a; text-shadow: none; }
+
+.weapon-action-announcement {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+}
 
 .weapon-retry {
     border: 1px solid #d27870;

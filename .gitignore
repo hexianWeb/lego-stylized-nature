@@ -16,6 +16,11 @@ dist
 !/test/voxelTerrainPlaceholder.test.js
 !/test/terrainMinimap.test.js
 !/test/flightControls.test.js
+!/test/aircraftWeapons.test.js
+!/test/enemyAttackRotation.test.js
+!/test/enemyEvasion.test.js
+!/test/enemyIncomingMissile.test.js
+!/test/enemyPursuitThrottle.test.js
 !/test/explorerAudio.test.js
 !/test/sizes.test.js
 dist/

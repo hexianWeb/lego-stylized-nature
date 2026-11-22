@@ -1,4 +1,5 @@
 import { Vector3 } from 'three/webgpu'
+import { MISSILE_ROLL_WINDOW } from '../world/player/aircraftIncomingMissile.js'
 
 const cannonIcon = `<svg viewBox="0 0 32 26" aria-hidden="true" focusable="false">
   <path fill="currentColor" d="M2 23c1-3.4 3.6-6.8 6.4-8.7l5.8 7.4C10.3 23.7 5.8 24.4 2 23Zm8-10 9.8-7.6 6.2 8-9.8 7.5L10 13Zm11.6-9L25 1.7l6.2 8-3.3 2.3-6.3-8Z"/>
@@ -33,6 +34,15 @@ export const aircraftWeaponMarkup = `
       <div class="weapon-enemy-edges" data-enemy-edges></div>
     </div>
     <div class="weapon-alert">
+      <div class="weapon-warning weapon-incoming" data-incoming-missile aria-hidden="true" hidden>
+        <i class="weapon-incoming-arrow"></i>
+        <span data-incoming-bearing></span><span class="weapon-incoming-eta"></span>
+        <span class="weapon-incoming-action"></span><kbd>R</kbd>
+      </div>
+      <div class="weapon-warning weapon-counter" data-counter-prompt aria-hidden="true" hidden>
+        <kbd>右键</kbd><strong>三连反击</strong><span data-counter-bearing></span>
+      </div>
+      <span class="weapon-action-announcement" role="alert" aria-atomic="true"></span>
       <div class="weapon-warning" data-player-damage role="status" hidden>
         ${warningIcon}<span class="weapon-warning-copy"></span>
       </div>
@@ -68,10 +78,14 @@ const setText = (element, value) => {
 
 const BEARINGS = ['正前', '右前', '右侧', '右后', '正后', '左后', '左侧', '左前']
 
+function bearingName(angle) {
+  const octant = Math.round(angle / (Math.PI / 4))
+  return BEARINGS[(octant % 8 + 8) % 8]
+}
+
 export function enemyBearing(dx, dy, dz, yaw) {
   if (Math.hypot(dx, dz) < 1e-4) return dy >= 0 ? '正上' : '正下'
-  const octant = Math.round((Math.atan2(dz, dx) - yaw) / (Math.PI / 4))
-  return BEARINGS[(octant % 8 + 8) % 8]
+  return bearingName(Math.atan2(dz, dx) - yaw)
 }
 
 export function projectEnemyMarker(point, camera, cameraPoint, result) {
@@ -111,6 +125,13 @@ export default class AircraftWeaponHUD {
     this.hullValue = this.hull.querySelector('.weapon-hull-value')
     this.warning = this.root.querySelector('[data-player-damage]')
     this.damage = this.warning.querySelector('.weapon-warning-copy')
+    this.incoming = this.root.querySelector('[data-incoming-missile]')
+    this.incomingBearing = this.incoming.querySelector('[data-incoming-bearing]')
+    this.incomingETA = this.incoming.querySelector('.weapon-incoming-eta')
+    this.incomingAction = this.incoming.querySelector('.weapon-incoming-action')
+    this.counter = this.root.querySelector('[data-counter-prompt]')
+    this.counterBearing = this.counter.querySelector('[data-counter-bearing]')
+    this.actionAnnouncement = this.root.querySelector('.weapon-action-announcement')
     this.retry = this.root.querySelector('.weapon-retry')
     this.hitFlash = this.root.querySelector('[data-player-hit-flash]')
     this.status = this.root.querySelector('[data-weapon-lock]')
@@ -155,7 +176,7 @@ export default class AircraftWeaponHUD {
   }
 
   showEnemyMarker(marker) {
-    const { element, edge, bearing, distance, alerted, tracked } = marker
+    const { element, edge, bearing, distance, alerted, tracked, counter } = marker
     const layer = edge ? this.enemyEdges : this.enemySights
     if (element.parentElement !== layer) layer.append(element)
     element.hidden = false
@@ -163,16 +184,18 @@ export default class AircraftWeaponHUD {
     element.dataset.bearing = bearing
     element.toggleAttribute('data-alerted', alerted)
     element.toggleAttribute('data-tracked', tracked)
+    element.toggleAttribute('data-counter', counter)
     element.style.left = `${(1 + marker.x) * 50}%`
     element.style.top = `${(1 + marker.y) * 50}%`
     if (edge) {
       element.style.setProperty('--enemy-angle', `${marker.angle}rad`)
       const count = marker.count > 1 ? ` ×${marker.count}` : ''
-      setText(marker.label, `${distance} 格${count}`)
+      setText(marker.label, `${counter ? '反击 ' : ''}${distance} 格${count}`)
     }
+    else if (counter) setText(marker.label, '反击')
   }
 
-  updateEnemyMarkers(targets, player, lockedTarget, camera, cellSize) {
+  updateEnemyMarkers(targets, player, lockedTarget, camera, cellSize, counterTarget) {
     const { position, yaw } = player.state
     const edges = this.pendingEdges
     const visibleEdges = this.visibleEdges
@@ -188,9 +211,10 @@ export default class AircraftWeaponHUD {
       const dz = target.position.z - position.z
       marker.bearing = enemyBearing(dx, dy, dz, yaw)
       marker.distance = Math.round(Math.hypot(dx, dy, dz) / cellSize)
-      marker.alerted = target.alerted === true && !target.extending
+      marker.alerted = target.attacking && target.alerted && !target.extending
       marker.tracked = target === lockedTarget
-      marker.priority = marker.tracked ? 3 : target.firing ? 2 : marker.alerted ? 1 : 0
+      marker.counter = target === counterTarget
+      marker.priority = marker.counter ? 4 : marker.tracked ? 3 : target.firing ? 2 : marker.alerted ? 1 : 0
       marker.count = 1
       if (marker.edge) edges.push(marker)
       else if (marker.tracked && !this.target.hidden) marker.element.hidden = true
@@ -231,6 +255,33 @@ export default class AircraftWeaponHUD {
     }
   }
 
+  updateActionPrompt(threat, counterTarget, playerState) {
+    this.incoming.hidden = !threat
+    this.counter.hidden = !counterTarget || Boolean(threat)
+    if (!threat) {
+      if (counterTarget) {
+        const { position, yaw } = playerState
+        const point = counterTarget.position
+        const direction = enemyBearing(point.x - position.x, point.y - position.y, point.z - position.z, yaw)
+        setText(this.counterBearing, `目标${direction}`)
+        setText(this.actionAnnouncement, `成功甩脱来弹，按右键三连反击，目标在${direction}`)
+      }
+      else setText(this.actionAnnouncement, '')
+      return
+    }
+    const direction = bearingName(threat.bearing)
+    const seconds = threat.timeToImpact
+    const urgent = seconds <= MISSILE_ROLL_WINDOW
+    const action = urgent ? '现在翻滚' : '准备翻滚'
+    this.incoming.toggleAttribute('data-urgent', urgent)
+    this.incoming.style.setProperty('--incoming-bearing', `${threat.bearing}rad`)
+    setText(this.incomingBearing, `${direction}来弹`)
+    setText(this.incomingETA, Number.isFinite(seconds) ? `${(Math.ceil(Math.max(0, seconds) * 10) / 10).toFixed(1)} 秒` : '')
+    setText(this.incomingAction, action)
+    // Announce bearing or timing changes without reading the ticking countdown.
+    setText(this.actionAnnouncement, `导弹来自${direction}，${urgent ? '现在按 R 翻滚' : '准备按 R 翻滚'}`)
+  }
+
   update(player, world, camera) {
     const weapons = world.aircraftWeapons
     const combat = world.aircraftCombatStatus
@@ -249,12 +300,17 @@ export default class AircraftWeaponHUD {
     const hitFlash = combat?.hitFlash ?? 0
     this.hitFlash.hidden = hitFlash <= 0
     if (hitFlash > 0) this.hitFlash.style.opacity = String(hitFlash)
+    const incoming = defeated ? null : combat?.incomingMissile
+    const targets = world.aircraftWeaponTargets ?? []
+    const counterTarget = !defeated && !incoming && combat?.counterReady &&
+      combat.counterTarget?.health > 0 && targets.includes(combat.counterTarget) ? combat.counterTarget : null
+    this.updateActionPrompt(incoming, counterTarget, player.state)
     const damage = defeated ? '机体受损' : hitFlash > 0 ? '被击中' : combat?.pursuers > 0 ? '敌机正在追击' : ''
-    this.warning.hidden = !damage
+    this.warning.hidden = !damage || Boolean(incoming || counterTarget)
     if (damage) setText(this.damage, damage)
     this.retry.hidden = !defeated
 
-    const target = weapons.lockTarget
+    const target = counterTarget ? null : weapons.lockTarget
     const tracking = !defeated && Boolean(target)
     const locked = tracking && weapons.locked
     this.status.hidden = !tracking
@@ -283,6 +339,6 @@ export default class AircraftWeaponHUD {
       }
     }
     else this.target.hidden = true
-    this.updateEnemyMarkers(world.aircraftWeaponTargets ?? [], player, target, camera, world.config.terrain.cellSize)
+    this.updateEnemyMarkers(targets, player, target, camera, world.config.terrain.cellSize, counterTarget)
   }
 }

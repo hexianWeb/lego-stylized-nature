@@ -99,9 +99,9 @@ export default class PlayerAircraft {
     this.visualRoot.visible = !rig?.insideCockpit
   }
 
-  update(flightPose) {
+  update(flightPose, frameDelta) {
     if (!this.enabled || this.paused) return
-    const delta = Math.min(0.15, Math.max(0, this.experience.time.getDelta()))
+    const delta = Math.min(0.15, Math.max(0, frameDelta ?? this.experience.time.getDelta()))
     if (!delta) return
     const input = this.input.consume(this.invertY)
     if (flightPose) {
@@ -144,6 +144,7 @@ export default class PlayerAircraft {
       delta, elapsed: this.elapsed, camera: this.experience.worldCamera?.instance,
       state: this.state, maxSpeed: this.motionConfig.maxSpeed, input: { thrustInput: this.state.boost },
     })
+    return flightPose ? undefined : input
   }
 
   setPaused(paused) {
