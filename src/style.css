@@ -208,7 +208,8 @@ button:focus-visible, .webgl:focus-visible {
     color: #fff;
 }
 .icon-button:active:not(:disabled) { transform: translateY(1px); }
-.icon-button[aria-pressed='true'] { color: #ffd083; }
+.icon-button[aria-pressed='true'],
+.icon-button[data-audio-pending] { color: #ffd083; }
 .action-bar [data-action='cinema'], .action-bar [data-action='map'] { display: none; }
 .has-cockpit-overlay:not(.is-cinema) .action-bar [data-action='map'] { display: grid; }
 .is-cinema .hud-part, .is-cinema .action-bar > :not([data-action='cinema']) { display: none; }

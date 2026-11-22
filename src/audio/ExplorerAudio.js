@@ -27,10 +27,6 @@ const CUES = {
     { frequency: 130, endFrequency: 48, duration: 0.19, gain: 0.14, type: 'sawtooth' },
     { frequency: 250, endFrequency: 1500, offset: 0.16, duration: 0.23, gain: 0.045, type: 'triangle' },
   ],
-  lock: [
-    { frequency: 856, duration: 0.095, gain: 0.085, type: 'triangle' },
-    { frequency: 1284, offset: 0.086, duration: 0.16, gain: 0.09, type: 'triangle' },
-  ],
   hit: [{ frequency: 395, endFrequency: 174, duration: 0.09, gain: 0.095, type: 'triangle' }],
   playerHit: [{ frequency: 248, endFrequency: 62, duration: 0.15, gain: 0.2, type: 'sawtooth' }],
   enemyCannon: [{ frequency: 141, endFrequency: 69, duration: 0.075, gain: 0.07, type: 'triangle' }],
@@ -41,6 +37,18 @@ const CUES = {
 }
 
 const CUE_COOLDOWNS = { biome: 12, home: 0.5, cannon: 0.045, hit: 0.12, enemyCannon: 0.12 }
+const LOCK_PROGRESS_CUES = [
+  { progress: 0, frequency: 780, endFrequency: 1080, duration: 0.145, gain: 0.34, type: 'triangle', release: 0.08 },
+  { progress: 0.31, frequency: 1120, duration: 0.115, gain: 0.29, type: 'triangle', release: 0.06 },
+  { progress: 0.58, frequency: 1320, duration: 0.095, gain: 0.32, type: 'triangle', release: 0.055 },
+  { progress: 0.81, frequency: 1580, duration: 0.080, gain: 0.35, type: 'triangle', release: 0.048 },
+]
+const LOCK_CONFIRM_CUE = [
+  { frequency: 1550, duration: 0.080, gain: 0.42, type: 'triangle', release: 0.047 },
+  { frequency: 2120, offset: 0.082, duration: 0.16, gain: 0.38, type: 'triangle', release: 0.10 },
+]
+const LOCK_CONFIRMED = LOCK_PROGRESS_CUES.length
+const LOCK_TICK_COOLDOWN = 0.09
 const WEAPON_EFFECTS = {
   cannon: { file: 'gun', gain: 0.7 },
   cannonTail: { file: 'guntail', gain: 0.48 },
@@ -52,6 +60,7 @@ const WEAPON_EFFECTS = {
 }
 
 const MUSIC_GAIN = 0.8
+const MUSIC_LOCK_GAIN = 0.39
 const MUSIC_TRACKS = [
   '/audio/Warm Adventure.mp3',
   '/audio/Miniature Nature.mp3',
@@ -78,7 +87,6 @@ export default class ExplorerAudio {
     catch { /* Storage may be unavailable in private or embedded browsing. */ }
     this.disposed = false
     this._focused = this.document?.hasFocus?.() !== false
-    this._gestureActive = false
     this._unlockPromise = null
     this._suspendTimer = null
     this._lastMotionUpdate = -Infinity
@@ -95,14 +103,20 @@ export default class ExplorerAudio {
     this._weaponLoading = null
     this._cannonLoop = null
     this._pendingCannon = false
+    this._lockTarget = null
+    this._lockStage = -1
+    this._lastLockCue = -Infinity
+    this._lockVoices = new Set()
+    this._musicDucked = false
 
     this._onGesture = (event) => {
+      if (!event.isTrusted || event.repeat) return
+      if (this.experience.ui && (event.code === 'KeyU' || event.target?.closest?.('[data-action="sound"]'))) return
+      const touchOrPen = event.pointerType === 'touch' || event.pointerType === 'pen'
+      if ((event.type === 'pointerdown' && touchOrPen) || (event.type === 'pointerup' && !touchOrPen)) return
       const missilePress = event.button === 2 && event.target === this.experience.canvas && this.experience.world?.aircraftWeapons
-      if (!event.isTrusted || event.repeat || (event.type === 'pointerdown' && event.button > 0 && !missilePress))
-        return
-      this._gestureActive = true
-      void this.unlock()
-      this._gestureActive = false
+      if (event.type === 'pointerdown' && event.button > 0 && !missilePress) return
+      void this.unlock(event)
     }
     this._onBlur = () => {
       this._focused = false
@@ -115,6 +129,7 @@ export default class ExplorerAudio {
     this._onVisibility = () => this._syncForeground()
 
     this.eventTarget?.addEventListener('pointerdown', this._onGesture, true)
+    this.eventTarget?.addEventListener('pointerup', this._onGesture, true)
     this.eventTarget?.addEventListener('keydown', this._onGesture, true)
     this.eventTarget?.addEventListener('blur', this._onBlur)
     this.eventTarget?.addEventListener('focus', this._onFocus)
@@ -137,21 +152,32 @@ export default class ExplorerAudio {
     return this._focused && this.document?.hidden !== true
   }
 
-  /** Must run during a trusted interaction. The built-in listeners handle this automatically. */
-  async unlock() {
+  /** Called by the built-in listeners or the sound control during a trusted interaction. */
+  async unlock(event) {
+    const trusted = event?.isTrusted === true
+    // A real interaction can reach the page before the separate window focus event.
+    const recoveredFocus = trusted && !this._focused && this.document?.hidden !== true
+    if (recoveredFocus) this._focused = true
     if (!this.enabled || !this.foreground)
       return false
-    if (!this._gestureActive && this.userActivation?.isActive !== true)
+    if (!trusted && this.userActivation?.isActive !== true)
       return this.unlocked
-    if (this._unlockPromise)
-      return this._unlockPromise
+    if (this.unlocked) {
+      if (recoveredFocus) this._syncForeground()
+      return true
+    }
 
     try {
+      if (this._unlockPromise) {
+        // An earlier resume can stay pending until the browser accepts a real gesture.
+        void this.context.resume().catch(() => {})
+        return this._unlockPromise
+      }
       if (!this.context)
         this._createGraph()
       const context = this.context
       this._unlockPromise = Promise.resolve(context.resume())
-        .then(async () => {
+        .then(() => {
           if (this.disposed || context !== this.context)
             return false
           this._syncOutput()
@@ -162,7 +188,7 @@ export default class ExplorerAudio {
             this._pendingCannon = false
             this.play('cannon')
           }
-          await this._startPlaylist()
+          void this._startPlaylist()
           return this.context === context && this.unlocked
         })
         .catch(() => false)
@@ -187,14 +213,17 @@ export default class ExplorerAudio {
     if (this.unlocked) this._loadWeaponEffects(this.context)
   }
 
-  setMuted(muted) {
+  setMuted(muted, event) {
     this.muted = Boolean(muted)
     try { this.storage?.setItem('brickland-sound-muted', String(this.muted)) }
     catch { /* Sound controls also work without browser storage. */ }
     this._syncOutput()
-    if (this.muted) this._stopCannon()
-    else
-      void this.unlock()
+    if (this.muted) {
+      this._stopCannon()
+      this._stopLockVoices()
+      return
+    }
+    return this.unlock(event)
   }
 
   setVolume(volume) {
@@ -202,6 +231,7 @@ export default class ExplorerAudio {
       return
     this.volume = clamp01(volume)
     this._syncOutput()
+    if (this.volume === 0) this._stopLockVoices()
   }
 
   _track(node) {
@@ -227,6 +257,8 @@ export default class ExplorerAudio {
     this.effects = this._track(context.createGain())
     this.effects.gain.value = 0.8
     this.effects.connect(this.master)
+    this.lockBus = this._track(context.createGain())
+    this.lockBus.connect(this.master)
     this.music = this._track(context.createGain())
     this.music.gain.value = MUSIC_GAIN
     this.music.connect(this.master)
@@ -317,10 +349,15 @@ export default class ExplorerAudio {
   update(timestamp = 0) {
     if (!this.context || this.disposed)
       return
-    const player = this.experience.world?.playerAircraft
+    const world = this.experience.world
+    const player = world?.playerAircraft
     const paused = !this.ready || !player || player.enabled === false || player.paused === true || !this.foreground
-    if (paused || this.muted || this.volume === 0) this._stopCannon()
+    const silent = paused || this.muted || this.volume === 0
+    if (silent) this._stopCannon()
     else if (this._cannonLoop && this.context.currentTime >= this._cannonLoop.until) this._stopCannon(true)
+    if (this.unlocked || silent) {
+      this._updateMissileLock(world?.aircraftWeapons, !silent && !world?.aircraftCombatStatus?.defeated)
+    }
     if (paused === this._lastPaused && timestamp >= this._lastMotionUpdate && timestamp - this._lastMotionUpdate < 50)
       return
     this._lastMotionUpdate = timestamp
@@ -376,15 +413,16 @@ export default class ExplorerAudio {
     return true
   }
 
-  _connectVoice(source, gain) {
+  _connectVoice(source, gain, output = this.effects) {
     source.connect(gain)
-    gain.connect(this.effects)
+    gain.connect(output)
     const voice = { source, gain }
     this._voices.add(voice)
     source.onended = () => {
       source.disconnect()
       gain.disconnect()
       this._voices.delete(voice)
+      if (this._lockVoices.delete(voice) && this._lockVoices.size === 0) this._setMusicDucked(false)
     }
     return voice
   }
@@ -413,7 +451,52 @@ export default class ExplorerAudio {
       this.play('cannonTail')
   }
 
-  _playTone(note, now) {
+  _updateMissileLock(weapons, audible) {
+    const target = weapons?.lockTarget ?? null
+    const stage = !target ? -1 : weapons.locked ? LOCK_CONFIRMED
+      : LOCK_PROGRESS_CUES.findLastIndex(cue => weapons.lockProgress >= cue.progress)
+    const newTarget = target !== this._lockTarget || stage < this._lockStage
+    this._lockTarget = target
+    if (!audible || newTarget) this._stopLockVoices()
+    if (newTarget) this._lockStage = -1
+    if (!audible) {
+      this._lockStage = stage
+      return
+    }
+    if (stage <= this._lockStage) return
+
+    const now = this.context.currentTime
+    const confirmed = stage === LOCK_CONFIRMED
+    // Retry an acquisition on the next frame if a rapid swap overlaps the cooldown.
+    if (!confirmed && now - this._lastLockCue < LOCK_TICK_COOLDOWN) return
+    const notes = confirmed ? LOCK_CONFIRM_CUE : [LOCK_PROGRESS_CUES[this._lockStage < 0 ? 0 : stage]]
+    this._lockStage = stage
+    this._lastLockCue = now
+    this._stopLockVoices()
+    // The lock has its own two short voices so a burst of combat sounds cannot mask the confirmation.
+    for (const note of notes) this._lockVoices.add(this._playTone(note, now, this.lockBus))
+    this._setMusicDucked(true)
+  }
+
+  _setMusicDucked(ducked) {
+    if (this._musicDucked === ducked) return
+    this._musicDucked = ducked
+    this._target(this.music.gain, ducked ? MUSIC_LOCK_GAIN : MUSIC_GAIN, ducked ? 0.018 : 0.18)
+  }
+
+  _stopLockVoices() {
+    if (!this._lockVoices.size) return
+    const now = this.context.currentTime
+    for (const { source, gain } of this._lockVoices) {
+      gain.gain.cancelScheduledValues(now)
+      gain.gain.setTargetAtTime(0, now, 0.006)
+      source.stop(now + 0.02)
+    }
+    this._lockVoices.clear()
+    this._setMusicDucked(false)
+  }
+
+  _playTone(note, now, output) {
     const oscillator = this.context.createOscillator()
     const gain = this.context.createGain()
     const start = now + (note.offset ?? 0)
@@ -425,11 +508,13 @@ export default class ExplorerAudio {
     gain.gain.setValueAtTime(0, now)
     gain.gain.setValueAtTime(0.0001, start)
     gain.gain.linearRampToValueAtTime(note.gain, start + 0.008)
+    if (note.release) gain.gain.setValueAtTime(note.gain, start + note.release)
     gain.gain.exponentialRampToValueAtTime(0.0001, end)
     gain.gain.setValueAtTime(0, end + 0.01)
-    this._connectVoice(oscillator, gain)
+    const voice = this._connectVoice(oscillator, gain, output)
     oscillator.start(start)
     oscillator.stop(end + 0.02)
+    return voice
   }
 
   async _startPlaylist() {
@@ -532,6 +617,11 @@ export default class ExplorerAudio {
     this._weaponBuffers.clear()
     this._cannonLoop = null
     this._pendingCannon = false
+    this._lockTarget = null
+    this._lockStage = -1
+    this._lastLockCue = -Infinity
+    this._lockVoices.clear()
+    this._musicDucked = false
     for (const voice of this._voices) {
       voice.source.onended = null
       try { voice.source.stop() }
@@ -552,7 +642,7 @@ export default class ExplorerAudio {
       void this.context.close().catch(() => {})
     this.context = null
     for (const field of [
-      'master', 'ambient', 'effects', 'music', 'engine', 'engineGain', 'harmonic',
+      'master', 'ambient', 'effects', 'lockBus', 'music', 'engine', 'engineGain', 'harmonic',
       'harmonicGain', 'wind', 'windHighpass', 'windFilter', 'windGain',
     ])
       this[field] = null
@@ -566,6 +656,7 @@ export default class ExplorerAudio {
     clearTimeout(this._suspendTimer)
     this._suspendTimer = null
     this.eventTarget?.removeEventListener('pointerdown', this._onGesture, true)
+    this.eventTarget?.removeEventListener('pointerup', this._onGesture, true)
     this.eventTarget?.removeEventListener('keydown', this._onGesture, true)
     this.eventTarget?.removeEventListener('blur', this._onBlur)
     this.eventTarget?.removeEventListener('focus', this._onFocus)

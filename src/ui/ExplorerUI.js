@@ -42,7 +42,7 @@ export default class ExplorerUI {
         </div>
         <nav class="action-bar" aria-label="飞行工具">
           ${button('pause', 'pause', '暂停飞行（P）', 'aria-pressed="false" disabled')}
-          ${button('sound', 'sound', '静音音效（U）', 'aria-pressed="false"')}
+          ${button('sound', 'muted', '开启音效（U）', 'aria-pressed="false"')}
           ${button('help', 'help', '操作帮助', 'aria-haspopup="dialog" disabled')}
           ${button('fullscreen', 'fullscreen', '切换全屏')}
           ${button('map', 'map', '放大小地图', 'aria-expanded="false" disabled')}
@@ -96,7 +96,7 @@ export default class ExplorerUI {
     const options = { signal: this.events.signal }
     this.deck = new FlightDeck(root)
     this.weaponHUD = new AircraftWeaponHUD(root, experience.sizes)
-    root.addEventListener('click', event => this.onAction(event.target.closest('[data-action]')?.dataset.action), options)
+    root.addEventListener('click', event => this.onAction(event.target.closest('[data-action]')?.dataset.action, event), options)
     window.addEventListener('keydown', event => this.onKeyDown(event), { ...options, capture: true })
     this.dialog.addEventListener('close', () => this.syncPause(), options)
     document.addEventListener('fullscreenchange', () => {
@@ -146,13 +146,11 @@ export default class ExplorerUI {
     this.root.classList.toggle('is-paused', this.flightPaused)
   }
 
-  onAction(action) {
+  onAction(action, event) {
     if (!action) return
     const audio = this.experience.audio
-    if (action === 'sound' && audio) {
-      audio.setMuted(!audio.muted)
-      this.syncAudioControl()
-      if (!audio.muted) audio.play('click')
+    if (action === 'sound') {
+      if (audio) void this.toggleSound(audio, event)
       return
     }
     audio?.play(action === 'pause' ? this.flightPaused ? 'resume' : 'pause' : action === 'home' ? 'home' : 'click')
@@ -222,7 +220,7 @@ export default class ExplorerUI {
     if (action) {
       event.preventDefault()
       event.stopPropagation()
-      this.onAction(action)
+      this.onAction(action, event)
     }
   }
 
@@ -239,6 +237,7 @@ export default class ExplorerUI {
     }
     if (timestamp >= this.lastUpdate && timestamp - this.lastUpdate < 100) return
     this.lastUpdate = timestamp
+    this.syncAudioControl()
     this.deck.update(player, cellSize)
     if (!hudVisible) return
     this.navigation.update(player, world)
@@ -253,13 +252,32 @@ export default class ExplorerUI {
     this.biome.textContent = BIOMES[biomeId] ?? '旷野之间'
   }
 
+  async toggleSound(audio, event) {
+    if (audio.foreground && audio.unlocked && !audio.muted) {
+      audio.setMuted(true)
+      this.syncAudioControl()
+      return
+    }
+
+    const enabling = audio.muted ? audio.setMuted(false, event) : audio.unlock(event)
+    this.syncAudioControl()
+    const enabled = await enabling
+    if (this.events.signal.aborted) return
+    this.syncAudioControl()
+    if (enabled) audio.play('click')
+  }
+
   syncAudioControl() {
-    const muted = this.experience.audio?.muted ?? true
+    const audio = this.experience.audio
+    const state = audio?.muted ? 'muted' : audio?.unlocked && audio.foreground ? 'active' : 'pending'
+    if (this.soundState === state) return
+    this.soundState = state
     const control = this.root.querySelector('[data-action="sound"]')
-    control.setAttribute('aria-pressed', String(muted))
-    control.setAttribute('aria-label', muted ? '开启音效（U）' : '静音音效（U）')
+    control.setAttribute('aria-pressed', String(state === 'muted'))
+    control.toggleAttribute('data-audio-pending', state === 'pending')
+    control.setAttribute('aria-label', state === 'active' ? '静音音效（U）' : '开启音效（U）')
     control.title = control.getAttribute('aria-label')
-    control.innerHTML = svg(muted ? 'muted' : 'sound')
+    control.innerHTML = svg(state === 'active' ? 'sound' : 'muted')
   }
 
   toggleMap(expanded = !this.mapExpanded) {

@@ -13,6 +13,19 @@ const warningIcon = `<svg viewBox="0 0 24 24" aria-hidden="true" focusable="fals
   <path d="M12 2.8 22 20.2H2L12 2.8Zm0 6v4.4m0 2.9v.4" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>`
 
+const lockCorner = `
+  <path class="weapon-lock-shell" d="M0 29V9L9 0h21v8H14l-6 6v15Z"/>
+  <path class="weapon-lock-face" d="M2 27V10l8-8h18v3H12l-7 7v15Z"/>
+  <path class="weapon-lock-hardware" d="M10 20h2v6h-2zM20 10h6v2h-6z"/>
+`
+
+const lockMarker = `<svg class="weapon-lock-graphic" viewBox="0 0 100 100" aria-hidden="true" focusable="false">
+  ${['translate(0 0)', 'translate(100 0) scale(-1 1)', 'translate(0 100) scale(1 -1)', 'translate(100 100) scale(-1 -1)']
+    .map(transform => `<g transform="${transform}">${lockCorner}</g>`).join('')}
+  <path class="weapon-lock-shell" d="M0 44h5l3 3v6l-3 3H0zM100 44h-5l-3 3v6l3 3h5z"/>
+  <path class="weapon-lock-pin" d="M2 47h3v6H2zM98 47h-3v6h3z"/>
+</svg>`
+
 export const aircraftWeaponMarkup = `
   <div class="weapon-hud flight-panel hud-part" data-weapon-hud hidden>
     <div class="weapon-hit-flash" data-player-hit-flash aria-hidden="true" hidden></div>
@@ -44,7 +57,9 @@ export const aircraftWeaponMarkup = `
       </div>
     </div>
     <i class="weapon-aim" data-weapon-aim aria-hidden="true" hidden></i>
-    <i class="weapon-target" data-weapon-target aria-hidden="true" hidden></i>
+    <div class="weapon-target" data-weapon-target aria-hidden="true" hidden>
+      <div class="weapon-lock-art">${lockMarker}<i class="weapon-lock-meter"></i></div>
+    </div>
   </div>`
 
 const setText = (element, value) => {
@@ -118,15 +133,17 @@ export default class AircraftWeaponHUD {
 
   placeMarker(element, point, camera) {
     const projected = this.projected.copy(point).applyMatrix4(camera.matrixWorldInverse)
-    if (projected.z >= -camera.near || projected.z < -camera.far) {
+    const depth = -projected.z
+    if (depth <= camera.near || depth > camera.far) {
       element.hidden = true
-      return
+      return 0
     }
     projected.applyMatrix4(camera.projectionMatrix)
     element.hidden = Math.abs(projected.x) > 1 || Math.abs(projected.y) > 1
-    if (element.hidden) return
+    if (element.hidden) return 0
     element.style.left = `${(1 + projected.x) * 50}%`
     element.style.top = `${(1 - projected.y) * 50}%`
+    return depth
   }
 
   createEnemyMarker() {
@@ -176,6 +193,7 @@ export default class AircraftWeaponHUD {
       marker.priority = marker.tracked ? 3 : target.firing ? 2 : marker.alerted ? 1 : 0
       marker.count = 1
       if (marker.edge) edges.push(marker)
+      else if (marker.tracked && !this.target.hidden) marker.element.hidden = true
       else this.showEnemyMarker(marker)
     }
     for (let i = contactCount; i < this.enemyMarkers.length; i++)
@@ -237,13 +255,17 @@ export default class AircraftWeaponHUD {
     this.retry.hidden = !defeated
 
     const target = weapons.lockTarget
-    this.status.hidden = defeated || !target
-    if (!this.status.hidden) setText(this.status, weapons.locked ? '已锁定 · 右键 / M' : '锁定中')
-    this.root.classList.toggle('is-locked', weapons.locked)
+    const tracking = !defeated && Boolean(target)
+    const locked = tracking && weapons.locked
+    this.status.hidden = !tracking
+    if (tracking) setText(this.status, locked ? '已锁定 · 右键 / M' : '锁定中')
+    this.root.classList.toggle('is-locked', locked)
     this.feedback.hidden = !(feedback?.time > 0 && feedback.text)
     if (!this.feedback.hidden) setText(this.feedback, feedback.text)
 
     this.enemySights.hidden = defeated
+    this.target.toggleAttribute('data-locked', locked)
+    this.target.style.setProperty('--lock-progress', String(tracking ? weapons.lockProgress : 0))
     if (defeated) {
       this.aim.hidden = this.target.hidden = true
       return
@@ -253,11 +275,14 @@ export default class AircraftWeaponHUD {
     const aimDistance = player.view === 'top' ? (camera.userData.focusDistance ?? 12) * 0.105 : 24
     this.aimPoint.set(aimDistance, 0, 0).applyQuaternion(player.group.quaternion).add(player.state.position)
     this.placeMarker(this.aim, this.aimPoint, camera)
-    this.target.hidden = !target
     if (target) {
-      this.placeMarker(this.target, target.position, camera)
-      this.target.style.setProperty('--lock-progress', `${weapons.lockProgress * 100}%`)
+      const depth = this.placeMarker(this.target, target.position, camera)
+      if (depth) {
+        const span = (target.radius ?? 0) * camera.projectionMatrix.elements[5] * this.sizes.height / depth
+        this.target.style.setProperty('--lock-target-size', `${Math.round(span * 1.05)}px`)
+      }
     }
+    else this.target.hidden = true
     this.updateEnemyMarkers(world.aircraftWeaponTargets ?? [], player, target, camera, world.config.terrain.cellSize)
   }
 }

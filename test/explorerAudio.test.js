@@ -39,6 +39,7 @@ class Parameter {
   setValueAtTime(value) { this.value = value }
   linearRampToValueAtTime(value) { this.value = value }
   exponentialRampToValueAtTime(value) { this.value = value }
+  cancelScheduledValues() {}
 }
 
 class AudioNode {
@@ -55,7 +56,7 @@ class AudioNode {
   stop() { this.stopped = true }
 }
 
-function createAudio({ ready = true, active = false, muted = false, storageFails = false, fetch, tracks, weapons = false } = {}) {
+function createAudio({ ready = true, active = false, muted = false, storageFails = false, fetch, tracks, weapons = false, ui, focused = true, resume } = {}) {
   const contexts = []
   class AudioContext {
     state = 'suspended'
@@ -80,13 +81,18 @@ function createAudio({ ready = true, active = false, muted = false, storageFails
     createBiquadFilter() { return this.createNode() }
     createBuffer(channels, size) { return { getChannelData: () => new Float32Array(size) } }
     async decodeAudioData(data) { return data }
-    async resume() { this.resumeCount++; this.state = 'running' }
+    async resume() {
+      this.resumeCount++
+      if (resume) await resume(this)
+      this.state = 'running'
+    }
     async suspend() { this.suspendCount++; this.state = 'suspended' }
     async close() { this.closeCount++; this.state = 'closed' }
   }
 
   const events = new Events()
   const document = new Events()
+  document.hasFocus = () => focused
   const activation = { isActive: active }
   const saved = new Map([['brickland-sound-muted', String(muted)]])
   const storage = {
@@ -108,12 +114,12 @@ function createAudio({ ready = true, active = false, muted = false, storageFails
     motionConfig: { maxSpeed: 10 },
   }
   const world = { playerAircraft: player, aircraftWeapons: weapons ? {} : undefined }
-  const audio = new ExplorerAudio({ world }, {
+  const audio = new ExplorerAudio({ world, ui }, {
     AudioContext, eventTarget: events, document, userActivation: activation, storage, fetch, tracks,
   })
   if (ready)
     audio.setReady()
-  return { audio, contexts, events, document, activation, player, saved }
+  return { audio, contexts, events, document, activation, player, saved, world }
 }
 
 test('rendering and synthetic input never create audio before a real interaction', async () => {
@@ -128,6 +134,52 @@ test('rendering and synthetic input never create audio before a real interaction
   assert.equal(contexts.length, 1)
   assert.equal(audio.unlocked, true)
   assert.equal(audio.master.gain.value, 0.28)
+  audio.dispose()
+})
+
+test('trusted touch release gets audio before the window focus event, and explicit sound actions control their own unlock', async () => {
+  const touch = createAudio({ focused: false, tracks: [] })
+  touch.events.emit('pointerdown', { isTrusted: true, pointerType: 'touch', button: 0 })
+  touch.events.emit('pointerup', { isTrusted: false, pointerType: 'touch', button: 0 })
+  assert.equal(touch.contexts.length, 0)
+  touch.events.emit('pointerup', { isTrusted: true, pointerType: 'touch', button: 0 })
+  await Promise.resolve()
+  assert.equal(touch.audio.unlocked, true)
+  assert.equal(touch.audio.master.gain.value, 0.28)
+  touch.events.emit('blur')
+  assert.equal(touch.audio.master.gain.value, 0)
+  assert.equal(await touch.audio.unlock({ isTrusted: true }), true)
+  assert.equal(touch.audio.master.gain.value, 0.28)
+  touch.audio.dispose()
+
+  const explicit = createAudio({ ui: {}, focused: false, tracks: [] })
+  const target = { closest: selector => selector === '[data-action="sound"]' }
+  explicit.events.emit('pointerdown', { isTrusted: true, button: 0, target })
+  explicit.events.emit('keydown', { isTrusted: true, code: 'KeyU' })
+  assert.equal(explicit.contexts.length, 0)
+  explicit.audio.setMuted(true)
+  assert.equal(await explicit.audio.setMuted(false, { isTrusted: true }), true)
+  assert.equal(explicit.audio.unlocked, true)
+  explicit.audio.dispose()
+})
+
+test('another trusted interaction retries a pending resume and unlock does not wait for music files', async () => {
+  let firstResume
+  const firstAttempt = new Promise(resolve => { firstResume = resolve })
+  let releaseTrack
+  const trackReady = new Promise(resolve => { releaseTrack = resolve })
+  const { audio, contexts, events } = createAudio({
+    tracks: ['/audio/slow.mp3'],
+    fetch: () => trackReady,
+    resume: context => context.resumeCount === 1 ? firstAttempt : firstResume(),
+  })
+  events.emit('pointerdown', { isTrusted: true, button: 0 })
+  assert.equal(contexts.length, 1)
+  assert.equal(audio.unlocked, false)
+  assert.equal(await audio.unlock({ isTrusted: true }), true)
+  assert.equal(contexts[0].resumeCount, 2)
+  assert.equal(audio._musicSource, null)
+  releaseTrack({ ok: false })
   audio.dispose()
 })
 
@@ -245,6 +297,7 @@ test('background tracks play in order, loop, and continue while flight is paused
   }
   const { audio, player } = createAudio({ active: true, fetch })
   assert.equal(await audio.unlock(), true)
+  await new Promise(resolve => setImmediate(resolve))
   assert.deepEqual(requested, [
     '/audio/Warm%20Adventure.mp3',
     '/audio/Miniature%20Nature.mp3',
@@ -413,4 +466,114 @@ test('disposal aborts weapon loads and late data cannot start audio', async () =
   assert.equal(context.closeCount, 1)
   assert.equal(context.nodes.length, nodeCount)
   assert.equal(audio.play('missile'), false)
+})
+
+test('missile lock cues follow progress once and stop on loss, pause, blur, mute, and defeat', async () => {
+  const { audio, contexts, events, player, world } = createAudio({
+    active: true, weapons: true, tracks: [], fetch: async () => ({ ok: false }),
+  })
+  await audio.unlock()
+  const [context] = contexts
+  const weapons = world.aircraftWeapons
+  const frequencies = () => context.nodes.filter(node => node.started && node.type === 'triangle')
+    .map(node => node.frequency.value)
+  const advance = (lockProgress, locked = false, elapsed = 0.25) => {
+    context.currentTime += elapsed
+    Object.assign(weapons, { lockProgress, locked })
+    audio.update(context.currentTime * 1000)
+  }
+  const activeVoice = () => Array.from(audio._lockVoices).at(-1)
+
+  weapons.lockTarget = {}
+  advance(0)
+  const acquisition = activeVoice()
+  assert.equal(acquisition.gain.output, audio.lockBus)
+  assert.equal(audio.lockBus.output, audio.master)
+  assert.ok(audio.music.gain.value < 0.5)
+  acquisition.source.onended()
+  assert.equal(audio.music.gain.value, 0.8)
+  advance(0.2)
+  advance(0.35)
+  advance(0.63)
+  assert.deepEqual(frequencies(), [1080, 1120, 1320])
+
+  const prePause = activeVoice()
+  player.paused = true
+  advance(0.84)
+  assert.equal(prePause.gain.gain.targets.at(-1), 0)
+  player.paused = false
+  advance(0.84)
+  assert.deepEqual(frequencies(), [1080, 1120, 1320])
+
+  weapons.lockTarget = {}
+  advance(0)
+  advance(0.84)
+  assert.deepEqual(frequencies(), [1080, 1120, 1320, 1080, 1580])
+  const preBlur = activeVoice()
+  events.emit('blur')
+  assert.equal(preBlur.gain.gain.targets.at(-1), 0)
+  events.emit('focus')
+  advance(1, true)
+  advance(1, true)
+  assert.deepEqual(frequencies(), [1080, 1120, 1320, 1080, 1580, 1550, 2120])
+
+  const confirmation = activeVoice()
+  weapons.lockTarget = null
+  advance(0)
+  assert.equal(confirmation.gain.gain.targets.at(-1), 0)
+  weapons.lockTarget = {}
+  advance(0)
+  const preMute = activeVoice()
+  audio.setMuted(true)
+  assert.equal(preMute.gain.gain.targets.at(-1), 0)
+  advance(1, true)
+  audio.setMuted(false)
+  advance(1, true)
+  assert.deepEqual(frequencies(), [1080, 1120, 1320, 1080, 1580, 1550, 2120, 1080])
+
+  weapons.lockTarget = {}
+  advance(0)
+  const preDefeat = activeVoice()
+  world.aircraftCombatStatus = { defeated: true }
+  advance(1, true)
+  assert.equal(preDefeat.gain.gain.targets.at(-1), 0)
+  assert.deepEqual(frequencies(), [1080, 1120, 1320, 1080, 1580, 1550, 2120, 1080, 1080])
+
+  world.aircraftCombatStatus = { defeated: false }
+  weapons.lockTarget = {}
+  advance(0)
+  const beforeSwap = frequencies().length
+  weapons.lockTarget = {}
+  advance(0, false, 0.04)
+  assert.equal(frequencies().length, beforeSwap)
+  advance(0.12, false, 0.06)
+  assert.equal(frequencies().length, beforeSwap + 1)
+  assert.equal(frequencies().at(-1), 1080)
+  audio.dispose()
+})
+
+test('an existing missile lock confirms on audio unlock and stays audible during busy combat', async () => {
+  const { audio, contexts, world } = createAudio({
+    active: true, weapons: true, tracks: [], fetch: async () => ({ ok: false }),
+  })
+  const weapons = world.aircraftWeapons
+  Object.assign(weapons, { lockTarget: {}, locked: true, lockProgress: 1 })
+  audio.update(16)
+  assert.equal(contexts.length, 0)
+  await audio.unlock()
+  assert.equal(audio._lockVoices.size, 2)
+
+  // Let normal effects fill their voice budget before another target locks.
+  for (const voice of audio._lockVoices) voice.source.onended()
+  const [context] = contexts
+  for (let i = 0; i < 12; i++) {
+    context.currentTime += 0.1
+    assert.equal(audio.play('click'), true)
+  }
+  assert.equal(audio.play('hit'), false)
+  weapons.lockTarget = {}
+  audio.update(32)
+  assert.equal(audio._lockVoices.size, 2)
+  assert.equal(audio._voices.size, 14)
+  audio.dispose()
 })
