@@ -19,6 +19,36 @@ const CUES = {
     { frequency: 783.99, duration: 0.3, gain: 0.025 },
     { frequency: 1174.66, offset: 0.12, duration: 0.4, gain: 0.018 },
   ],
+  cannon: [
+    { frequency: 185, endFrequency: 63, duration: 0.075, gain: 0.11, type: 'sawtooth' },
+    { frequency: 910, endFrequency: 220, duration: 0.024, gain: 0.037, type: 'square' },
+  ],
+  missile: [
+    { frequency: 130, endFrequency: 48, duration: 0.19, gain: 0.14, type: 'sawtooth' },
+    { frequency: 250, endFrequency: 1500, offset: 0.16, duration: 0.23, gain: 0.045, type: 'triangle' },
+  ],
+  lock: [
+    { frequency: 856, duration: 0.095, gain: 0.085, type: 'triangle' },
+    { frequency: 1284, offset: 0.086, duration: 0.16, gain: 0.09, type: 'triangle' },
+  ],
+  hit: [{ frequency: 395, endFrequency: 174, duration: 0.09, gain: 0.095, type: 'triangle' }],
+  playerHit: [{ frequency: 248, endFrequency: 62, duration: 0.15, gain: 0.2, type: 'sawtooth' }],
+  enemyCannon: [{ frequency: 141, endFrequency: 69, duration: 0.075, gain: 0.07, type: 'triangle' }],
+  destroyed: [
+    { frequency: 165, endFrequency: 34, duration: 0.31, gain: 0.155, type: 'sawtooth' },
+    { frequency: 525, endFrequency: 98, duration: 0.13, gain: 0.06, type: 'triangle' },
+  ],
+}
+
+const CUE_COOLDOWNS = { biome: 12, home: 0.5, cannon: 0.045, hit: 0.12, enemyCannon: 0.12 }
+const WEAPON_EFFECTS = {
+  cannon: { file: 'gun', gain: 0.7 },
+  cannonTail: { file: 'guntail', gain: 0.48 },
+  missile: { file: 'missile', gain: 0.62 },
+  hit: { file: 'hit', gain: 0.3 },
+  blast: { file: 'blast', gain: 0.48 },
+  destroyed: { file: 'explosion', gain: 0.62 },
+  reload: { file: 'reload', gain: 0.4 },
 }
 
 const MUSIC_GAIN = 0.8
@@ -60,10 +90,15 @@ export default class ExplorerAudio {
     this._musicBuffers = null
     this._musicSource = null
     this._musicLoading = false
-    this._musicAbort = new AbortController()
+    this._audioAbort = new AbortController()
+    this._weaponBuffers = new Map()
+    this._weaponLoading = null
+    this._cannonLoop = null
+    this._pendingCannon = false
 
     this._onGesture = (event) => {
-      if (!event.isTrusted || event.repeat || (event.type === 'pointerdown' && event.button > 0))
+      const missilePress = event.button === 2 && event.target === this.experience.canvas && this.experience.world?.aircraftWeapons
+      if (!event.isTrusted || event.repeat || (event.type === 'pointerdown' && event.button > 0 && !missilePress))
         return
       this._gestureActive = true
       void this.unlock()
@@ -122,6 +157,11 @@ export default class ExplorerAudio {
           this._syncOutput()
           this._lastMotionUpdate = -Infinity
           this.update(0)
+          this._loadWeaponEffects(context)
+          if (this._pendingCannon) {
+            this._pendingCannon = false
+            this.play('cannon')
+          }
           await this._startPlaylist()
           return this.context === context && this.unlocked
         })
@@ -144,6 +184,7 @@ export default class ExplorerAudio {
     this.ready = Boolean(ready)
     this._lastMotionUpdate = -Infinity
     this.update(0)
+    if (this.unlocked) this._loadWeaponEffects(this.context)
   }
 
   setMuted(muted) {
@@ -151,7 +192,8 @@ export default class ExplorerAudio {
     try { this.storage?.setItem('brickland-sound-muted', String(this.muted)) }
     catch { /* Sound controls also work without browser storage. */ }
     this._syncOutput()
-    if (!this.muted)
+    if (this.muted) this._stopCannon()
+    else
       void this.unlock()
   }
 
@@ -277,6 +319,8 @@ export default class ExplorerAudio {
       return
     const player = this.experience.world?.playerAircraft
     const paused = !this.ready || !player || player.enabled === false || player.paused === true || !this.foreground
+    if (paused || this.muted || this.volume === 0) this._stopCannon()
+    else if (this._cannonLoop && this.context.currentTime >= this._cannonLoop.until) this._stopCannon(true)
     if (paused === this._lastPaused && timestamp >= this._lastMotionUpdate && timestamp - this._lastMotionUpdate < 50)
       return
     this._lastMotionUpdate = timestamp
@@ -302,16 +346,71 @@ export default class ExplorerAudio {
 
   /** Returns false when silent, unsupported, or limited to avoid overlapping UI sounds. */
   play(name) {
-    if (!this.enabled || !this.unlocked || !this.foreground || this.volume === 0 || !CUES[name])
+    if (!this.enabled || !this.foreground || this.volume === 0)
       return false
+    if (!this.unlocked) {
+      // A click can fire before the first trusted gesture's resume has resolved.
+      if (name === 'cannon' && this._unlockPromise) this._pendingCannon = true
+      return false
+    }
     const now = this.context.currentTime
-    const cooldown = name === 'biome' ? 12 : name === 'home' ? 0.5 : 0.07
-    if (now - (this._lastCue.get(name) ?? -Infinity) < cooldown || this._voices.size + CUES[name].length > 12)
+    const sample = this._weaponBuffers.get(name)
+    if (name === 'cannon' && sample) {
+      if (!this._cannonLoop) {
+        if (this._voices.size >= 12) return false
+        const voice = this._playSample(sample, now, true)
+        this._cannonLoop = { voice, started: now, until: now }
+      }
+      this._cannonLoop.until = now + 0.14
+      return true
+    }
+
+    const tones = CUES[name === 'blast' ? 'destroyed' : name === 'reload' ? 'click' : name]
+    if (!sample && !tones) return false
+    const cooldown = CUE_COOLDOWNS[name] ?? 0.07
+    if (now - (this._lastCue.get(name) ?? -Infinity) < cooldown || this._voices.size + (sample ? 1 : tones.length) > 12)
       return false
     this._lastCue.set(name, now)
-    for (const note of CUES[name])
-      this._playTone(note, now)
+    if (sample) this._playSample(sample, now)
+    else for (const note of tones) this._playTone(note, now)
     return true
+  }
+
+  _connectVoice(source, gain) {
+    source.connect(gain)
+    gain.connect(this.effects)
+    const voice = { source, gain }
+    this._voices.add(voice)
+    source.onended = () => {
+      source.disconnect()
+      gain.disconnect()
+      this._voices.delete(voice)
+    }
+    return voice
+  }
+
+  _playSample({ buffer, gain: level }, now, loop = false) {
+    const source = this.context.createBufferSource()
+    const gain = this.context.createGain()
+    source.buffer = buffer
+    source.loop = loop
+    gain.gain.value = loop ? 0 : level
+    if (loop) gain.gain.setTargetAtTime(level, now, 0.008)
+    const voice = this._connectVoice(source, gain)
+    source.start(now)
+    return voice
+  }
+
+  _stopCannon(playTail = false) {
+    this._pendingCannon = false
+    const loop = this._cannonLoop
+    if (!loop) return
+    this._cannonLoop = null
+    const now = this.context.currentTime
+    loop.voice.gain.gain.setTargetAtTime(0, now, 0.012)
+    loop.voice.source.stop(now + 0.05)
+    if (playTail && now - loop.started >= 0.2)
+      this.play('cannonTail')
   }
 
   _playTone(note, now) {
@@ -328,15 +427,7 @@ export default class ExplorerAudio {
     gain.gain.linearRampToValueAtTime(note.gain, start + 0.008)
     gain.gain.exponentialRampToValueAtTime(0.0001, end)
     gain.gain.setValueAtTime(0, end + 0.01)
-    oscillator.connect(gain)
-    gain.connect(this.effects)
-    const voice = { oscillator, gain }
-    this._voices.add(voice)
-    oscillator.onended = () => {
-      oscillator.disconnect()
-      gain.disconnect()
-      this._voices.delete(voice)
-    }
+    this._connectVoice(oscillator, gain)
     oscillator.start(start)
     oscillator.stop(end + 0.02)
   }
@@ -363,24 +454,36 @@ export default class ExplorerAudio {
   async _loadTracks(context) {
     if (this._musicBuffers)
       return this._musicBuffers
-    const loaded = await Promise.all(this.tracks.map(async (path) => {
-      try {
-        const response = await this.fetch(encodeURI(path), { signal: this._musicAbort.signal })
-        if (!response?.ok || this.disposed || this.context !== context)
-          return null
-        const data = await response.arrayBuffer()
-        if (this.disposed || this.context !== context)
-          return null
-        return await context.decodeAudioData(data)
-      }
-      catch {
-        return null
-      }
-    }))
+    const loaded = await Promise.all(this.tracks.map(path => this._decodeSample(context, path)))
     const buffers = loaded.filter(Boolean)
     if (!this.disposed && this.context === context && buffers.length)
       this._musicBuffers = buffers
     return this.context === context ? buffers : []
+  }
+
+  async _decodeSample(context, path) {
+    try {
+      const response = await this.fetch(encodeURI(path), { signal: this._audioAbort.signal })
+      if (!response?.ok || this.disposed || this.context !== context) return null
+      const data = await response.arrayBuffer()
+      if (this.disposed || this.context !== context) return null
+      const buffer = await context.decodeAudioData(data)
+      return !this.disposed && this.context === context ? buffer : null
+    }
+    catch {
+      return null
+    }
+  }
+
+  _loadWeaponEffects(context) {
+    if (!this.fetch || !this.experience.world?.aircraftWeapons || this._weaponLoading) return
+    this._weaponLoading = Promise.all(Object.entries(WEAPON_EFFECTS).map(async ([name, effect]) => {
+      const buffer = await this._decodeSample(context, `/audio/weapon-effects/${effect.file}.mp3`)
+      if (buffer && this.context === context && !this.disposed) {
+        this._weaponBuffers.set(name, { buffer, gain: effect.gain })
+        if (name === 'hit') this._weaponBuffers.set('playerHit', { buffer, gain: 0.75 })
+      }
+    }))
   }
 
   _playTrack(index) {
@@ -425,11 +528,15 @@ export default class ExplorerAudio {
     this._stopMusic()
     this._musicBuffers = null
     this._musicLoading = false
+    this._weaponLoading = null
+    this._weaponBuffers.clear()
+    this._cannonLoop = null
+    this._pendingCannon = false
     for (const voice of this._voices) {
-      voice.oscillator.onended = null
-      try { voice.oscillator.stop() }
+      voice.source.onended = null
+      try { voice.source.stop() }
       catch { /* A scheduled voice may already have ended. */ }
-      voice.oscillator.disconnect()
+      voice.source.disconnect()
       voice.gain.disconnect()
     }
     this._voices.clear()
@@ -455,7 +562,7 @@ export default class ExplorerAudio {
     if (this.disposed)
       return
     this.disposed = true
-    this._musicAbort.abort()
+    this._audioAbort.abort()
     clearTimeout(this._suspendTimer)
     this._suspendTimer = null
     this.eventTarget?.removeEventListener('pointerdown', this._onGesture, true)

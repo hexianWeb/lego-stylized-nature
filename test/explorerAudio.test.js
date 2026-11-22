@@ -49,13 +49,13 @@ class AudioNode {
   started = false
   stopped = false
 
-  connect() {}
+  connect(output) { this.output = output }
   disconnect() { this.disconnected = true }
   start() { this.started = true }
   stop() { this.stopped = true }
 }
 
-function createAudio({ ready = true, active = false, muted = false, storageFails = false, fetch } = {}) {
+function createAudio({ ready = true, active = false, muted = false, storageFails = false, fetch, tracks, weapons = false } = {}) {
   const contexts = []
   class AudioContext {
     state = 'suspended'
@@ -107,8 +107,9 @@ function createAudio({ ready = true, active = false, muted = false, storageFails
     state: { velocity: { x: 0, y: 0, z: 0 }, boost: 0 },
     motionConfig: { maxSpeed: 10 },
   }
-  const audio = new ExplorerAudio({ world: { playerAircraft: player } }, {
-    AudioContext, eventTarget: events, document, userActivation: activation, storage, fetch,
+  const world = { playerAircraft: player, aircraftWeapons: weapons ? {} : undefined }
+  const audio = new ExplorerAudio({ world }, {
+    AudioContext, eventTarget: events, document, userActivation: activation, storage, fetch, tracks,
   })
   if (ready)
     audio.setReady()
@@ -212,8 +213,8 @@ test('short cues are bounded, finish cleanly, and disposal releases every node a
   assert.equal(audio.play('click'), true)
   assert.equal(audio.play('click'), false)
   const click = Array.from(audio._voices)[0]
-  click.oscillator.onended()
-  assert.equal(click.oscillator.disconnected, true)
+  click.source.onended()
+  assert.equal(click.source.disconnected, true)
   assert.equal(click.gain.disconnected, true)
   assert.equal(audio._voices.size, 0)
   for (const cue of ['home', 'pause', 'resume', 'biome']) {
@@ -228,7 +229,7 @@ test('short cues are bounded, finish cleanly, and disposal releases every node a
   assert.equal(events.listenerCount, 0)
   assert.equal(document.listenerCount, 0)
   assert.ok(context.nodes.every(node => node.disconnected))
-  assert.ok(voices.every(voice => voice.oscillator.stopped && voice.oscillator.disconnected && voice.gain.disconnected))
+  assert.ok(voices.every(voice => voice.source.stopped && voice.source.disconnected && voice.gain.disconnected))
   assert.equal(audio.play('click'), false)
   assert.equal(await audio.unlock(), false)
 })
@@ -278,4 +279,138 @@ test('an interrupted unlock cannot revive a disposed experience', async () => {
   assert.equal(await pending, false)
   assert.equal(contexts[0].state, 'closed')
   assert.equal(contexts[0].closeCount, 1)
+})
+
+const WEAPON_CLIPS = ['gun', 'guntail', 'missile', 'hit', 'blast', 'explosion', 'reload']
+const clipName = url => url.slice(url.lastIndexOf('/') + 1, -4)
+const clipResponse = clip => ({ ok: true, arrayBuffer: async () => ({ clip, duration: 0.45 }) })
+const sampled = (context, clip) => context.nodes.filter(node => node.buffer?.clip === clip)
+
+test('weapon clips load once on unlock and leave synthesis available before or after a failed load', async () => {
+  let releaseGun
+  const gunReady = new Promise(resolve => { releaseGun = resolve })
+  const requested = []
+  const fetch = async (url) => {
+    requested.push(url)
+    const clip = clipName(url)
+    if (clip === 'gun') await gunReady
+    if (clip === 'hit') return { ok: false }
+    return clipResponse(clip)
+  }
+  const { audio, contexts, events } = createAudio({ fetch, tracks: [], weapons: true })
+  assert.equal(audio.play('cannon'), false)
+  assert.deepEqual(requested, [])
+
+  events.emit('pointerdown', { isTrusted: true, button: 0 })
+  await new Promise(resolve => setImmediate(resolve))
+  const context = contexts[0]
+  assert.equal(audio.unlocked, true)
+  assert.equal(audio.play('cannon'), true)
+  assert.ok(Array.from(audio._voices).some(voice => voice.source.started && !voice.source.buffer))
+  assert.equal(sampled(context, 'gun').length, 0)
+
+  releaseGun()
+  await audio._weaponLoading
+  context.currentTime += 1
+  assert.equal(audio.play('cannon'), true)
+  assert.equal(sampled(context, 'gun').length, 1)
+  for (const [cue, clip] of [['missile', 'missile'], ['destroyed', 'explosion'], ['blast', 'blast'], ['reload', 'reload']]) {
+    assert.equal(audio.play(cue), true)
+    const [source] = sampled(context, clip)
+    assert.ok(source?.started)
+    assert.ok(source.output === audio.effects || source.output?.output === audio.effects)
+  }
+  const before = audio._voices.size
+  assert.equal(audio.play('hit'), true)
+  assert.equal(audio.play('playerHit'), true)
+  assert.ok(audio._voices.size > before)
+  assert.equal(sampled(context, 'hit').length, 0)
+
+  events.emit('keydown', { isTrusted: true })
+  await new Promise(resolve => setImmediate(resolve))
+  assert.deepEqual(requested.sort(), WEAPON_CLIPS.map(clip => `/audio/weapon-effects/${clip}.mp3`).sort())
+  audio.dispose()
+})
+
+test('player damage reuses the impact clip at higher volume and enemy fire leaves the player cannon idle', async () => {
+  const fetch = async url => clipResponse(clipName(url))
+  const { audio, contexts } = createAudio({ active: true, fetch, tracks: [], weapons: true })
+  await audio.unlock()
+  await audio._weaponLoading
+  assert.equal(audio.play('enemyCannon'), true)
+  assert.equal(sampled(contexts[0], 'gun').length, 0)
+  assert.equal(audio.play('hit'), true)
+  assert.equal(audio.play('playerHit'), true)
+  const [outgoing, incoming] = sampled(contexts[0], 'hit')
+  assert.equal(incoming.buffer, outgoing.buffer)
+  assert.ok(incoming.output.gain.value > outgoing.output.gain.value)
+  audio.dispose()
+})
+
+test('cannon pulses share one loop, use a tail on sustained release, and stop silently on mute', async () => {
+  const fetch = async url => clipResponse(clipName(url))
+  const { audio, contexts } = createAudio({ active: true, fetch, tracks: [], weapons: true })
+  await audio.unlock()
+  await audio._weaponLoading
+  const context = contexts[0]
+  const fireBurst = () => {
+    for (let i = 0; i < 5; i++) {
+      context.currentTime += 0.06
+      assert.equal(audio.play('cannon'), true)
+    }
+    return sampled(context, 'gun').at(-1)
+  }
+
+  const loop = fireBurst()
+  assert.equal(sampled(context, 'gun').length, 1)
+  assert.equal(loop.loop, true)
+  assert.equal(loop.started, true)
+  context.currentTime += 0.07
+  audio.update(16)
+  assert.equal(loop.stopped, false)
+  context.currentTime += 0.10
+  audio.update(32)
+  assert.equal(loop.stopped, true)
+  assert.equal(sampled(context, 'guntail').length, 1)
+
+  const nextLoop = fireBurst()
+  audio.setMuted(true)
+  assert.equal(nextLoop.stopped, true)
+  assert.equal(audio.master.gain.value, 0)
+  assert.equal(audio.play('cannon'), false)
+  context.currentTime += 1
+  audio.update(48)
+  assert.equal(sampled(context, 'guntail').length, 1)
+
+  const [tail] = sampled(context, 'guntail')
+  audio.dispose()
+  assert.equal(tail.stopped, true)
+  assert.equal(tail.disconnected, true)
+  assert.equal(nextLoop.disconnected, true)
+})
+
+test('disposal aborts weapon loads and late data cannot start audio', async () => {
+  let release
+  const ready = new Promise(resolve => { release = resolve })
+  const signals = []
+  const fetch = async (url, { signal }) => {
+    signals.push(signal)
+    await ready
+    return clipResponse(clipName(url))
+  }
+  const { audio, contexts } = createAudio({ active: true, fetch, tracks: [], weapons: true })
+  await audio.unlock()
+  const loading = audio._weaponLoading
+  const context = contexts[0]
+  const nodeCount = context.nodes.length
+  assert.equal(signals.length, WEAPON_CLIPS.length)
+  assert.ok(signals.every(signal => !signal.aborted))
+
+  audio.dispose()
+  assert.ok(signals.every(signal => signal.aborted))
+  release()
+  await loading
+  assert.equal(context.closeCount, 1)
+  assert.equal(context.nodes.length, nodeCount)
+  assert.equal(audio.play('missile'), false)
 })
