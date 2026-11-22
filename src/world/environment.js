@@ -30,11 +30,6 @@ export default class Environment {
     this.environmentIntensity = 0.3
     this.useEnvBackground = false
     this.backgroundColor = flightAtmosphere?.sky ?? SOLID_BACKGROUND
-    if (flightAtmosphere) {
-      // Fade coarse terrain beyond the detail window into the flying horizon.
-      this.fog = new THREE.Fog(this.backgroundColor, flightAtmosphere.near, flightAtmosphere.far)
-      scene.fog = this.fog
-    }
     /** 0 = darker shadows, 1 = more ambient/env fill */
     this.shadowFill = 0.32
     this.shadowBounds = {
@@ -109,7 +104,6 @@ export default class Environment {
 
   syncBackground() {
     this.clearColor.set(this.backgroundColor)
-    this.fog?.color.copy(this.clearColor)
     this.scene.background = this.useEnvBackground && this.envMap
       ? this.envMap
       : this.clearColor
@@ -250,7 +244,6 @@ export default class Environment {
     this.disposed = true
     this.scene.environment = null
     this.scene.background = null
-    if (this.fog) this.scene.fog = null
     this.envMapRenderTarget?.dispose()
     this.envMapRenderTarget = null
     this.envMap = null

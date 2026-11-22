@@ -99,7 +99,7 @@ export const worldConfig = {
       appearance: 'model',
       assetName: 'playerAircraftModel',
       view: 'top',
-      atmosphere: { sky: '#add7e0', near: 12, far: 35 },
+      atmosphere: { sky: '#add7e0' },
       invertY: true,
       cameraFollow: { enabled: true },
       visualAttitude: {
