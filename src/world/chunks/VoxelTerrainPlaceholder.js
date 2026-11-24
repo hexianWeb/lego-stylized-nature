@@ -7,13 +7,14 @@ import BiomeBlender from '../biomes/BiomeBlender.js'
 import BrickColorResolver from '../bricks/BrickColorResolver.js'
 import { heightShapers } from '../terrain/heightShapers.js'
 import { getChunkWindowCoords, getRenderChunkKey } from './chunkCoordinates.js'
+import MidTerrainRing from './MidTerrainRing.js'
 
 const clamp01 = value => Math.max(0, Math.min(1, value))
 const smoothstep = value => value * value * (3 - 2 * value)
 
 /** Coarse biome-colored boxes, dissolved by the detailed terrain's column clock. */
 export default class VoxelTerrainPlaceholder {
-  constructor({ config, parentGroup, biomeRegistry = new BiomeRegistry(), biomeMaskGenerator = new BiomeMaskGenerator(config), colorResolver = null }) {
+  constructor({ config, parentGroup, biomeRegistry = new BiomeRegistry(), biomeMaskGenerator = new BiomeMaskGenerator(config), colorResolver = null, releaseSceneObjects = null }) {
     this.config = config
     this.parentGroup = parentGroup
     this.biomeRegistry = biomeRegistry
@@ -56,6 +57,7 @@ export default class VoxelTerrainPlaceholder {
     this.mesh.castShadow = false
     this.mesh.receiveShadow = false
     parentGroup.add(this.mesh)
+    this.midground = settings.midground ? new MidTerrainRing(this, settings.midground, releaseSceneObjects) : null
   }
 
   sampleHeight(x, z, biomeCell) {
@@ -76,8 +78,8 @@ export default class VoxelTerrainPlaceholder {
     return Math.max(0, Math.min(terrain.maxHeight, Math.floor(height)))
   }
 
-  getTop(height) {
-    return Math.max(this.heightStep, Math.round((height + 1) * this.config.terrain.layerHeight / this.heightStep) * this.heightStep)
+  getTop(height, step = this.heightStep) {
+    return Math.max(step, Math.round((height + 1) * this.config.terrain.layerHeight / step) * step)
   }
 
   getBoxSpan(block) {
@@ -105,28 +107,29 @@ export default class VoxelTerrainPlaceholder {
     return top
   }
 
-  createChunk(coord) {
+  createChunk(coord, span = this.cellSpan, step = this.heightStep) {
     const { cellSize } = this.config.terrain
     const originX = coord.x * this.chunkSize
     const originZ = coord.z * this.chunkSize
     const context = this.biomeMaskGenerator.createSamplingContext()
     const voxels = []
-    for (let z = 0; z < this.chunkSize; z += this.cellSpan) {
-      for (let x = 0; x < this.chunkSize; x += this.cellSpan) {
-        const endX = Math.min(this.chunkSize, x + this.cellSpan)
-        const endZ = Math.min(this.chunkSize, z + this.cellSpan)
+    for (let z = 0; z < this.chunkSize; z += span) {
+      for (let x = 0; x < this.chunkSize; x += span) {
+        const endX = Math.min(this.chunkSize, x + span)
+        const endZ = Math.min(this.chunkSize, z + span)
         const sampleX = originX + Math.floor((x + endX) / 2)
         const sampleZ = originZ + Math.floor((z + endZ) / 2)
         const biomeCell = this.biomeMaskGenerator.getCellBiome(sampleX, sampleZ, context)
         const height = this.sampleHeight(sampleX, sampleZ, biomeCell)
-        const top = this.getTop(height)
+        const top = this.getTop(height, step)
         const noise = random01(sampleX, sampleZ, this.config.seed + 52817)
         voxels.push({
+          top,
           x: (originX + (x + endX) / 2) * cellSize,
-          y: (top - this.heightStep) / 2,
+          y: (top - step) / 2,
           z: (originZ + (z + endZ) / 2) * cellSize,
           size: (endX - x) * cellSize,
-          sizeY: top + this.heightStep,
+          sizeY: top + step,
           sizeZ: (endZ - z) * cellSize,
           sample: { x: sampleX, y: height, z: sampleZ, biomeCell, surfaceCell: { height }, layer: 'surface' },
           // Wait for the trailing edge of this large box: all covered columns
@@ -143,7 +146,7 @@ export default class VoxelTerrainPlaceholder {
     return { coord: { ...coord }, voxels, start: 0, mode: null }
   }
 
-  update(centerCoord, activeSlots = new Map()) {
+  update(centerCoord, activeSlots = new Map(), deadline = Infinity) {
     if (!centerCoord)
       return
     const moved = this.centerCoord?.x !== centerCoord.x || this.centerCoord?.z !== centerCoord.z
@@ -151,6 +154,11 @@ export default class VoxelTerrainPlaceholder {
     if (moved) {
       this.centerCoord = { ...centerCoord }
       const coords = getChunkWindowCoords(centerCoord, this.radius)
+      // Keep the far ring at the front of the instance buffer. When the middle
+      // ring is ready, its fallback instances are outside the submitted draw.
+      if (this.midground) coords.sort((a, b) =>
+        Math.max(Math.abs(b.x - centerCoord.x), Math.abs(b.z - centerCoord.z))
+        - Math.max(Math.abs(a.x - centerCoord.x), Math.abs(a.z - centerCoord.z)))
       const retained = new Set(coords.map(getRenderChunkKey))
       for (const key of this.cache.keys()) {
         if (!retained.has(key))
@@ -173,15 +181,25 @@ export default class VoxelTerrainPlaceholder {
       this.updateColors()
     }
 
+    const visible = this.visible && (this.config.chunks.debugSpacing ?? 0) === 0
+    this.midground?.update(centerCoord, activeSlots, moved, visible, deadline)
+    const useMidground = this.midground && this.midground.mode !== 'coarse'
+    let count = 0
     let firstChanged = Infinity
     let lastChanged = 0
     for (const [key, chunk] of this.cache) {
       const slot = activeSlots.get(key)
-      const mode = !slot ? 'covered' : slot.columnTransition?.active ? 'dissolving' : 'revealed'
+      const mode = this.midground?.patches.has(key) ? 'replaced'
+        : !slot ? 'covered' : slot.columnTransition?.active ? 'dissolving' : 'revealed'
+      if (!useMidground || (mode !== 'replaced' && mode !== 'revealed'))
+        count = Math.max(count, chunk.start + chunk.voxels.length)
       if (!moved && mode === chunk.mode && mode !== 'dissolving')
         continue
       chunk.mode = mode
-      this.updateChunk(chunk, slot)
+      if (mode === 'replaced') {
+        this.mesh.instanceMatrix.array.fill(0, chunk.start * 16, (chunk.start + chunk.voxels.length) * 16)
+      }
+      else this.updateChunk(chunk, slot)
       firstChanged = Math.min(firstChanged, chunk.start * 16)
       lastChanged = Math.max(lastChanged, (chunk.start + chunk.voxels.length) * 16)
     }
@@ -196,7 +214,8 @@ export default class VoxelTerrainPlaceholder {
       attribute.addUpdateRange(firstChanged, lastChanged - firstChanged)
       attribute.needsUpdate = true
     }
-    this.mesh.visible = this.visible && (this.config.chunks.debugSpacing ?? 0) === 0
+    this.mesh.count = count
+    this.mesh.visible = visible
   }
 
   updateChunk(chunk, slot) {
@@ -220,6 +239,11 @@ export default class VoxelTerrainPlaceholder {
     }
   }
 
+  hazeAt(x, z) {
+    const distance = Math.max(Math.abs(x - this.hazeX), Math.abs(z - this.hazeZ))
+    return smoothstep(clamp01((distance - this.hazeInner) / this.hazeSpan)) * 0.32
+  }
+
   updateColors() {
     let ancestor = this.parentGroup
     while (ancestor && !ancestor.isScene)
@@ -227,16 +251,14 @@ export default class VoxelTerrainPlaceholder {
     if (ancestor?.background?.isColor)
       this.background.copy(ancestor.background)
     const chunkWorldSize = this.chunkSize * this.config.terrain.cellSize
-    const centerX = (this.centerCoord.x + 0.5) * chunkWorldSize
-    const centerZ = (this.centerCoord.z + 0.5) * chunkWorldSize
-    const inner = (this.windowRadius + 0.5) * chunkWorldSize
-    const outer = (this.radius + 0.5) * chunkWorldSize
+    this.hazeX = (this.centerCoord.x + 0.5) * chunkWorldSize
+    this.hazeZ = (this.centerCoord.z + 0.5) * chunkWorldSize
+    this.hazeInner = (this.windowRadius + 0.5) * chunkWorldSize
+    this.hazeSpan = (this.radius - this.windowRadius) * chunkWorldSize
     const color = new THREE.Color()
     for (const chunk of this.cache.values()) {
       chunk.voxels.forEach((voxel, index) => {
-        const distance = Math.max(Math.abs(voxel.x - centerX), Math.abs(voxel.z - centerZ))
-        const haze = smoothstep(clamp01((distance - inner) / (outer - inner))) * 0.32
-        this.colorResolver.resolveColor(voxel.sample, color).lerp(this.background, haze)
+        this.colorResolver.resolveColor(voxel.sample, color).lerp(this.background, this.hazeAt(voxel.x, voxel.z))
         this.mesh.setColorAt(chunk.start + index, color)
       })
     }
@@ -250,9 +272,14 @@ export default class VoxelTerrainPlaceholder {
     if (this.centerCoord)
       this.updateColors()
     this.mesh.visible = visible && this.centerCoord !== null && (this.config.chunks.debugSpacing ?? 0) === 0
+    if (this.midground) {
+      this.midground.group.visible = this.mesh.visible
+      for (const patch of this.midground.patches.values()) patch.updateColors(this, true)
+    }
   }
 
   reset() {
+    this.midground?.clear()
     this.cache.clear()
     this.centerCoord = null
     this.activeSlots = null
@@ -263,6 +290,7 @@ export default class VoxelTerrainPlaceholder {
 
   dispose() {
     this.reset()
+    this.midground?.dispose()
     this.mesh.dispose()
     this.geometry.dispose()
     this.material.dispose()

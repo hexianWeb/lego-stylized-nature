@@ -24,7 +24,7 @@ export function getForestTrialConfig(config, mode) {
   return {
     ...config,
     seed: 20260608,
-    biomes: { ...config.biomes, previewBiome: mode === 'forest' ? 'autumnForest' : null },
+    biomes: { ...config.biomes, previewBiome: mode === 'forest' ? 'autumnForest' : '' },
   }
 }
 

@@ -77,7 +77,12 @@ export const worldConfig = {
     halo: 8,
     windowRadius: 1,
     /** Coarse biome-colored boxes cover pending chunks; cellSpan is in terrain cells. */
-    placeholder: { enabled: true, radius: 3, cellSpan: 12 },
+    placeholder: {
+      enabled: true, radius: 3, cellSpan: 12,
+      // First ring outside the detailed window. 'boxes' is the equal-density
+      // instanced control; 'coarse' restores the original distant boxes.
+      midground: { mode: 'surface', cellSpan: 6, heightLayers: 2, brickSeams: true },
+    },
     /** A continuous band of brick-sized clouds over the placeholder, bandBoxes boxes wide around loaded terrain. */
     clouds: { enabled: true, bandBoxes: 2 },
     maxPendingBuildsPerFrame: 1,

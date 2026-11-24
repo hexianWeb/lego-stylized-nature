@@ -13,6 +13,16 @@ export function createChunksPanel(debug, config, chunkManager) {
     chunkManager?.setDebugSpacing(config.chunks.debugSpacing)
   })
 
+  const midground = config.chunks.placeholder?.midground
+  if (midground) {
+    const mid = folder.addFolder({ title: 'Midground', expanded: true })
+    mid.addBinding(midground, 'mode', {
+      label: 'Geometry',
+      options: { 'Stepped surface': 'surface', 'Same-density boxes': 'boxes', 'Original coarse boxes': 'coarse' },
+    })
+    mid.addBinding(midground, 'brickSeams', { label: 'Brick seams' })
+  }
+
   const transition = config.chunks.transition
   if (transition) {
     const animationFolder = folder.addFolder({ title: 'Column Transition', expanded: true })

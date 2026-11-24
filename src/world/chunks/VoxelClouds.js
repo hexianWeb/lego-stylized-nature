@@ -198,9 +198,11 @@ export default class VoxelClouds {
     let lastChanged = 0
     for (const [key, chunk] of this.cache) {
       const slot = activeSlots.get(key)
+      const midTops = this.placeholder.midground?.patches.get(key)?.cloudTops
       const mode = !slot ? 'covered' : slot.columnTransition?.active ? 'dissolving' : 'revealed'
-      if (!moved && mode === chunk.mode && mode !== 'dissolving' && !chunk.appearing)
+      if (!moved && mode === chunk.mode && mode !== 'dissolving' && !chunk.appearing && midTops === chunk.midTops)
         continue
+      chunk.midTops = midTops
       chunk.mode = mode
       this.updateChunk(chunk, slot, now)
       firstChanged = Math.min(firstChanged, chunk.start * 16)
@@ -243,7 +245,10 @@ export default class VoxelClouds {
       const dissolve = smoothstep(clamp01((progress - dissolveStart) / (dissolveEnd - dissolveStart)))
       const scale = appear * (1 - dissolve)
       const sizeY = chunk.layers[cell] * this.voxelHeight
-      const base = chunk.bases[Math.floor(localZ / span) * chunk.boxes + Math.floor(localX / span)]
+      const box = Math.floor(localZ / span) * chunk.boxes + Math.floor(localX / span)
+      const base = chunk.midTops
+        ? Math.max(chunk.bases[box], chunk.midTops[box] + this.voxelHeight * 1.5)
+        : chunk.bases[box]
       const offset = (chunk.start + index) * 16
       matrix.fill(0, offset, offset + 16)
       matrix[offset] = this.voxelSize * scale

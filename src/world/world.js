@@ -142,6 +142,7 @@ export default class World {
           buildWorkers: ChunkBuildWorkerPool.create(this.config.chunks),
           prepareAhead: preparation?.metrics.enabled === true,
           isTerrainReady: preparation?.isObjectReady,
+          releaseSceneObjects: group => this.experience.renderer?.releaseSceneObjects?.(group),
         })
       }
       else {

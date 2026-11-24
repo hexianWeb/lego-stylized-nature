@@ -32,6 +32,7 @@ export default class ChunkManager {
     buildWorkers = null,
     prepareAhead = false,
     isTerrainReady = null,
+    releaseSceneObjects = null,
   }) {
     this.config = config
     this.terrainGenerator = terrainGenerator
@@ -87,7 +88,7 @@ export default class ChunkManager {
     const placeholderSettings = chunkConfig.placeholder ?? chunkConfig.distantTerrain
     this.terrainPlaceholder = placeholderSettings?.enabled === true
       ? new VoxelTerrainPlaceholder({
-          config, parentGroup,
+          config, parentGroup, releaseSceneObjects,
           biomeRegistry: biomeRegistry ?? terrainGenerator.biomeRegistry,
           biomeMaskGenerator: terrainGenerator.biomeMaskGenerator,
           colorResolver: brickColorResolver,
@@ -746,7 +747,7 @@ export default class ChunkManager {
     }
     // Worker builds retain their coarse cover; both renderers share the same
     // column clock so placeholder boxes dissolve as detailed terrain rises.
-    this.terrainPlaceholder?.update(this.centerCoord, this.activeSlots)
+    this.terrainPlaceholder?.update(this.centerCoord, this.activeSlots, deadline)
     this.voxelClouds?.update(this.centerCoord, this.activeSlots)
   }
 
