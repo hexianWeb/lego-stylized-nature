@@ -334,7 +334,10 @@ test('an interrupted unlock cannot revive a disposed experience', async () => {
   assert.equal(contexts[0].closeCount, 1)
 })
 
-const WEAPON_CLIPS = ['gun', 'guntail', 'missile', 'hit', 'blast', 'explosion', 'reload']
+const WEAPON_CLIPS = [
+  'gun', 'guntail', 'missile', 'hit', 'blast', 'explosion', 'reload', 'enemy-cannon',
+  'incoming-missile', 'lock-acquire', 'lock-progress', 'lock-confirmed',
+]
 const clipName = url => url.slice(url.lastIndexOf('/') + 1, -4)
 const clipResponse = clip => ({ ok: true, arrayBuffer: async () => ({ clip, duration: 0.45 }) })
 const sampled = (context, clip) => context.nodes.filter(node => node.buffer?.clip === clip)
@@ -391,7 +394,10 @@ test('player damage reuses the impact clip at higher volume and enemy fire leave
   await audio.unlock()
   await audio._weaponLoading
   assert.equal(audio.play('enemyCannon'), true)
+  assert.ok(sampled(contexts[0], 'enemy-cannon')[0]?.started)
   assert.equal(sampled(contexts[0], 'gun').length, 0)
+  assert.equal(audio.play('incomingMissile'), true)
+  assert.ok(sampled(contexts[0], 'incoming-missile')[0]?.started)
   assert.equal(audio.play('hit'), true)
   assert.equal(audio.play('playerHit'), true)
   const [outgoing, incoming] = sampled(contexts[0], 'hit')
@@ -470,13 +476,14 @@ test('disposal aborts weapon loads and late data cannot start audio', async () =
 
 test('missile lock cues follow progress once and stop on loss, pause, blur, mute, and defeat', async () => {
   const { audio, contexts, events, player, world } = createAudio({
-    active: true, weapons: true, tracks: [], fetch: async () => ({ ok: false }),
+    active: true, weapons: true, tracks: [], fetch: async url => clipResponse(clipName(url)),
   })
   await audio.unlock()
+  await audio._weaponLoading
   const [context] = contexts
   const weapons = world.aircraftWeapons
-  const frequencies = () => context.nodes.filter(node => node.started && node.type === 'triangle')
-    .map(node => node.frequency.value)
+  const played = () => context.nodes.filter(node => node.started && node.buffer?.clip?.startsWith('lock-'))
+    .map(node => node.buffer.clip)
   const advance = (lockProgress, locked = false, elapsed = 0.25) => {
     context.currentTime += elapsed
     Object.assign(weapons, { lockProgress, locked })
@@ -487,6 +494,7 @@ test('missile lock cues follow progress once and stop on loss, pause, blur, mute
   weapons.lockTarget = {}
   advance(0)
   const acquisition = activeVoice()
+  assert.equal(acquisition.source.buffer.clip, 'lock-acquire')
   assert.equal(acquisition.gain.output, audio.lockBus)
   assert.equal(audio.lockBus.output, audio.master)
   assert.ok(audio.music.gain.value < 0.5)
@@ -495,7 +503,8 @@ test('missile lock cues follow progress once and stop on loss, pause, blur, mute
   advance(0.2)
   advance(0.35)
   advance(0.63)
-  assert.deepEqual(frequencies(), [1080, 1120, 1320])
+  const firstLock = ['lock-acquire', 'lock-progress', 'lock-progress']
+  assert.deepEqual(played(), firstLock)
 
   const prePause = activeVoice()
   player.paused = true
@@ -503,19 +512,21 @@ test('missile lock cues follow progress once and stop on loss, pause, blur, mute
   assert.equal(prePause.gain.gain.targets.at(-1), 0)
   player.paused = false
   advance(0.84)
-  assert.deepEqual(frequencies(), [1080, 1120, 1320])
+  assert.deepEqual(played(), firstLock)
 
   weapons.lockTarget = {}
   advance(0)
   advance(0.84)
-  assert.deepEqual(frequencies(), [1080, 1120, 1320, 1080, 1580])
+  const secondLock = [...firstLock, 'lock-acquire', 'lock-progress']
+  assert.deepEqual(played(), secondLock)
   const preBlur = activeVoice()
   events.emit('blur')
   assert.equal(preBlur.gain.gain.targets.at(-1), 0)
   events.emit('focus')
   advance(1, true)
   advance(1, true)
-  assert.deepEqual(frequencies(), [1080, 1120, 1320, 1080, 1580, 1550, 2120])
+  secondLock.push('lock-confirmed')
+  assert.deepEqual(played(), secondLock)
 
   const confirmation = activeVoice()
   weapons.lockTarget = null
@@ -529,7 +540,7 @@ test('missile lock cues follow progress once and stop on loss, pause, blur, mute
   advance(1, true)
   audio.setMuted(false)
   advance(1, true)
-  assert.deepEqual(frequencies(), [1080, 1120, 1320, 1080, 1580, 1550, 2120, 1080])
+  assert.deepEqual(played(), [...secondLock, 'lock-acquire'])
 
   weapons.lockTarget = {}
   advance(0)
@@ -537,43 +548,57 @@ test('missile lock cues follow progress once and stop on loss, pause, blur, mute
   world.aircraftCombatStatus = { defeated: true }
   advance(1, true)
   assert.equal(preDefeat.gain.gain.targets.at(-1), 0)
-  assert.deepEqual(frequencies(), [1080, 1120, 1320, 1080, 1580, 1550, 2120, 1080, 1080])
+  assert.deepEqual(played(), [...secondLock, 'lock-acquire', 'lock-acquire'])
 
   world.aircraftCombatStatus = { defeated: false }
   weapons.lockTarget = {}
   advance(0)
-  const beforeSwap = frequencies().length
+  const beforeSwap = played().length
   weapons.lockTarget = {}
   advance(0, false, 0.04)
-  assert.equal(frequencies().length, beforeSwap)
+  assert.equal(played().length, beforeSwap)
   advance(0.12, false, 0.06)
-  assert.equal(frequencies().length, beforeSwap + 1)
-  assert.equal(frequencies().at(-1), 1080)
+  assert.equal(played().length, beforeSwap + 1)
+  assert.equal(played().at(-1), 'lock-acquire')
   audio.dispose()
 })
 
-test('an existing missile lock confirms on audio unlock and stays audible during busy combat', async () => {
+test('an existing missile lock waits for its clip and stays audible during busy combat', async () => {
+  let releaseConfirmation
+  const confirmationReady = new Promise(resolve => { releaseConfirmation = resolve })
+  const fetch = async (url) => {
+    const clip = clipName(url)
+    if (clip === 'lock-confirmed') await confirmationReady
+    return clipResponse(clip)
+  }
   const { audio, contexts, world } = createAudio({
-    active: true, weapons: true, tracks: [], fetch: async () => ({ ok: false }),
+    active: true, weapons: true, tracks: [], fetch,
   })
   const weapons = world.aircraftWeapons
   Object.assign(weapons, { lockTarget: {}, locked: true, lockProgress: 1 })
   audio.update(16)
   assert.equal(contexts.length, 0)
   await audio.unlock()
-  assert.equal(audio._lockVoices.size, 2)
+  audio.update(16)
+  assert.equal(audio._voices.size, 0)
+  releaseConfirmation()
+  await audio._weaponLoading
+  audio.update(32)
+  const [context] = contexts
+  assert.equal(sampled(context, 'lock-confirmed').length, 1)
+  assert.equal(audio._lockVoices.size, 1)
 
   // Let normal effects fill their voice budget before another target locks.
   for (const voice of audio._lockVoices) voice.source.onended()
-  const [context] = contexts
   for (let i = 0; i < 12; i++) {
     context.currentTime += 0.1
     assert.equal(audio.play('click'), true)
   }
   assert.equal(audio.play('hit'), false)
   weapons.lockTarget = {}
-  audio.update(32)
-  assert.equal(audio._lockVoices.size, 2)
-  assert.equal(audio._voices.size, 14)
+  audio.update(48)
+  assert.equal(sampled(context, 'lock-confirmed').length, 2)
+  assert.equal(audio._lockVoices.size, 1)
+  assert.equal(audio._voices.size, 13)
   audio.dispose()
 })

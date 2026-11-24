@@ -29,11 +29,6 @@ const CUES = {
   ],
   hit: [{ frequency: 395, endFrequency: 174, duration: 0.09, gain: 0.095, type: 'triangle' }],
   playerHit: [{ frequency: 248, endFrequency: 62, duration: 0.15, gain: 0.2, type: 'sawtooth' }],
-  enemyCannon: [{ frequency: 141, endFrequency: 69, duration: 0.075, gain: 0.07, type: 'triangle' }],
-  incomingMissile: [
-    { frequency: 770, duration: 0.1, gain: 0.085, type: 'square' },
-    { frequency: 770, offset: 0.19, duration: 0.14, gain: 0.085, type: 'square' },
-  ],
   destroyed: [
     { frequency: 165, endFrequency: 34, duration: 0.31, gain: 0.155, type: 'sawtooth' },
     { frequency: 525, endFrequency: 98, duration: 0.13, gain: 0.06, type: 'triangle' },
@@ -41,17 +36,8 @@ const CUES = {
 }
 
 const CUE_COOLDOWNS = { biome: 12, home: 0.5, cannon: 0.045, hit: 0.12, enemyCannon: 0.12 }
-const LOCK_PROGRESS_CUES = [
-  { progress: 0, frequency: 780, endFrequency: 1080, duration: 0.145, gain: 0.34, type: 'triangle', release: 0.08 },
-  { progress: 0.31, frequency: 1120, duration: 0.115, gain: 0.29, type: 'triangle', release: 0.06 },
-  { progress: 0.58, frequency: 1320, duration: 0.095, gain: 0.32, type: 'triangle', release: 0.055 },
-  { progress: 0.81, frequency: 1580, duration: 0.080, gain: 0.35, type: 'triangle', release: 0.048 },
-]
-const LOCK_CONFIRM_CUE = [
-  { frequency: 1550, duration: 0.080, gain: 0.42, type: 'triangle', release: 0.047 },
-  { frequency: 2120, offset: 0.082, duration: 0.16, gain: 0.38, type: 'triangle', release: 0.10 },
-]
-const LOCK_CONFIRMED = LOCK_PROGRESS_CUES.length
+const LOCK_PROGRESS_STAGES = [0, 0.31, 0.58, 0.81]
+const LOCK_CONFIRMED = LOCK_PROGRESS_STAGES.length
 const LOCK_TICK_COOLDOWN = 0.09
 const WEAPON_EFFECTS = {
   cannon: { file: 'gun', gain: 0.7 },
@@ -61,6 +47,11 @@ const WEAPON_EFFECTS = {
   blast: { file: 'blast', gain: 0.48 },
   destroyed: { file: 'explosion', gain: 0.62 },
   reload: { file: 'reload', gain: 0.4 },
+  enemyCannon: { file: 'enemy-cannon', gain: 0.32 },
+  incomingMissile: { file: 'incoming-missile', gain: 0.56 },
+  lockAcquire: { file: 'lock-acquire', gain: 0.5 },
+  lockProgress: { file: 'lock-progress', gain: 0.45 },
+  lockConfirmed: { file: 'lock-confirmed', gain: 0.78 },
 }
 
 const MUSIC_GAIN = 0.8
@@ -431,14 +422,14 @@ export default class ExplorerAudio {
     return voice
   }
 
-  _playSample({ buffer, gain: level }, now, loop = false) {
+  _playSample({ buffer, gain: level }, now, loop = false, output) {
     const source = this.context.createBufferSource()
     const gain = this.context.createGain()
     source.buffer = buffer
     source.loop = loop
     gain.gain.value = loop ? 0 : level
     if (loop) gain.gain.setTargetAtTime(level, now, 0.008)
-    const voice = this._connectVoice(source, gain)
+    const voice = this._connectVoice(source, gain, output)
     source.start(now)
     return voice
   }
@@ -458,7 +449,7 @@ export default class ExplorerAudio {
   _updateMissileLock(weapons, audible) {
     const target = weapons?.lockTarget ?? null
     const stage = !target ? -1 : weapons.locked ? LOCK_CONFIRMED
-      : LOCK_PROGRESS_CUES.findLastIndex(cue => weapons.lockProgress >= cue.progress)
+      : LOCK_PROGRESS_STAGES.findLastIndex(progress => weapons.lockProgress >= progress)
     const newTarget = target !== this._lockTarget || stage < this._lockStage
     this._lockTarget = target
     if (!audible || newTarget) this._stopLockVoices()
@@ -473,12 +464,15 @@ export default class ExplorerAudio {
     const confirmed = stage === LOCK_CONFIRMED
     // Retry an acquisition on the next frame if a rapid swap overlaps the cooldown.
     if (!confirmed && now - this._lastLockCue < LOCK_TICK_COOLDOWN) return
-    const notes = confirmed ? LOCK_CONFIRM_CUE : [LOCK_PROGRESS_CUES[this._lockStage < 0 ? 0 : stage]]
+    const cue = confirmed ? 'lockConfirmed' : stage === 0 ? 'lockAcquire' : 'lockProgress'
+    const sample = this._weaponBuffers.get(cue)
+    // Keep evaluating the active stage while its clip loads.
+    if (!sample) return
     this._lockStage = stage
     this._lastLockCue = now
     this._stopLockVoices()
-    // The lock has its own two short voices so a burst of combat sounds cannot mask the confirmation.
-    for (const note of notes) this._lockVoices.add(this._playTone(note, now, this.lockBus))
+    // Lock cues stay audible even when other combat sounds fill the effects bus.
+    this._lockVoices.add(this._playSample(sample, now, false, this.lockBus))
     this._setMusicDucked(true)
   }
 
@@ -500,7 +494,7 @@ export default class ExplorerAudio {
     this._setMusicDucked(false)
   }
 
-  _playTone(note, now, output) {
+  _playTone(note, now) {
     const oscillator = this.context.createOscillator()
     const gain = this.context.createGain()
     const start = now + (note.offset ?? 0)
@@ -512,10 +506,9 @@ export default class ExplorerAudio {
     gain.gain.setValueAtTime(0, now)
     gain.gain.setValueAtTime(0.0001, start)
     gain.gain.linearRampToValueAtTime(note.gain, start + 0.008)
-    if (note.release) gain.gain.setValueAtTime(note.gain, start + note.release)
     gain.gain.exponentialRampToValueAtTime(0.0001, end)
     gain.gain.setValueAtTime(0, end + 0.01)
-    const voice = this._connectVoice(oscillator, gain, output)
+    const voice = this._connectVoice(oscillator, gain)
     oscillator.start(start)
     oscillator.stop(end + 0.02)
     return voice
