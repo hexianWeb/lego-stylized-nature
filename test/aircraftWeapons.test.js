@@ -112,8 +112,8 @@ test('weapon visuals separate both tracer colors and keep smoke after the missil
   const missile = { position: position.clone(), direction, launchUp: new Vector3(0, 0.8, 0.6), powered: false }
   const visualState = { shots: [shot, { ...shot, enemy: true }], missiles: [missile] }
   visuals.update(0.02, visualState, [], [{ type: 'cannon', position, direction }])
-  assert.equal(batch('CannonTracerHeads').count, 1)
   assert.equal(batch('CannonTracerStreaks').count, 1)
+  assert.equal(batch('CannonTracerStreaks').geometry, batch('EnemyCannonTracers').geometry)
   assert.equal(batch('CannonMuzzleFlares').count, 1)
   assert.equal(batch('EnemyCannonTracers').count, 1)
   assert.equal(batch('MissileBody0').count, 1)
@@ -145,6 +145,44 @@ test('weapon visuals separate both tracer colors and keep smoke after the missil
   assert.equal(resourceDisposals, 0)
   geometry.dispose()
   material.dispose()
+})
+
+test('each player shot ejects one casing on the firing side, then the casing moves independently', (t) => {
+  const weapons = createAircraftWeapons()
+  const visuals = createAircraftWeaponVisuals()
+  t.after(() => visuals.dispose())
+  const casings = visuals.group.getObjectByName('CannonCasings')
+  const jet = aircraft()
+  jet.cannon = true
+  jet.quaternion.setFromAxisAngle(new Vector3(1, 0, 0), Math.PI / 3)
+  const outboard = new Vector3(0, 0, 1).applyQuaternion(jet.quaternion)
+  const events = weapons.step(0.12, jet)
+  assert.deepEqual(events.map(event => event.side), [-1, 1, -1])
+  visuals.update(0.12, weapons, [], events)
+  assert.equal(casings.count, events.length)
+  const matrix = new Matrix4()
+  const location = i => {
+    casings.getMatrixAt(i, matrix)
+    return new Vector3().setFromMatrixPosition(matrix)
+  }
+  for (const [i, event] of events.entries()) {
+    const outwardDistance = location(i).sub(event.position).dot(outboard) * event.side
+    assert.ok(outwardDistance > 0.025)
+  }
+  const previous = location(1)
+  jet.position.x += 80
+  jet.quaternion.identity()
+  jet.cannon = false
+  visuals.update(0.04, weapons, [], weapons.step(0.04, jet))
+  assert.equal(casings.count, 3)
+  assert.ok(location(1).x > previous.x)
+  assert.ok(location(1).distanceTo(previous) < 1)
+  visuals.update(0.5, weapons)
+  assert.equal(casings.count, 0)
+  visuals.update(0, weapons, [], events)
+  visuals.reset()
+  visuals.update(0, weapons)
+  assert.equal(casings.count, 0)
 })
 
 test('incoming missiles keep their own body and leave a local trail through a flyby', (t) => {

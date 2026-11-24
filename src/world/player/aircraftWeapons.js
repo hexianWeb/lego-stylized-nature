@@ -177,12 +177,15 @@ export function createAircraftWeapons({ sampleSurface } = {}) {
     }
   }
 
-  function fireCannon(aircraft, scale, events) {
+  function fireCannon(aircraft, scale, events, frameAge) {
     const position = mount(aircraft.position, scale, 2, -1.8, cannonSide * 9)
     const toe = -cannonSide * 9 * ART_UNIT * scale * SHOT_SPEED / SHOT_CROSSING
     const velocity = forward.clone().multiplyScalar(SHOT_SPEED).addScaledVector(right, toe).add(aircraft.velocity)
     shots.push({ id: nextId++, position, direction: velocity.clone().normalize(), velocity, age: 0 })
-    events.push({ type: 'cannon', weapon: 'cannon', position: position.clone(), direction: forward.clone() })
+    events.push({
+      type: 'cannon', weapon: 'cannon', position: position.clone(), direction: forward.clone(),
+      side: cannonSide, orientation: aircraft.quaternion.clone(), carrierVelocity: aircraft.velocity.clone(), scale, frameAge,
+    })
     cannonSide = -cannonSide
     spend(cannonAmmo)
   }
@@ -361,7 +364,7 @@ export function createAircraftWeapons({ sampleSurface } = {}) {
       }
       if (aircraft.cannon && cannonAmmo.left) {
         if (gunDue <= EPSILON) {
-          fireCannon(aircraft, scale, events)
+          fireCannon(aircraft, scale, events, (steps - i) * stepTime)
           gunDue += SHOT_INTERVAL
         }
         gunDue -= stepTime

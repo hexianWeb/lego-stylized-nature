@@ -14,7 +14,7 @@ export function createModelAircraft(scene, flameConfig) {
   if (settings.enabled) {
     for (const name of ['left_engine', 'right_engine']) {
       const mount = root.getObjectByName(name)
-      if (mount) flames.push(createEngineFlameVFX(mount, settings))
+      if (mount) flames.push(createEngineFlameVFX(mount, settings, flames.length * 1.5))
     }
   }
   return {

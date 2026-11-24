@@ -2,6 +2,7 @@ import * as THREE from 'three/webgpu'
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js'
 import { attribute } from 'three/tsl'
 import { FLIGHT_POSE_ORDER } from '../camera.js'
+import { cannonFlashGeometry, createCannonCasings } from './aircraftCannonVisuals.js'
 import { createAircraftMissileRack } from './aircraftMissileRack.js'
 import { createEnemyAircraftModels } from './enemyAircraftModels.js'
 
@@ -16,14 +17,12 @@ const MISSILE_NOZZLE = MISSILE_LENGTH * 0.5 - 0.018
 const UP = new THREE.Vector3(0, 1, 0)
 const X_AXIS = new THREE.Vector3(1, 0, 0)
 const HOT = new THREE.Color(0xfff0bf)
-const TRACER_COLOR = new THREE.Color(0xffb652)
-const TRACER_HEAD = new THREE.Color(0xfffad8)
 const SPARK_DIRECTIONS = [
   [1, 0.3, 0.2], [-1, 0.8, 0.15], [0.2, 0.5, 1],
   [-0.34, -0.5, -1], [0.42, -1, 0.25], [0.15, 1, -0.4],
 ].map(axis => new THREE.Vector3(...axis).normalize())
 const BURSTS = {
-  cannon: { duration: 0.095, size: 0.112, spread: 0.28, sparks: 3, color: 0xffbf65 },
+  cannon: { duration: 0.048 },
   enemyCannon: { duration: 0.085, size: 0.09, spread: 0.22, sparks: 2, color: 0xff5a47 },
   enemyMissile: { duration: 0.16, size: 0.18, spread: 0.35, sparks: 3, color: 0xff584c },
   enemyMissileHit: { duration: 0.35, size: 0.38, spread: 0.85, sparks: 6, color: 0xff4b37 },
@@ -102,6 +101,7 @@ export function createAircraftWeaponVisuals(missileScene, mountParent, enemyScen
   const geometry = {
     ...enemyAirframe(),
     brick: new THREE.BoxGeometry(1, 1, 1),
+    cannonFlash: cannonFlashGeometry(),
     point: new THREE.OctahedronGeometry(1),
     streak: new THREE.ConeGeometry(1, 1, 6).rotateZ(Math.PI),
     smoke: new THREE.IcosahedronGeometry(0.5),
@@ -118,7 +118,8 @@ export function createAircraftWeaponVisuals(missileScene, mountParent, enemyScen
     trim: new THREE.MeshStandardMaterial({ color: 0xefaa47, roughness: 0.44 }),
     engines: new THREE.MeshBasicMaterial({ color: 0xffd89a, toneMapped: false }),
     damaged: new THREE.MeshBasicMaterial({ color: 0xff7857, toneMapped: false }),
-    tracer: new THREE.MeshBasicMaterial({ color: 0xffffff, toneMapped: false }),
+    tracer: new THREE.MeshBasicMaterial({ color: 0xffad4c, toneMapped: false }),
+    cannonFlash: new THREE.MeshBasicMaterial({ vertexColors: true, toneMapped: false }),
     enemyTracer: new THREE.MeshBasicMaterial({ color: 0xff5a47, toneMapped: false }),
     glow: new THREE.MeshBasicMaterial({
       color: 0xffac46, transparent: true, opacity: 0.40, depthWrite: false, toneMapped: false,
@@ -157,9 +158,7 @@ export function createAircraftWeaponVisuals(missileScene, mountParent, enemyScen
     return mesh
   }
 
-  const tracerStreaks = batch(geometry.streak, material.tracer, TRACER_CAPACITY, 'CannonTracerStreaks')
-  const tracerHeads = batch(geometry.point, material.tracer, TRACER_CAPACITY, 'CannonTracerHeads')
-  const tracerGlows = batch(geometry.streak, material.glow, TRACER_CAPACITY, 'CannonTracerGlow')
+  const tracerStreaks = batch(geometry.brick, material.tracer, TRACER_CAPACITY, 'CannonTracerStreaks')
   const enemyTracers = batch(geometry.brick, material.enemyTracer, TRACER_CAPACITY, 'EnemyCannonTracers')
   const missileParts = importedMissile.length ? importedMissile : [{ shape: geometry.fallbackMissile, paint: material.fallbackMissile }]
   const missileRack = mountParent ? createAircraftMissileRack(missileParts, mountParent) : null
@@ -177,11 +176,14 @@ export function createAircraftWeaponVisuals(missileScene, mountParent, enemyScen
   const exhaust = batch(geometry.streak, material.exhaust, MISSILE_CAPACITY, 'MissileExhaust')
   const smoke = batch(geometry.smoke, material.smoke, SMOKE_CAPACITY, 'MissileSmoke')
   const flashes = batch(geometry.point, material.burst, BURST_CAPACITY, 'WeaponFlashes')
-  const muzzleFlares = batch(geometry.streak, material.glow, BURST_CAPACITY, 'CannonMuzzleFlares')
+  const muzzleFlares = batch(geometry.cannonFlash, material.cannonFlash, BURST_CAPACITY, 'CannonMuzzleFlares')
+  const enemyFlares = batch(geometry.streak, material.glow, BURST_CAPACITY, 'EnemyMuzzleFlares')
+  const casings = createCannonCasings()
+  group.add(casings.mesh)
   const sparks = batch(geometry.brick, material.burst, BURST_CAPACITY * SPARK_DIRECTIONS.length, 'WeaponSparks')
-  const batches = [tracerStreaks, tracerHeads, tracerGlows, enemyTracers, ...darts, plumes, exhaust, smoke, flashes, muzzleFlares, sparks]
+  const batches = [tracerStreaks, enemyTracers, ...darts, plumes, exhaust, smoke, flashes, muzzleFlares, enemyFlares, sparks]
   const bursts = Array.from({ length: BURST_CAPACITY }, () => ({
-    position: new THREE.Vector3(), direction: new THREE.Vector3(), style: null, elapsed: 0,
+    position: new THREE.Vector3(), direction: new THREE.Vector3(), velocity: new THREE.Vector3(), style: null, elapsed: 0,
   }))
   const puffs = Array.from({ length: SMOKE_CAPACITY }, () => ({ position: new THREE.Vector3(), age: SMOKE_LIFE }))
   const lastPuffByMissile = new Map()
@@ -329,14 +331,9 @@ export function createAircraftWeaponVisuals(missileScene, mountParent, enemyScen
         place(enemyTracers, enemyCount++, shot.position, 0.027, 0.36, -0.11)
         continue
       }
-      const trail = Math.max(0.04, Math.min(0.042, shot.age) * shot.velocity.length())
-      const hotness = 1 - 0.45 * THREE.MathUtils.smoothstep(shot.age, 0.45, 0.95)
-      place(tracerStreaks, playerCount, shot.position, 0.044 * hotness, trail, -trail * 0.5)
-      place(tracerGlows, playerCount, shot.position, 0.092 * hotness, trail, -trail * 0.5)
-      place(tracerHeads, playerCount, shot.position, 0.044 * hotness, 0.118 * hotness)
-      tracerStreaks.setColorAt(playerCount, tint.copy(TRACER_COLOR).multiplyScalar(hotness))
-      tracerHeads.setColorAt(playerCount, tint.copy(TRACER_HEAD).multiplyScalar(hotness))
-      playerCount++
+      const length = THREE.MathUtils.clamp(0.065 + shot.age * shot.velocity.length(), 0.10, 0.425)
+      const width = 0.013 * (1 - 0.45 * THREE.MathUtils.smoothstep(shot.age, 0.45, 0.95))
+      place(tracerStreaks, playerCount++, shot.position, width, length, -length * 0.5)
     }
     for (const missile of lastPuffByMissile.keys())
       if (missile !== incomingMissile && (!missile.powered || !missiles.includes(missile))) lastPuffByMissile.delete(missile)
@@ -364,8 +361,6 @@ export function createAircraftWeaponVisuals(missileScene, mountParent, enemyScen
       poweredCount++
     }
     writeCount(tracerStreaks, playerCount)
-    writeCount(tracerHeads, playerCount)
-    writeCount(tracerGlows, playerCount)
     writeCount(enemyTracers, enemyCount)
     for (const dart of darts) writeCount(dart, missileCount)
     writeCount(plumes, poweredCount)
@@ -374,6 +369,11 @@ export function createAircraftWeaponVisuals(missileScene, mountParent, enemyScen
   }
 
   function updateBursts(delta, events) {
+    for (const burst of bursts) {
+      if (burst.style !== BURSTS.cannon) continue
+      burst.elapsed += delta
+      burst.position.addScaledVector(burst.velocity, delta)
+    }
     for (const event of events) {
       const missileImpact = event.weapon === 'missile' && (event.type === 'hit' || event.type === 'impact')
       const style = missileImpact ? BURSTS.missileImpact : BURSTS[event.type]
@@ -388,9 +388,15 @@ export function createAircraftWeaponVisuals(missileScene, mountParent, enemyScen
       else burst.direction.set(0, 0, 0)
       burst.style = style
       burst.elapsed = 0
+      if (style === BURSTS.cannon) {
+        burst.elapsed = event.frameAge ?? 0
+        burst.velocity.set(0, 0, 0)
+        if (event.carrierVelocity) burst.velocity.copy(event.carrierVelocity)
+      }
     }
     let flashCount = 0
     let muzzleCount = 0
+    let enemyFlareCount = 0
     let sparkCount = 0
     for (const burst of bursts) {
       const style = burst.style
@@ -401,6 +407,12 @@ export function createAircraftWeaponVisuals(missileScene, mountParent, enemyScen
         continue
       }
       const remaining = 1 - progress
+      if (style === BURSTS.cannon) {
+        axis.copy(burst.direction)
+        transform.quaternion.setFromUnitVectors(UP, axis)
+        place(muzzleFlares, muzzleCount++, burst.position, 0.086 * (0.5 + remaining * 0.5), 0.21 * remaining)
+        continue
+      }
       const radius = style.size * remaining * (1 + progress * 0.7)
       tint.setHex(style.color).lerp(HOT, 0.6 * remaining)
       axis.set(0, 0, 0)
@@ -411,7 +423,7 @@ export function createAircraftWeaponVisuals(missileScene, mountParent, enemyScen
         axis.copy(burst.direction)
         transform.quaternion.setFromUnitVectors(UP, axis)
         const length = 0.42 * remaining
-        place(muzzleFlares, muzzleCount++, burst.position, 0.11 * remaining, length, length * 0.46)
+        place(enemyFlares, enemyFlareCount++, burst.position, 0.11 * remaining, length, length * 0.46)
       }
       for (let n = 0; n < style.sparks; n++) {
         axis.copy(SPARK_DIRECTIONS[n]).addScaledVector(burst.direction, 1.55).normalize()
@@ -424,6 +436,7 @@ export function createAircraftWeaponVisuals(missileScene, mountParent, enemyScen
     }
     writeCount(flashes, flashCount)
     writeCount(muzzleFlares, muzzleCount)
+    writeCount(enemyFlares, enemyFlareCount)
     writeCount(sparks, sparkCount)
   }
 
@@ -436,11 +449,13 @@ export function createAircraftWeaponVisuals(missileScene, mountParent, enemyScen
     updateProjectiles(weapons?.shots ?? [], weapons?.missiles ?? [], incomingMissile)
     updateSmoke(elapsed)
     updateBursts(elapsed, events)
+    casings.update(elapsed, events)
   }
 
   function reset() {
     time = burstIndex = puffIndex = 0
     lastPuffByMissile.clear()
+    casings.reset()
     incoming.visible = false
     for (const model of models) model.root.visible = false
     for (const mesh of batches) mesh.count = 0
@@ -453,6 +468,7 @@ export function createAircraftWeaponVisuals(missileScene, mountParent, enemyScen
     disposed = true
     missileRack?.dispose()
     enemyModels.dispose()
+    casings.dispose()
     group.removeFromParent()
     group.clear()
     for (const mesh of batches) mesh.dispose()
