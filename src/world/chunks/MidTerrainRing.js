@@ -1,6 +1,7 @@
 import * as THREE from 'three/webgpu'
-import { createMidTerrainMaterial } from '../../materials/tsl/midTerrainMaterial.js'
+import { createPlaceholderTerrainMaterial } from '../../materials/tsl/placeholderTerrainMaterial.js'
 import { getChunkWindowCoords, getRenderChunkKey } from './chunkCoordinates.js'
+import { createPlaceholderColorAttributes, samplePlaceholderPalette, writePlaceholderColors } from './placeholderTerrainPalette.js'
 
 const distance = (a, b) => Math.max(Math.abs(a.x - b.x), Math.abs(a.z - b.z))
 
@@ -87,13 +88,9 @@ class MidTerrainPatch {
     const length = this.offsets[count]
     const Attribute = boxes ? THREE.InstancedBufferAttribute : THREE.BufferAttribute
     this.cover = new Attribute(new Float32Array(length).fill(1), 1).setUsage(THREE.DynamicDrawUsage)
-    this.color = new Attribute(new Float32Array(length * 3), 3)
+    this.colors = createPlaceholderColorAttributes(this.mesh, length)
     const anchors = new Float32Array(length * 3)
     const matrix = new THREE.Matrix4()
-    // Cloud bases use the maximum under a whole *coarse* footprint, including
-    // finer tiles straddling a coarse boundary when the spans aren't divisible.
-    const coarseCols = Math.ceil(chunkSize / owner.cellSpan)
-    this.cloudTops = new Float32Array(coarseCols ** 2)
     let maxTop = 0
     for (let i = 0; i < count; i++) {
       const tile = this.tiles[i]
@@ -105,13 +102,6 @@ class MidTerrainPatch {
         anchors[j + 2] = z
       }
       if (boxes) this.mesh.setMatrixAt(i, matrix.makeScale(tile.size, tile.sizeY, tile.sizeZ).setPosition(x, tile.y, z))
-      const first = tile.cells[0], last = tile.cells[3]
-      for (let cz = Math.floor(first / chunkSize / owner.cellSpan); cz <= Math.floor(last / chunkSize / owner.cellSpan); cz++) {
-        for (let cx = Math.floor(first % chunkSize / owner.cellSpan); cx <= Math.floor(last % chunkSize / owner.cellSpan); cx++) {
-          const k = cz * coarseCols + cx
-          this.cloudTops[k] = Math.max(this.cloudTops[k], tile.top)
-        }
-      }
     }
     geometry.setAttribute('tileCover', this.cover)
     geometry.setAttribute('tileAnchor', new Attribute(anchors, 3))
@@ -120,26 +110,20 @@ class MidTerrainPatch {
     const bounds = new THREE.Sphere(new THREE.Vector3(half, (maxTop - step) * 0.5, half),
       Math.hypot(half, (maxTop + step) * 0.5, half))
     if (boxes) {
-      this.mesh.instanceColor = this.color
       this.mesh.boundingSphere = bounds
     }
     else {
-      geometry.setAttribute('color', this.color)
       geometry.boundingSphere = bounds
     }
-    this.palette = new Float32Array(count * 3)
     this.updateColors(owner, true)
   }
 
   updateColors(owner, resample) {
-    const color = new THREE.Color()
-    for (let i = 0; i < this.tiles.length; i++) {
-      const tile = this.tiles[i]
-      if (resample) owner.colorResolver.resolveColor(tile.sample, color).toArray(this.palette, i * 3)
-      color.fromArray(this.palette, i * 3).lerp(owner.background, owner.hazeAt(tile.x, tile.z))
-      for (let j = this.offsets[i]; j < this.offsets[i + 1]; j++) color.toArray(this.color.array, j * 3)
+    if (resample) {
+      this.palette = samplePlaceholderPalette(owner.colorResolver, this.tiles, this.palette)
     }
-    this.color.needsUpdate = true
+    writePlaceholderColors(owner, this.tiles, this.palette, this.colors, { offsets: this.offsets })
+    for (const attribute of this.colors) attribute.needsUpdate = true
   }
 
   updateCover(slot) {
@@ -179,7 +163,7 @@ export default class MidTerrainRing {
     this.radius = owner.windowRadius + 1
     this.span = Math.max(1, Math.min(owner.chunkSize, Math.floor(settings.cellSpan ?? 6)))
     this.step = owner.config.terrain.layerHeight * Math.max(1, Math.floor(settings.heightLayers ?? 2))
-    this.materials = [false, true].map(seams => createMidTerrainMaterial(owner.config.terrain, seams))
+    this.materials = [false, true].map(brickSeams => createPlaceholderTerrainMaterial(owner.config.terrain, { brickSeams, revealTiles: true }))
     this.group = new THREE.Group()
     this.group.name = 'MidTerrainRing'
     owner.parentGroup.add(this.group)

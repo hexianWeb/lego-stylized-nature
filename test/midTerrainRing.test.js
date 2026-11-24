@@ -3,8 +3,10 @@ import test from 'node:test'
 import * as THREE from 'three/webgpu'
 import { worldConfig } from '../src/world/WorldConfig.js'
 import ChunkColumnTransition from '../src/world/chunks/ChunkColumnTransition.js'
+import VoxelClouds from '../src/world/chunks/VoxelClouds.js'
 import VoxelTerrainPlaceholder from '../src/world/chunks/VoxelTerrainPlaceholder.js'
 import { getChunkWindowCoords, getRenderChunkKey } from '../src/world/chunks/chunkCoordinates.js'
+import { createCloudLayerGeometry } from '../src/world/chunks/cloudLayerGeometry.js'
 
 function fixture(t) {
   const config = structuredClone(worldConfig)
@@ -29,7 +31,7 @@ test('stepped midground seals the perimeter, emits only exposed internal walls a
   const { geometry } = patch.mesh
   const pos = geometry.getAttribute('position')
   const normal = geometry.getAttribute('normal')
-  const { cellSize, layerHeight } = config.terrain
+  const { cellSize } = config.terrain
   assert.equal(patch.mesh.position.x, -26 * cellSize)
   assert.equal(geometry.index.count / 6, 9 + 12 + 3, 'nine tops, twelve perimeter skirts and three cliffs')
   let area = 0, cliffs = 0
@@ -47,7 +49,6 @@ test('stepped midground seals the perimeter, emits only exposed internal walls a
   }
   assert.ok(Math.abs(area - (13 * cellSize) ** 2) < 1e-5)
   assert.equal(cliffs, 6)
-  assert.ok(Math.abs(patch.cloudTops[1] - 6 * layerHeight) < 1e-6, 'cloud clearance includes both fine tiles under one coarse tile')
   const colors = patch.palette.slice()
   config.chunks.placeholder.midground.mode = 'boxes'
   fill()
@@ -93,4 +94,57 @@ test('budgeted replacements keep coarse cover, follow the trailing detailed colu
   p.update(center, slots)
   assert.ok(disposed && !patch.mesh.parent)
   assert.equal(p.mesh.count, p.capacity, 'original-box comparison restores the entire legacy batch')
+})
+
+test('a rectangular cloud mask generates one merged quad for each exposed side', (t) => {
+  const mask = new Uint8Array(12).fill(1)
+  const geometry = createCloudLayerGeometry({ mask, width: 4, depth: 3, cellSize: 0.5, thickness: 0.75 })
+  t.after(() => geometry.dispose())
+  assert.equal(geometry.index.count, 36)
+  geometry.computeBoundingBox()
+  assert.deepEqual(geometry.boundingBox.min.toArray(), [0, 0, 0])
+  assert.deepEqual(geometry.boundingBox.max.toArray(), [2, 0.75, 1.5])
+  assert.ok(mask.every(cell => cell === 1), 'meshing preserves the cached occupancy')
+})
+
+test('cloud geometry stays cached until the window moves and retains world-aligned masks', (t) => {
+  const { p, config, center } = fixture(t)
+  const clouds = new VoxelClouds({ config, parentGroup: p.parentGroup, placeholder: p })
+  t.after(() => clouds.dispose())
+  clouds.update(center)
+  assert.equal(clouds.chunkMasks.size, 40)
+  assert.equal(clouds.chunkMasks.has('0:0'), false, 'detailed terrain has a clear opening')
+  const geometry = clouds.mesh.geometry
+  const retained = clouds.chunkMasks.get('2:2')
+  clouds.update(center)
+  assert.equal(clouds.mesh.geometry, geometry)
+
+  let disposed = false
+  geometry.addEventListener('dispose', () => { disposed = true })
+  clouds.update({ x: 1, z: 0 })
+  assert.equal(clouds.chunkMasks.size, 40)
+  assert.equal(clouds.chunkMasks.get('2:2'), retained)
+  assert.ok(disposed)
+  assert.equal(clouds.mesh.position.x, -2 * clouds.chunkSpan)
+  assert.equal(clouds.mesh.position.y, config.chunks.clouds.baseHeight)
+})
+
+test('low cloud cells clear high terrain in pending and rendered midground', (t) => {
+  const { p, config, center, slots, fill } = fixture(t)
+  config.chunks.clouds.baseHeight = 0.9
+  p.sampleHeight = x => THREE.MathUtils.euclideanModulo(x, 13) < 6 ? 8 : 1
+  p.update(center, slots, -1)
+  const clouds = new VoxelClouds({ config, parentGroup: p.parentGroup, placeholder: p })
+  t.after(() => clouds.dispose())
+  clouds.seed = config.seed
+  clouds.noise2D = () => 1
+  clouds.update(center)
+  const pending = clouds.chunkMasks.get('-2:0').slice()
+  assert.deepEqual([...pending], [0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1])
+
+  fill()
+  assert.ok(p.midground.patches.has('-2:0'))
+  clouds.reset()
+  clouds.update(center)
+  assert.deepEqual(clouds.chunkMasks.get('-2:0'), pending)
 })

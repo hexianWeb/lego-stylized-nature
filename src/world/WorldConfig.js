@@ -83,8 +83,8 @@ export const worldConfig = {
       // instanced control; 'coarse' restores the original distant boxes.
       midground: { mode: 'surface', cellSpan: 6, heightLayers: 2, brickSeams: true },
     },
-    /** A continuous band of brick-sized clouds over the placeholder, bandBoxes boxes wide around loaded terrain. */
-    clouds: { enabled: true, bandBoxes: 2 },
+    /** World-anchored voxel cloud layer over the placeholder window. */
+    clouds: { enabled: true, cellSpan: 4, baseHeight: 3.35, thickness: 0.76 },
     maxPendingBuildsPerFrame: 1,
     maxPrefabBuildsPerFrame: 1,
     /** Shared main-thread budget; individual chunk/prefab populations are atomic and may exceed it. */
@@ -104,7 +104,20 @@ export const worldConfig = {
       appearance: 'model',
       assetName: 'playerAircraftModel',
       view: 'top',
-      atmosphere: { sky: '#add7e0' },
+      atmosphere: {
+        enabled: true,
+        sky: '#add7e0',
+        turbidity: 3,
+        groundAlbedo: 0.25,
+        skyIntensity: 1,
+        sunDiskIntensity: 5,
+        hazeDensity: 0.024,
+        hazeHeightFalloff: 0.11,
+        hazeBaseHeight: 1.5,
+        hazeStartDistance: 7,
+        hazeFadeStart: 28,
+        hazeFadeEnd: 52,
+      },
       invertY: true,
       cameraFollow: { enabled: true },
       visualAttitude: {

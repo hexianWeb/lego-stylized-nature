@@ -4,10 +4,13 @@ import { mulberry32, random01 } from '../../utils/random.js'
 import BiomeMaskGenerator from '../biomes/BiomeMaskGenerator.js'
 import BiomeRegistry from '../biomes/BiomeRegistry.js'
 import BiomeBlender from '../biomes/BiomeBlender.js'
+import { hasActiveAirPerspective } from '../atmosphere/airPerspective.js'
 import BrickColorResolver from '../bricks/BrickColorResolver.js'
 import { heightShapers } from '../terrain/heightShapers.js'
 import { getChunkWindowCoords, getRenderChunkKey } from './chunkCoordinates.js'
 import MidTerrainRing from './MidTerrainRing.js'
+import { createPlaceholderTerrainMaterial } from '../../materials/tsl/placeholderTerrainMaterial.js'
+import { createPlaceholderColorAttributes, samplePlaceholderPalette, writePlaceholderColors } from './placeholderTerrainPalette.js'
 
 const clamp01 = value => Math.max(0, Math.min(1, value))
 const smoothstep = value => value * value * (3 - 2 * value)
@@ -35,22 +38,13 @@ export default class VoxelTerrainPlaceholder {
     this.activeSlots = null
     this.visible = true
     this.background = new THREE.Color('#6aca97')
+    this.useBakedHaze = true
 
     this.geometry = new THREE.BoxGeometry(1, 1, 1)
-    const normals = this.geometry.getAttribute('normal')
-    const faceColors = new Float32Array(normals.count * 3)
-    const faceColor = new THREE.Color()
-    for (let index = 0; index < normals.count; index++) {
-      const y = normals.getY(index)
-      const x = normals.getX(index)
-      // Neutral face shading keeps the actual biome palette legible from every side.
-      faceColor.setScalar(y > 0 ? 1 : y < 0 ? 0.45 : x > 0 ? 0.65 : x < 0 ? 0.82 : 0.74)
-      faceColor.toArray(faceColors, index * 3)
-    }
-    this.geometry.setAttribute('color', new THREE.BufferAttribute(faceColors, 3))
-    this.material = new THREE.MeshBasicMaterial({ vertexColors: true, toneMapped: false })
+    this.material = createPlaceholderTerrainMaterial(config.terrain)
     this.capacity = (this.radius * 2 + 1) ** 2 * Math.ceil(this.chunkSize / this.cellSpan) ** 2
     this.mesh = new THREE.InstancedMesh(this.geometry, this.material, this.capacity)
+    this.colors = createPlaceholderColorAttributes(this.mesh, this.capacity)
     this.mesh.name = 'VoxelTerrainPlaceholder'
     this.mesh.count = 0
     this.mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage)
@@ -80,31 +74,6 @@ export default class VoxelTerrainPlaceholder {
 
   getTop(height, step = this.heightStep) {
     return Math.max(step, Math.round((height + 1) * this.config.terrain.layerHeight / step) * step)
-  }
-
-  getBoxSpan(block) {
-    const origin = Math.floor(block / this.chunkSize) * this.chunkSize
-    const start = origin + Math.floor((block - origin) / this.cellSpan) * this.cellSpan
-    return [start, Math.min(origin + this.chunkSize, start + this.cellSpan)]
-  }
-
-  /** Highest box top (world Y) among the boxes overlapping a world-space XZ rectangle. */
-  getMaxTop(minX, minZ, maxX, maxZ) {
-    const { cellSize } = this.config.terrain
-    const context = this.biomeMaskGenerator.createSamplingContext()
-    let top = this.heightStep
-    for (let z = Math.floor(minZ / cellSize); z <= Math.floor(maxZ / cellSize);) {
-      const [startZ, endZ] = this.getBoxSpan(z)
-      for (let x = Math.floor(minX / cellSize); x <= Math.floor(maxX / cellSize);) {
-        const [startX, endX] = this.getBoxSpan(x)
-        const sampleX = Math.floor((startX + endX) / 2)
-        const sampleZ = Math.floor((startZ + endZ) / 2)
-        top = Math.max(top, this.getTop(this.sampleHeight(sampleX, sampleZ, this.biomeMaskGenerator.getCellBiome(sampleX, sampleZ, context))))
-        x = endX
-      }
-      z = endZ
-    }
-    return top
   }
 
   createChunk(coord, span = this.cellSpan, step = this.heightStep) {
@@ -150,6 +119,10 @@ export default class VoxelTerrainPlaceholder {
     if (!centerCoord)
       return
     const moved = this.centerCoord?.x !== centerCoord.x || this.centerCoord?.z !== centerCoord.z
+    const scene = this.getScene()
+    const useBakedHaze = !hasActiveAirPerspective(scene?.fogNode)
+    const recolor = moved || useBakedHaze !== this.useBakedHaze
+    this.useBakedHaze = useBakedHaze
     this.activeSlots = activeSlots
     if (moved) {
       this.centerCoord = { ...centerCoord }
@@ -178,11 +151,12 @@ export default class VoxelTerrainPlaceholder {
       const center = new THREE.Vector3((centerCoord.x + 0.5) * chunkWorldSize, 0, (centerCoord.z + 0.5) * chunkWorldSize)
       const extent = (this.radius + 0.5) * chunkWorldSize + this.voxelSize
       this.mesh.boundingSphere = new THREE.Sphere(center, Math.hypot(extent, extent, this.config.terrain.maxHeight * this.config.terrain.layerHeight + this.voxelSize * 4))
-      this.updateColors()
     }
+    if (recolor)
+      this.updateColors(scene)
 
     const visible = this.visible && (this.config.chunks.debugSpacing ?? 0) === 0
-    this.midground?.update(centerCoord, activeSlots, moved, visible, deadline)
+    this.midground?.update(centerCoord, activeSlots, recolor, visible, deadline)
     const useMidground = this.midground && this.midground.mode !== 'coarse'
     let count = 0
     let firstChanged = Infinity
@@ -240,37 +214,41 @@ export default class VoxelTerrainPlaceholder {
   }
 
   hazeAt(x, z) {
+    if (!this.useBakedHaze)
+      return 0
     const distance = Math.max(Math.abs(x - this.hazeX), Math.abs(z - this.hazeZ))
     return smoothstep(clamp01((distance - this.hazeInner) / this.hazeSpan)) * 0.32
   }
 
-  updateColors() {
+  getScene() {
     let ancestor = this.parentGroup
     while (ancestor && !ancestor.isScene)
       ancestor = ancestor.parent
-    if (ancestor?.background?.isColor)
-      this.background.copy(ancestor.background)
+    return ancestor
+  }
+
+  updateColors(scene = this.getScene(), resample = false) {
+    if (scene?.background?.isColor)
+      this.background.copy(scene.background)
     const chunkWorldSize = this.chunkSize * this.config.terrain.cellSize
     this.hazeX = (this.centerCoord.x + 0.5) * chunkWorldSize
     this.hazeZ = (this.centerCoord.z + 0.5) * chunkWorldSize
     this.hazeInner = (this.windowRadius + 0.5) * chunkWorldSize
     this.hazeSpan = (this.radius - this.windowRadius) * chunkWorldSize
-    const color = new THREE.Color()
     for (const chunk of this.cache.values()) {
-      chunk.voxels.forEach((voxel, index) => {
-        this.colorResolver.resolveColor(voxel.sample, color).lerp(this.background, this.hazeAt(voxel.x, voxel.z))
-        this.mesh.setColorAt(chunk.start + index, color)
-      })
+      if (!chunk.palette || resample) {
+        chunk.palette = samplePlaceholderPalette(this.colorResolver, chunk.voxels, chunk.palette)
+      }
+      writePlaceholderColors(this, chunk.voxels, chunk.palette, this.colors, { start: chunk.start })
     }
-    if (this.mesh.instanceColor)
-      this.mesh.instanceColor.needsUpdate = true
+    for (const attribute of this.colors) attribute.needsUpdate = true
   }
 
   refresh(visible = true) {
     this.visible = visible
     this.colorResolver.invalidatePalettes?.()
     if (this.centerCoord)
-      this.updateColors()
+      this.updateColors(this.getScene(), true)
     this.mesh.visible = visible && this.centerCoord !== null && (this.config.chunks.debugSpacing ?? 0) === 0
     if (this.midground) {
       this.midground.group.visible = this.mesh.visible

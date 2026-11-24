@@ -95,7 +95,7 @@ export default class ChunkManager {
         })
       : null
     this.voxelClouds = this.terrainPlaceholder && chunkConfig.clouds?.enabled === true
-      ? new VoxelClouds({ config, parentGroup, placeholder: this.terrainPlaceholder })
+      ? new VoxelClouds({ config, parentGroup, placeholder: this.terrainPlaceholder, releaseSceneObjects })
       : null
 
     for (const slot of this.slots) {
@@ -745,10 +745,9 @@ export default class ChunkManager {
     if (placementEnabled && buildPrefabs) {
       this.buildPendingPrefabs(prefabActiveKeys, deadline)
     }
-    // Worker builds retain their coarse cover; both renderers share the same
-    // column clock so placeholder boxes dissolve as detailed terrain rises.
+    // Worker builds retain their coarse cover until the detailed columns rise.
     this.terrainPlaceholder?.update(this.centerCoord, this.activeSlots, deadline)
-    this.voxelClouds?.update(this.centerCoord, this.activeSlots)
+    this.voxelClouds?.update(this.centerCoord)
   }
 
   refreshAOPreview(showOverlays = true) {
