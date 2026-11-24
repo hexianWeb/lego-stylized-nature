@@ -3,6 +3,7 @@ import { MathUtils, Vector3 } from 'three/webgpu'
 export const DEFAULT_AIRCRAFT_CONFIG = Object.freeze({
   height: 5.5, scale: 1, cruiseSpeed: 4.4, maxSpeed: 7.92,
   turnRate: 1.25, pitchMax: 1.4, diveMax: 0.62, bankMax: 52 * Math.PI / 180,
+  pitchInputScale: 0.8,
   clearance: 0.85, ceiling: 72, rollSeconds: 0.85, loopSeconds: 3.6,
 })
 
@@ -104,7 +105,6 @@ function advancePathPitch(state, climb, hasThrust, config, dt) {
   const upwardRate = TAU / config.loopSeconds * (1 + 0.15 * state.boost)
   const downwardRate = upwardRate * 0.85
   const limit = climb >= 0 ? config.pitchMax : config.diveMax
-  const demand = climb * limit
   const fullStick = Math.abs(climb) >= 0.97 ? Math.sign(climb) : 0
   const thrusting = hasThrust && state.boost > 0.3
   if (loop) {
@@ -130,8 +130,10 @@ function advancePathPitch(state, climb, hasThrust, config, dt) {
     }
   }
   else {
+    const demand = climb * limit * config.pitchInputScale
     const change = damp(state.pathPitch, demand, 8, dt) - state.pathPitch
-    state.pathPitch += clamp(change, -downwardRate * dt, upwardRate * dt)
+    const pitchStep = config.pitchInputScale * dt
+    state.pathPitch += clamp(change, -downwardRate * pitchStep, upwardRate * pitchStep)
   }
   return state.loop !== null
 }
